@@ -23,6 +23,8 @@ def home():
             db.session.commit()
             flash('Note added!', category='success')
 
+    # render the template using name of template
+    # now when go to '/', render home.html
     return render_template("home.html", user=current_user)  # return html when we got root
 
 
