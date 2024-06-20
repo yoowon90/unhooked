@@ -8,11 +8,12 @@ from flask_login import login_user, login_required, logout_user, current_user
 # need to restart server manually if syntax error
 
 auth = Blueprint('auth', __name__)  # define url
+# POST is usually a change to the DB or state of webpage
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
+        email = request.form.get('email')  # access info from server's form attribute
         password = request.form.get('password')
 
         user = User.query.filter_by(email=email).first()
