@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import login_required, current_user
-from .models import Note
+from .models import Note, Wishlist
 from . import db
 import json
 
@@ -13,6 +13,7 @@ views = Blueprint('views', __name__)  # define blueprint
 @login_required
 def home():
     if request.method == 'POST': 
+        # TODO: edit home.html to say "Welcome!" such as via <p> Welcome </p>
         note = request.form.get('note')#Gets the note from the HTML 
 
         if len(note) < 1:
@@ -40,6 +41,20 @@ def delete_note():
 
     return jsonify({})
 
-@views.route('/create-wishlist', methods=['POST'])
-def create_wishlist():
-    pass
+
+@views.route('/my-wishlist', methods=['GET', 'POST'])
+def my_wishlist():
+    if request.method == 'POST': 
+        wishitem = request.form.get('wishitem')#Gets the wish item from the HTML 
+
+        if len(wishitem) < 1:
+            flash('Item is too short!', category='error') 
+        else:
+            new_item = Wishlist(data=wishlist, user_id=current_user.id)  #providing the schema for the note 
+            db.session.add(new_item) #adding the note to the database 
+            db.session.commit()
+            flash('Item added to Wish List!', category='success')
+
+    # render the template using name of template
+    # now when go to '/', render home.html
+    return render_template("wishlist.html", user=current_user)  # return html when we got root

@@ -1,9 +1,12 @@
 {% extends "base.html" %} {% block title %}Sign Up{% endblock %} {% block
 content %}
-<form method="POST">
+<!-- now build html for below -->
+<form method="POST"> <!-- when submit form, send POST request to backend -->
   <h3 align="center">Sign Up</h3>
-  <div class="form-group">
+  <div class="form-group"> <!-- form-group & form-control are bootstrap class-->
     <label for="email">Email Address</label>
+    <!-- must have name bc it is what attribute is called in the backend. id is optional. -->
+    <!-- recommend id and name to be the same -->
     <input
       type="email"
       class="form-control"
@@ -42,7 +45,7 @@ content %}
       placeholder="Confirm password"
     />
   </div>
-  <br />
+  <br /> <!-- separate the button -->
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 {% endblock %}
