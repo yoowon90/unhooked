@@ -42,7 +42,7 @@ def delete_note():
     return jsonify({})
 
 
-@views.route('/wishlist', methods=['GET', 'POST'])
+@views.route('/my-wishlist', methods=['GET', 'POST'])
 def wishlist():
     if request.method == 'POST': 
         wishitem = request.form.get('wishitem')#Gets the wish item from the HTML 
