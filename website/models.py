@@ -14,8 +14,8 @@ class Wishlist(db.Model):
     data = db.Column(db.String(10000))
     date = db.Column(db.DateTime(timezone=True), default=func.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    item_name = db.Column(db.String(10000))
-    item_price = db.Column(db.String(10000))
+    wish_item = db.Column(db.String(10000))
+    wish_item_price = db.Column(db.String(10000))
     heightened_interest = db.Column(db.String(10000))
 
 class User(db.Model, UserMixin):
