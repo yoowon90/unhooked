@@ -58,3 +58,20 @@ def wishlist():
     # render the template using name of template
     # now when go to '/', render home.html
     return render_template("wishlist.html", user=current_user)  # return html when we got root
+
+@views.route('/test', methods=['GET', 'POST'])
+def test():
+    if request.method == 'POST': 
+        wishitem = request.form.get('wishitem')#Gets the wish item from the HTML 
+
+        if len(wishitem) < 1:
+            flash('Item is too short!', category='error') 
+        else:
+            new_item = Wishlist(data=wishlist, user_id=current_user.id)  #providing the schema for the note 
+            db.session.add(new_item) #adding the note to the database 
+            db.session.commit()
+            flash('Item added to Wish List!', category='success')
+
+    # render the template using name of template
+    # now when go to '/', render home.html
+    return render_template("test.html", user=current_user)  # return html when we got root
