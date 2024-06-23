@@ -1,48 +1,28 @@
-{% extends "base.html" %} {% block title %}Sign Up{% endblock %} {% block
+{% extends "base.html" %} {% block title %}Wish List{% endblock %} {% block
   content %}
   <!-- now build html for below -->
   <form method="POST"> <!-- when submit form, send POST request to backend -->
-    <h3 align="center">Sign Up</h3>
+    <h3 align="center">My Wish List</h3>
     <div class="form-group"> <!-- form-group & form-control are bootstrap class-->
-      <label for="email">Email Address</label>
+      <label for="wish-item">Add Wish Item</label>
       <!-- must have name bc it is what attribute is called in the backend. id is optional. -->
       <!-- recommend id and name to be the same -->
       <input
-        type="email"
+        type="wish-item"
         class="form-control"
-        id="email"
-        name="email"
-        placeholder="Enter email"
+        id="wishItem"
+        name="wishItem"
+        placeholder="Enter wish item"
       />
     </div>
     <div class="form-group">
-      <label for="firstName">First Name</label>
+      <label for="wish-item-price">Wish Item Price</label>
       <input
-        type="text"
+        type="wish-item-price"
         class="form-control"
-        id="firstName"
-        name="firstName"
-        placeholder="Enter first name"
-      />
-    </div>
-    <div class="form-group">
-      <label for="password1">Password</label>
-      <input
-        type="password"
-        class="form-control"
-        id="password1"
-        name="password1"
-        placeholder="Enter password"
-      />
-    </div>
-    <div class="form-group">
-      <label for="password2">Password (Confirm)</label>
-      <input
-        type="password"
-        class="form-control"
-        id="password2"
-        name="password2"
-        placeholder="Confirm password"
+        id="wishItemPrice"
+        name="wishItem"
+        placeholder="Enter wish item price"
       />
     </div>
     <br /> <!-- separate the button -->
