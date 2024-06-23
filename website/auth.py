@@ -13,7 +13,8 @@ auth = Blueprint('auth', __name__)  # define url
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')  # access info from server's form attribute
+        email = request.form.get('email')  # whenever access route, has information in request.form that was sent as form
+        # when trying print(request.form), get an immutable multi dict object 
         password = request.form.get('password')
 
         user = User.query.filter_by(email=email).first()
