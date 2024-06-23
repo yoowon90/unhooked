@@ -1,32 +1,32 @@
-{% extends "base.html" %} {% block title %}Test Page{% endblock %} {% block
+{% extends "base.html" %} {% block title %}Wish List{% endblock %} {% block
   content %}
-  <!-- now build html for below -->
-  <form method="POST"> <!-- when submit form, send POST request to backend -->
-    <h3 align="center">My Wish List</h3>
-    <div class="form-group"> <!-- form-group & form-control are bootstrap class-->
-      <label for="wish-item">Add Wish Item</label>
-      <!-- must have name bc it is what attribute is called in the backend. id is optional. -->
-      <!-- recommend id and name to be the same -->
-      <input
-        type="wish-item"
-        class="form-control"
-        id="wishItem"
-        name="wishItem"
-        placeholder="Enter wish item"
-      />
-    </div>
-    <div class="form-group">
-      <label for="wish-item-price">Wish Item Price</label>
-      <input
-        type="wish-item-price"
-        class="form-control"
-        id="wishItemPrice"
-        name="wishItem"
-        placeholder="Enter wish item price"
-      />
-    </div>
-    <br /> <!-- separate the button -->
-    <button type="submit" class="btn btn-primary">Submit</button>
-  </form>
-  {% endblock %}
-  
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">First</th>
+      <th scope="col">Last</th>
+      <th scope="col">Handle</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">1</th>
+      <td>Mark</td>
+      <td>Otto</td>
+      <td>@mdo</td>
+    </tr>
+    <tr>
+      <th scope="row">2</th>
+      <td>Jacob</td>
+      <td>Thornton</td>
+      <td>@fat</td>
+    </tr>
+    <tr>
+      <th scope="row">3</th>
+      <td colspan="2">Larry the Bird</td>
+      <td>@twitter</td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}
