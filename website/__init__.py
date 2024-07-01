@@ -20,7 +20,7 @@ def create_app():
     app.register_blueprint(auth, url_prefix='/')  # '/' means no prefix
     # TODO: register and adjust prefix whatever you want
 
-    from .models import User, Note, Wishlist
+    from .models import User, Note, WishItem
     
     with app.app_context():
         db.create_all()

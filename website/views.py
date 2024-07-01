@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import login_required, current_user
-from .models import Note, Wishlist
+from .models import Note, WishItem
 from . import db
 import json
 
@@ -45,12 +45,15 @@ def delete_note():
 @views.route('/my-wishlist', methods=['GET', 'POST'])
 def wishlist():
     if request.method == 'POST': 
-        wishitem = request.form.get('wishitem')#Gets the wish item from the HTML 
+        wish_item_name = request.form.get('item_name')#Gets the wish item from the HTML 
+        wish_item_price = request.form.get('item_price')#Gets the wish item from the HTML  
 
-        if len(wishitem) < 1:
+        if len(wish_item_name) < 1:
             flash('Item is too short!', category='error') 
+        elif float(wish_item_price) < 0:
+            falash('Price cannot be below zero!', category='error')
         else:
-            new_item = Wishlist(data=wishlist, user_id=current_user.id)  #providing the schema for the note 
+            new_item = WishItem(item_name=wish_item_name, item_price=wish_item_price, user_id=current_user.id)  #providing the schema for the note 
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
             flash('Item added to Wish List!', category='success')
@@ -62,12 +65,12 @@ def wishlist():
 @views.route('/test', methods=['GET', 'POST'])
 def test():
     if request.method == 'POST': 
-        wishitem = request.form.get('wishitem')#Gets the wish item from the HTML 
+        wishitem = request.form.get('wishitem')  #Gets the wish item from the HTML 
 
         if len(wishitem) < 1:
             flash('Item is too short!', category='error') 
         else:
-            new_item = Wishlist(data=wishlist, user_id=current_user.id)  #providing the schema for the note 
+            new_item = WishItem(data=wishitem, user_id=current_user.id)  #providing the schema for the note 
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
             flash('Item added to Wish List!', category='success')

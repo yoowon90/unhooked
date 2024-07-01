@@ -9,14 +9,14 @@ class Note(db.Model):
     date = db.Column(db.DateTime(timezone=True), default=func.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-class Wishlist(db.Model):
+class WishItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.String(10000))
+    # data = db.Column(db.String(10000))
     date = db.Column(db.DateTime(timezone=True), default=func.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    wish_item = db.Column(db.String(10000))
-    wish_item_price = db.Column(db.String(10000))
-    heightened_interest = db.Column(db.String(10000))
+    item_name = db.Column(db.String(10000))
+    item_price = db.Column(db.String(10000))
+    heightened_interest = db.Column(db.String(10000), default=False)
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -24,3 +24,5 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(150))
     first_name = db.Column(db.String(150))
     notes = db.relationship('Note')
+    wishitems = db.relationship('WishItem')
+
