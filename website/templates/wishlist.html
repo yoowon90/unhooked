@@ -1,32 +1,25 @@
-{% extends "base.html" %} {% block title %}Wish List{% endblock %} {% block
-  content %}
-  <!-- now build html for below -->
-  <form method="POST"> <!-- when submit form, send POST request to backend -->
-    <h3 align="center">My Wish List</h3>
-    <div class="form-group"> <!-- form-group & form-control are bootstrap class-->
-      <label for="wish-item">Add Wish Item</label>
-      <!-- must have name bc it is what attribute is called in the backend. id is optional. -->
-      <!-- recommend id and name to be the same -->
-      <input
-        type="wish-item"
-        class="form-control"
-        id="wishItem"
-        name="wishItem"
-        placeholder="Enter wish item"
-      />
+{% extends "base.html" %} {% block title %}Wish List{% endblock %} {% block content
+  %}
+  <!-- this is the same as base.html and overwrite any blocks -->
+  <h1 align="center">Wish List</h1>
+  <ul class="list-group list-group-flush" id="wishItems">
+    {% for wishitem in user.wishitems %}
+    <li class="list-group-item">
+      {{ wishitem.item_name }}
+      {{ wishitem.item_price }}
+      <button type="button" class="close" onClick="deleteNote({{ wishitem.id }})">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+  <form method="POST">
+    <textarea name="item_name" id="item_name" class="form-control"></textarea>
+    <textarea name="item_price" id="item_price" class="form-control"></textarea>
+    <br />
+    <div align="center">
+      <button type="submit" class="btn btn-primary">Add Item</button>
     </div>
-    <div class="form-group">
-      <label for="wish-item-price">Wish Item Price</label>
-      <input
-        type="wish-item-price"
-        class="form-control"
-        id="wishItemPrice"
-        name="wishItem"
-        placeholder="Enter wish item price"
-      />
-    </div>
-    <br /> <!-- separate the button -->
-    <button type="submit" class="btn btn-primary">Submit</button>
   </form>
   {% endblock %}
   
