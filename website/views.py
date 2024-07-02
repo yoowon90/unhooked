@@ -45,15 +45,32 @@ def delete_note():
 @views.route('/my-wishlist', methods=['GET', 'POST'])
 def wishlist():
     if request.method == 'POST': 
-        wish_item_name = request.form.get('item_name')#Gets the wish item from the HTML 
-        wish_item_price = request.form.get('item_price')#Gets the wish item from the HTML  
+        wish_item_name = request.form.get('name')#Gets the wish item from the HTML 
+        wish_item_price = request.form.get('price')#Gets the wish item from the HTML  
+        wish_item_category = request.form.get('category')#Gets the wish item from the HTML
+        wish_item_brand = request.form.get('brand')
+        wish_item_link = request.form.get('link')
 
         if len(wish_item_name) < 1:
             flash('Item is too short!', category='error') 
-        elif float(wish_item_price) < 0:
-            falash('Price cannot be below zero!', category='error')
+        if float(wish_item_price) < 0:
+            flash('Price cannot be below zero!', category='error')
+        if len(wish_item_category) < 1:
+            flash('Speciy a category!', category='error')
+        if len(wish_item_brand) < 1:
+            flash('Specify a brand!', category='error')
+        if (len(wish_item_link) < 5) or not (wish_item_link.endswith('.com') 
+                                       or wish_item_link.endswith('.org') 
+                                       or wish_item_link.endswith('.net')):
+            flash('Invalid link!', category='error')
+                    
         else:
-            new_item = WishItem(item_name=wish_item_name, item_price=wish_item_price, user_id=current_user.id)  #providing the schema for the note 
+            new_item = WishItem(user_id=current_user.id,
+                                name=wish_item_name, 
+                                price=wish_item_price,
+                                category=wish_item_category,
+                                brand=wish_item_brand,
+                                link=wish_item_link)  #providing the schema for the note 
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
             flash('Item added to Wish List!', category='success')

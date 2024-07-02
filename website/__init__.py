@@ -38,5 +38,6 @@ def create_app():
 
 def create_database(app):
     if not path.exists('website/' + DB_NAME):
-        db.create_all(app=app)
+        with app.app_context():  # https://stackoverflow.com/questions/44941757/sqlalchemy-exc-operationalerror-sqlite3-operationalerror-no-such-table
+            db.create_all()
         print('Created Database!')

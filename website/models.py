@@ -14,8 +14,11 @@ class WishItem(db.Model):
     # data = db.Column(db.String(10000))
     date = db.Column(db.DateTime(timezone=True), default=func.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    item_name = db.Column(db.String(10000))
-    item_price = db.Column(db.String(10000))
+    category = db.Column(db.String(10000))  # dress, bag, skirt, jeans, non-denim pants, shoes, accessories, etc.
+    brand = db.Column(db.String(10000))
+    name = db.Column(db.String(10000))
+    price = db.Column(db.String(10000))
+    link = db.Column(db.String(10000))
     heightened_interest = db.Column(db.String(10000), default=False)
 
 class User(db.Model, UserMixin):
