@@ -3,19 +3,48 @@
   <!-- this is the same as base.html and overwrite any blocks -->
   <h1 align="center">Wish List</h1>
   <ul class="list-group list-group-flush" id="wishItems">
-    {% for wishitem in user.wishitems %}
-    <li class="list-group-item">
-      {{ wishitem.item_name }}
-      {{ wishitem.item_price }}
-      <button type="button" class="close" onClick="deleteNote({{ wishitem.id }})">
-        <span aria-hidden="true">&times;</span>
-      </button>
-    </li>
-    {% endfor %}
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Added Date</th>
+          <th scope="col">Brand</th>
+          <th scope="col">Category</th>
+          <th scope="col">Name</th>
+          <th scope="col">Link</th>
+          <th scope="col">Price</th>
+
+        </tr>
+      </thead>
+      <li class="list-group-item">
+      {% set count = namespace(value=0) %}
+      {% for wishitem in user.wishitems %}
+      {% set count.value = count.value + 1 %}
+        <tr>
+          <th scope="row">{{count.value}}</th>
+          <td> {{wishitem.date}} </td>
+          <td> {{wishitem.brand}} </td>
+          <td> {{wishitem.category}} </td>
+          <td> {{wishitem.name}} </td>
+          <td> {{wishitem.link}} </td>
+          <td> {{wishitem.price}} </td>
+          <td> 
+            <button type="button" class="close" onClick="deleteNote({{ wishitem.id }})">
+            <span aria-hidden="true">&times;</span>
+            </button>
+          </td>
+        </tr>
+      </li>
+      {% endfor %}
+      </table>
   </ul>
   <form method="POST">
-    <textarea name="item_name" id="item_name" class="form-control"></textarea>
-    <textarea name="item_price" id="item_price" class="form-control"></textarea>
+    <!-- sample: Madewell, Dress, Linen Blue, madewell.com, 129.12-->
+    <textarea name="brand" id="brand" class="form-control"></textarea>
+    <textarea name="category" id="category" class="form-control"></textarea>
+    <textarea name="name" id="name" class="form-control"></textarea>
+    <textarea name="link" id="link" class="form-control"></textarea>
+    <textarea name="price" id="price" class="form-control"></textarea>
     <br />
     <div align="center">
       <button type="submit" class="btn btn-primary">Add Item</button>
