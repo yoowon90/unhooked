@@ -1,7 +1,18 @@
 {% extends "base.html" %} {% block title %}Wish List{% endblock %} {% block content
   %}
+  <!-- below is sample style -->
+   <style>
+    input:placeholder-shown {
+      font-style: italic;
+    }
+
+   </style>
+
   <!-- this is the same as base.html and overwrite any blocks -->
   <h1 align="center">Wish List</h1>
+  <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.add_wishitem') }}';">Add more items</button>
+  <br>
+  <br>
   <ul class="list-group list-group-flush" id="wishItems">
     <table class="table table-sm">
       <thead>
@@ -38,17 +49,6 @@
       {% endfor %}
       </table>
   </ul>
-  <form method="POST">
-    <!-- sample: Madewell, Dress, Linen Blue, madewell.com, 129.12-->
-    <textarea name="brand" id="brand" class="form-control"></textarea>
-    <textarea name="category" id="category" class="form-control"></textarea>
-    <textarea name="name" id="name" class="form-control"></textarea>
-    <textarea name="link" id="link" class="form-control"></textarea>
-    <textarea name="price" id="price" class="form-control"></textarea>
-    <br />
-    <div align="center">
-      <button type="submit" class="btn btn-primary">Add Item</button>
-    </div>
-  </form>
+  
   {% endblock %}
   

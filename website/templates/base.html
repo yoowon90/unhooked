@@ -16,7 +16,6 @@
       href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
       crossorigin="anonymous"
     />
-
     <title>{% block title %}Home{% endblock %}</title>  <!-- write python like for loop for block. base template that can be overwritten in child template -->
   </head>
   <body>
@@ -29,9 +28,10 @@
         <div class="navbar-nav">
           {% if user.is_authenticated %}
           <a class="nav-item nav-link" id="home" href="/">Home</a>  <!-- 'a' is a link. lead to href -->
-          <a class="nav-item nav-link" id="logout" href="/logout">Logout</a>
+          <a class="nav-item nav-link" id="wishlist" href="/add-wishitem">Add Wish Item</a>
           <a class="nav-item nav-link" id="wishlist" href="/my-wishlist">Wish List</a>
           <a class="nav-item nav-link" id="wishlist" href="/test">Test Tab</a>
+          <a class="nav-item nav-link" id="logout" href="/logout">Logout</a>
           {% else %}
           <a class="nav-item nav-link" id="login" href="/login">Login</a>
           <a class="nav-item nav-link" id="signUp" href="/sign-up">Sign Up</a>
