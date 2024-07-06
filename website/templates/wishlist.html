@@ -13,6 +13,13 @@
   <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.add_wishitem') }}';">Add more items</button>
   <br>
   <br>
+  {% set totalprice = namespace(value=0.00) %}
+  {% for wishitem in user.wishitems %}
+  {% set totalprice.value = totalprice.value + wishitem.price|float %}
+  {% endfor %}
+  {% set totalprice.value =  totalprice.value|round(2) %}
+  <b> Total value of items: <font color="#ff0000">{{ totalprice.value }} </font> </b>
+
   <ul class="list-group list-group-flush" id="wishItems">
     <table class="table table-sm">
       <thead>
@@ -39,8 +46,8 @@
           <td> {{wishitem.name}} </td>
           <td> {{wishitem.link}} </td>
           <td> {{wishitem.price}} </td>
-          <td> 
-            <button type="button" class="close" onClick="deleteNote({{ wishitem.id }})">
+          <td>
+            <button type="button" class="close" onClick="deleteWishItem({{ wishitem.id }})">
             <span aria-hidden="true">&times;</span>
             </button>
           </td>
@@ -49,6 +56,5 @@
       {% endfor %}
       </table>
   </ul>
-  
   {% endblock %}
   
