@@ -8,14 +8,14 @@ function deleteWishItem(wishItemId)
   });
 }
 
-function unhookWishItem(wishItemId) 
+function toggleWishItem(wishItemId, unhooked, purchased, nextUrl)
 {
-  fetch("/unhook-wishitem", {
+  fetch("/toggle-wishitem", {
     method: "POST",
-    body: JSON.stringify({ wishItemId: wishItemId }),
-  }).then((_res) => {
-    window.location.href = "/unhooked-list";
-  });
+    body: JSON.stringify({ wishItemId: wishItemId, unhooked: unhooked, purchased: purchased }),
+    }).then((_res) => {
+      window.location.href = nextUrl;
+    });
 }
 
 function deleteNote(noteId) 

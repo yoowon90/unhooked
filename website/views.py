@@ -9,7 +9,7 @@ import os
 
 views = Blueprint('views', __name__)  # define blueprint
 
-
+# login
 @views.route('/', methods=['GET', 'POST'])  # url (homepage). run function when opening root.
 @login_required
 def home():
@@ -29,7 +29,7 @@ def home():
     # now when go to '/', render home.html
     return render_template("home.html", user=current_user)  # return html when we got root
 
-
+# notes
 @views.route('/delete-note', methods=['POST'])
 def delete_note():  
     note = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
@@ -44,7 +44,7 @@ def delete_note():
     print(f"jsonify: {jsonify({})}")
     return jsonify({})
 
-
+# test
 @views.route('/test', methods=['GET', 'POST'])
 def test():
     if request.method == 'POST': 
@@ -68,7 +68,7 @@ def dir_last_updated(folder):
                    for root_path, dirs, files in os.walk(folder)
                    for f in files))
 
-
+# wishlist
 @views.route('/my-wishlist', methods=['GET', 'POST'])
 def wishlist():
     if request.method == 'POST': 
@@ -149,33 +149,24 @@ def add_wishitem():
     # now when go to '/', render home.html
     return render_template("wishitem.html", user=current_user)  # return html when we got root
 
-@views.route('/delete-wishitem', methods=['POST'])
-def delete_wishitem():  
-    wishitem = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
-    wishItemId = wishitem['wishItemId']
-    print(f"wishItemId:{wishItemId}")
-    wishitem = WishItem.query.get(wishItemId)
-    if wishitem:
-        print("there is a wishitem")
-        if wishitem.user_id == current_user.id:
-            db.session.delete(wishitem)
-            db.session.commit()
-    print(f"jsonify: {jsonify({})}")
-    return jsonify({})
 
-@views.route('/unhook-wishitem', methods=['POST'])
-def unhook_wishitem():
-    wishitem = json.loads(request.data)
-    wishItemId = wishitem['wishItemId']
-    print(f"wishItemId:{wishItemId}")
+
+@views.route('/toggle-wishitem', methods=['POST'])
+def toggle_wishitem():
+    # sample data: {'wishItemId': 2, 'unhooked': False, 'purchased': False}
+    wishItemId = json.loads(request.data)['wishItemId']
+    unhooked =  json.loads(request.data)['unhooked']
+    purchased = json.loads(request.data)['purchased']
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
-        print("there is a wishitem")
         if wishitem.user_id == current_user.id:
-            # toggle unhooked
-            wishitem.unhooked = True
+            wishitem.unhooked = unhooked
+            wishitem.purchased = purchased
+            if unhooked and not purchased:
+                flash("Item unhooked!", category='success')
+            if not unhooked and purchased:
+                flash("Item purchased.", category='success')  # lol
             db.session.commit()
-    print(f"jsonify: {jsonify({})}")
     return jsonify({})
 
 
@@ -185,3 +176,8 @@ def unhooked_list():
     # now when go to '/', render home.html
     return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 
+@views.route('/purchased-list', methods=['GET', 'POST'])
+def purchased_list():
+    # render the template using name of template
+    # now when go to '/', render home.html
+    return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root

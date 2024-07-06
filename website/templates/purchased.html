@@ -1,4 +1,4 @@
-{% extends "base.html" %} {% block title %}Unhooked List{% endblock %} {% block content
+{% extends "base.html" %} {% block title %}Perchase List{% endblock %} {% block content
   %}
   <!-- below is sample style -->
    <style>
@@ -6,22 +6,32 @@
       font-style: italic;
     }
 
+    .unhook-button {
+      color: red;
+    }
+
+
    </style>
 
   <!-- this is the same as base.html and overwrite any blocks -->
-  <h1 align="center">Unhooked List</h1>
-  <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist') }}';">Go to Wish List</button>
+  <h1 align="center">Purchase List</h1>
+    <button type="button" class="btn btn-danger" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist') }}';">Go to my Wish List</button>
+    <br>
+    <br>
+    <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}';">Go to my Unhooked List</button>
   <br>
-  <br>
-  {% set totalprice = namespace(value=0.00) %}
+  {% set totalpurchasedprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
-  {% if wishitem.unhooked and not wishitem.unhooked %}
-  {% set totalprice.value = totalprice.value + wishitem.price|float %}
+  {% if not wishitem.unhooked and wishitem.purchased %}
+  {% endif %}
+  {% if not wishitem.unhooked and wishitem.purchased %}
+  {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.price|float %}
   {% endif %}
   {% endfor %}
-  {% set totalprice.value =  totalprice.value|round(2) %}
-  <b> Total saved: <font color="#ff0000">${{ totalprice.value }} </font> </b>
-
+  {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
+  <div style="display: flex; justify-content: space-between;">
+    <p> <b> Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} </b></font></p>
+  </div>
   <ul class="list-group list-group-flush" id="wishItems">
     <table class="table table-sm">
       <thead>
@@ -39,7 +49,7 @@
       <li class="list-group-item">
       {% set count = namespace(value=0) %}
       {% for wishitem in user.wishitems %}
-      {% if wishitem.unhooked and not wishitem.purchased %}
+      {% if not wishitem.unhooked and wishitem.purchased %}
       {% set count.value = count.value + 1 %}
         <tr>
           <th scope="row">{{count.value}}</th>
@@ -49,16 +59,12 @@
           <td> {{wishitem.name}} </td>
           <td> {{wishitem.link}} </td>
           <td> {{wishitem.price}} </td>
-          <td>
-            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list' )">
-            <span aria-hidden="true">Re-add to Wishlist</span>
-            </button>
-          </td>
         </tr>
       {% endif %}
       </li>
       {% endfor %}
       </table>
-  </ul>
-  {% endblock %}
+    </ul>
+  <br>
+ {% endblock %} 
   
