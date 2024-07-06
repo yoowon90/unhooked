@@ -19,6 +19,8 @@ class WishItem(db.Model):
     price = db.Column(db.String(10000))
     link = db.Column(db.String(10000))
     heightened_interest = db.Column(db.String(10000), default=False)
+    unhooked = db.Column(db.Boolean, default=False)
+    # ineligible = db.Column(db.Boolean, default=True)
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)

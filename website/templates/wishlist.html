@@ -6,19 +6,25 @@
       font-style: italic;
     }
 
+    .unhook-button {
+      color: red;
+    }
+
    </style>
 
   <!-- this is the same as base.html and overwrite any blocks -->
   <h1 align="center">Wish List</h1>
-  <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.add_wishitem') }}';">Add more items</button>
+  <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}';">Go to my Unhooked list</button>
   <br>
   <br>
   {% set totalprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
+  {% if not wishitem.unhooked %}
   {% set totalprice.value = totalprice.value + wishitem.price|float %}
+  {% endif %}
   {% endfor %}
   {% set totalprice.value =  totalprice.value|round(2) %}
-  <b> Total value of items: <font color="#ff0000">{{ totalprice.value }} </font> </b>
+  <b> Total value of items: <font color="#ff0000">${{ totalprice.value }} </font> </b>
 
   <ul class="list-group list-group-flush" id="wishItems">
     <table class="table table-sm">
@@ -37,6 +43,7 @@
       <li class="list-group-item">
       {% set count = namespace(value=0) %}
       {% for wishitem in user.wishitems %}
+      {% if not wishitem.unhooked %}
       {% set count.value = count.value + 1 %}
         <tr>
           <th scope="row">{{count.value}}</th>
@@ -47,14 +54,70 @@
           <td> {{wishitem.link}} </td>
           <td> {{wishitem.price}} </td>
           <td>
-            <button type="button" class="close" onClick="deleteWishItem({{ wishitem.id }})">
-            <span aria-hidden="true">&times;</span>
+            <button type="button" class="close" onClick="unhookWishItem({{ wishitem.id }})">
+            <span id='unhook-button' style="color: blue; font-size: 13.5pt;" aria-hidden="true"> unhook </span>
             </button>
           </td>
         </tr>
+      {% endif %}
       </li>
       {% endfor %}
       </table>
-  </ul>
-  {% endblock %}
+    </ul>
+  <br>
+  <hr width="50%" color="green" size="50px" />
+  <h1 align="center">Add New Item</h1>
+ <form method="POST">
+   <!-- sample: Madewell, Dress, Linen Blue, madewell.com, 129.12-->
+   <table align="center">
+     <tbody>
+       <tr>
+         <td>
+           Enter Brand:
+         </td>
+         <td>
+           <input type="text" id="brand" name="brand" size=60 placeholder="Rouje">
+         </td>
+       </tr>
+      <tr>
+       <td>
+         Enter Category:
+       </td>
+       <td>
+         <input type="text" id="category" name="category" size=60 placeholder="Dress">
+       </td>
+      </tr>
+      <tr>
+       <td>
+         Enter Link:
+       </td>
+       <td>
+         <input type="text" id="link" name="link" size=60 placeholder="https://us.rouje.com/products/cyrielle-fleurdepechepeche">
+       </td>
+      </tr>
+      <tr>
+       <td>
+         Enter Name:
+       </td>
+       <td>
+         <input type="text" id="name" name="name" size=60 placeholder="CYRIELLE DRESS">
+       </td>
+      </tr>
+      <tr>
+       <td>
+         Enter Price:
+       </td>
+       <td>
+         <input type="text" id="price" name="price" size=60 placeholder="212.00">
+       </td>
+      </tr>
+     </tbody>
+   </table>
+   <br />
+   <div align="center">
+    <button type="submit" class="btn btn-primary">Add Item</button>
+   </div>
+   
+ </form>
+ {% endblock %} 
   
