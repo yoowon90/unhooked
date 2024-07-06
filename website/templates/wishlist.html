@@ -18,13 +18,21 @@
   <br>
   <br>
   {% set totalprice = namespace(value=0.00) %}
+  {% set totalpurchasedprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
-  {% if not wishitem.unhooked %}
+  {% if not wishitem.unhooked and not wishitem.purchased %}
   {% set totalprice.value = totalprice.value + wishitem.price|float %}
+  {% endif %}
+  {% if not wishitem.unhooked and wishitem.purchased %}
+  {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.price|float %}
   {% endif %}
   {% endfor %}
   {% set totalprice.value =  totalprice.value|round(2) %}
-  <b> Total value of items: <font color="#ff0000">${{ totalprice.value }} </font> </b>
+  {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
+  <div style="display: flex; justify-content: space-between;">
+    <p> <b> Total value of items: <font color="#ff0000">${{ totalprice.value }} </b> </font></p>
+    <p> <b> Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} </b></font></p>
+  </div>
 
   <ul class="list-group list-group-flush" id="wishItems">
     <table class="table table-sm">
@@ -43,7 +51,7 @@
       <li class="list-group-item">
       {% set count = namespace(value=0) %}
       {% for wishitem in user.wishitems %}
-      {% if not wishitem.unhooked %}
+      {% if not wishitem.unhooked and not wishitem.purchased %}
       {% set count.value = count.value + 1 %}
         <tr>
           <th scope="row">{{count.value}}</th>
@@ -54,9 +62,14 @@
           <td> {{wishitem.link}} </td>
           <td> {{wishitem.price}} </td>
           <td>
-            <button type="button" class="close" onClick="unhookWishItem({{ wishitem.id }})">
+            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist')">
             <span id='unhook-button' style="color: blue; font-size: 13.5pt;" aria-hidden="true"> unhook </span>
             </button>
+          </td>
+          <td>
+          <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, true, '/purchased-list')">
+          <span id='purchase-button' style="color: red; font-size: 13.5pt;" aria-hidden="true"> purchase </span>
+          </button>
           </td>
         </tr>
       {% endif %}
@@ -117,7 +130,6 @@
    <div align="center">
     <button type="submit" class="btn btn-primary">Add Item</button>
    </div>
-   
  </form>
  {% endblock %} 
   

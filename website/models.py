@@ -9,6 +9,7 @@ class Note(db.Model):
     date = db.Column(db.DateTime(timezone=True), default=func.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # allow associate (relationship) note to user
 
+
 class WishItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.DateTime(timezone=True), default=func.now())
@@ -20,13 +21,17 @@ class WishItem(db.Model):
     link = db.Column(db.String(10000))
     heightened_interest = db.Column(db.String(10000), default=False)
     unhooked = db.Column(db.Boolean, default=False)
-    # ineligible = db.Column(db.Boolean, default=True)
+    ineligible = db.Column(db.Boolean, default=True)
+    purchased = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.String(10000))  # free note to store promo code, sale, etc
+
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True)
     password = db.Column(db.String(150))
     first_name = db.Column(db.String(150))
+    zipcode = db.Column(db.String(5))
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
 
