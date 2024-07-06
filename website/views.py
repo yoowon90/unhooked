@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from .models import Note, WishItem
 from . import db
 import json
+import os
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -33,13 +34,35 @@ def home():
 def delete_note():  
     note = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
     noteId = note['noteId']
+    print(f"noteId: {noteId}")
     note = Note.query.get(noteId)
     if note:
+        print("there is a note")
         if note.user_id == current_user.id:
             db.session.delete(note)
             db.session.commit()
-
+    print(f"jsonify: {jsonify({})}")
     return jsonify({})
+
+@views.route('/delete-wishitem', methods=['POST'])
+def delete_wishitem():  
+    wishitem = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
+    wishItemId = wishitem['wishItemId']
+    print(f"wishItemId:{wishItemId}")
+    wishitem = WishItem.query.get(wishItemId)
+    if wishitem:
+        print("there is a wishitem")
+        if wishitem.user_id == current_user.id:
+            db.session.delete(wishitem)
+            db.session.commit()
+    print(f"jsonify: {jsonify({})}")
+    return jsonify({})
+
+def dir_last_updated(folder):
+    # https://stackoverflow.com/questions/41144565/flask-does-not-see-change-in-js-file
+    return str(max(os.path.getmtime(os.path.join(root_path, f))
+                   for root_path, dirs, files in os.walk(folder)
+                   for f in files))
 
 
 @views.route('/my-wishlist', methods=['GET', 'POST'])
@@ -79,7 +102,7 @@ def wishlist():
 
     # render the template using name of template
     # now when go to '/', render home.html
-    return render_template("wishlist.html", user=current_user)  # return html when we got root
+    return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 
 @views.route('/test', methods=['GET', 'POST'])
 def test():
