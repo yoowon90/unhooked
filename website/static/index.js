@@ -8,6 +8,16 @@ function deleteWishItem(wishItemId)
   });
 }
 
+function unhookWishItem(wishItemId) 
+{
+  fetch("/unhook-wishitem", {
+    method: "POST",
+    body: JSON.stringify({ wishItemId: wishItemId }),
+  }).then((_res) => {
+    window.location.href = "/unhooked-list";
+  });
+}
+
 function deleteNote(noteId) 
 {
   fetch("/delete-note", {

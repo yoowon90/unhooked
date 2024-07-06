@@ -44,19 +44,23 @@ def delete_note():
     print(f"jsonify: {jsonify({})}")
     return jsonify({})
 
-@views.route('/delete-wishitem', methods=['POST'])
-def delete_wishitem():  
-    wishitem = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
-    wishItemId = wishitem['wishItemId']
-    print(f"wishItemId:{wishItemId}")
-    wishitem = WishItem.query.get(wishItemId)
-    if wishitem:
-        print("there is a wishitem")
-        if wishitem.user_id == current_user.id:
-            db.session.delete(wishitem)
+
+@views.route('/test', methods=['GET', 'POST'])
+def test():
+    if request.method == 'POST': 
+        wishitem = request.form.get('wishitem')  #Gets the wish item from the HTML 
+
+        if len(wishitem) < 1:
+            flash('Item is too short!', category='error') 
+        else:
+            new_item = WishItem(data=wishitem, user_id=current_user.id)  #providing the schema for the note 
+            db.session.add(new_item) #adding the note to the database 
             db.session.commit()
-    print(f"jsonify: {jsonify({})}")
-    return jsonify({})
+            flash('Item added to Wish List!', category='success')
+
+    # render the template using name of template
+    # now when go to '/', render home.html
+    return render_template("test.html", user=current_user)  # return html when we got root
 
 def dir_last_updated(folder):
     # https://stackoverflow.com/questions/41144565/flask-does-not-see-change-in-js-file
@@ -74,12 +78,15 @@ def wishlist():
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
 
-        if len(wish_item_name) < 1:
-            flash('Item is too short!', category='error') 
-        if type(foo) != float or type(foo) != int:
+        try:
+            wish_item_price = float(wish_item_price)
+            if wish_item_price < 0:
+                flash('Price cannot be below zero!', category='error')
+        except:
             flash('Price must be a number!', category='error')
-        if float(wish_item_price) < 0:
-            flash('Price cannot be below zero!', category='error')
+
+        if len(wish_item_name) < 1:
+            flash('Item is too short!', category='error')
         if len(wish_item_category) < 1:
             flash('Speciy a category!', category='error')
         if len(wish_item_brand) < 1:
@@ -104,22 +111,6 @@ def wishlist():
     # now when go to '/', render home.html
     return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 
-@views.route('/test', methods=['GET', 'POST'])
-def test():
-    if request.method == 'POST': 
-        wishitem = request.form.get('wishitem')  #Gets the wish item from the HTML 
-
-        if len(wishitem) < 1:
-            flash('Item is too short!', category='error') 
-        else:
-            new_item = WishItem(data=wishitem, user_id=current_user.id)  #providing the schema for the note 
-            db.session.add(new_item) #adding the note to the database 
-            db.session.commit()
-            flash('Item added to Wish List!', category='success')
-
-    # render the template using name of template
-    # now when go to '/', render home.html
-    return render_template("test.html", user=current_user)  # return html when we got root
 
 @views.route('/add-wishitem', methods=['GET', 'POST'])
 def add_wishitem():
@@ -156,4 +147,41 @@ def add_wishitem():
 
     # render the template using name of template
     # now when go to '/', render home.html
-    return render_template("add_wishitem.html", user=current_user)  # return html when we got root
+    return render_template("wishitem.html", user=current_user)  # return html when we got root
+
+@views.route('/delete-wishitem', methods=['POST'])
+def delete_wishitem():  
+    wishitem = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
+    wishItemId = wishitem['wishItemId']
+    print(f"wishItemId:{wishItemId}")
+    wishitem = WishItem.query.get(wishItemId)
+    if wishitem:
+        print("there is a wishitem")
+        if wishitem.user_id == current_user.id:
+            db.session.delete(wishitem)
+            db.session.commit()
+    print(f"jsonify: {jsonify({})}")
+    return jsonify({})
+
+@views.route('/unhook-wishitem', methods=['POST'])
+def unhook_wishitem():
+    wishitem = json.loads(request.data)
+    wishItemId = wishitem['wishItemId']
+    print(f"wishItemId:{wishItemId}")
+    wishitem = WishItem.query.get(wishItemId)
+    if wishitem:
+        print("there is a wishitem")
+        if wishitem.user_id == current_user.id:
+            # toggle unhooked
+            wishitem.unhooked = True
+            db.session.commit()
+    print(f"jsonify: {jsonify({})}")
+    return jsonify({})
+
+
+@views.route('/unhooked-list', methods=['GET', 'POST'])
+def unhooked_list():
+    # render the template using name of template
+    # now when go to '/', render home.html
+    return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
+
