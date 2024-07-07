@@ -30,14 +30,14 @@ pip install -r requirements.txt
 
 For `main`:
 ```bash
-FLASK_ENV=main python main.py
+FLASK_ENV=production python main.py
 ```
 For `develop`:
 ```bash
-FLASK_ENV=develop python main.py
+FLASK_ENV=development python main.py
 ```
 ## Viewing The App
 
-For `main`: Go to `http://127.0.0.1:5000`
+For `production`: Go to `http://127.0.0.1:5000`
 
-For `develop`: Go to `http://127.0.0.1:5001`
+For `development`: Go to `http://127.0.0.1:5001`
