@@ -41,3 +41,7 @@ FLASK_ENV=development python main.py
 For `production`: Go to `http://127.0.0.1:5000`
 
 For `development`: Go to `http://127.0.0.1:5001`
+
+## To run production code in background
+
+`sudo nohup FLASK_ENV=production python main.py > log.txt 2>&1`
