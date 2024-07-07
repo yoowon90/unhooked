@@ -28,11 +28,11 @@ pip install -r requirements.txt
 
 ## Running The App
 
-For `main`:
+For `production`:
 ```bash
 FLASK_ENV=production python main.py
 ```
-For `develop`:
+For `development`:
 ```bash
 FLASK_ENV=development python main.py
 ```
