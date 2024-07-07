@@ -34,10 +34,10 @@ FLASK_ENV=main python main.py
 ```
 For `develop`:
 ```bash
-FLASK_EN
-V=develop python main.py
+FLASK_ENV=develop python main.py
 ```
 ## Viewing The App
 
 For `main`: Go to `http://127.0.0.1:5000`
+
 For `develop`: Go to `http://127.0.0.1:5001`
