@@ -21,10 +21,10 @@
   {% set totalpurchasedprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
   {% if not wishitem.unhooked and not wishitem.purchased %}
-  {% set totalprice.value = totalprice.value + wishitem.price|float %}
+  {% set totalprice.value = totalprice.value + wishitem.taxed_price %}
   {% endif %}
   {% if not wishitem.unhooked and wishitem.purchased %}
-  {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.price|float %}
+  {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.taxed_price %}
   {% endif %}
   {% endfor %}
   {% set totalprice.value =  totalprice.value|round(2) %}
@@ -44,7 +44,7 @@
           <th scope="col">Category</th>
           <th scope="col">Name</th>
           <th scope="col">Link</th>
-          <th scope="col">Price</th>
+          <th scope="col">Price (+tax)</th>
 
         </tr>
       </thead>
@@ -60,7 +60,7 @@
           <td> {{wishitem.category}} </td>
           <td> {{wishitem.name}} </td>
           <td> {{wishitem.link}} </td>
-          <td> {{wishitem.price}} </td>
+          <td> {{wishitem.taxed_price|round(2)}} </td>
           <td>
             <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist')">
             <span id='unhook-button' style="color: blue; font-size: 13.5pt;" aria-hidden="true"> unhook </span>
@@ -102,14 +102,6 @@
       </tr>
       <tr>
        <td>
-         Enter Link:
-       </td>
-       <td>
-         <input type="text" id="link" name="link" size=60 placeholder="https://us.rouje.com/products/cyrielle-fleurdepechepeche">
-       </td>
-      </tr>
-      <tr>
-       <td>
          Enter Name:
        </td>
        <td>
@@ -124,6 +116,14 @@
          <input type="text" id="price" name="price" size=60 placeholder="212.00">
        </td>
       </tr>
+      <tr>
+        <td>
+          Enter Link:
+        </td>
+        <td>
+          <input type="text" id="link" name="link" size=60 placeholder="https://us.rouje.com/products/cyrielle-fleurdepechepeche">
+        </td>
+       </tr>
      </tbody>
    </table>
    <br />
