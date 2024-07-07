@@ -8,6 +8,16 @@ function toggleWishItem(wishItemId, unhooked, purchased, nextUrl)
     });
 }
 
+function deleteItem(wishItemId, nextUrl) 
+{
+  fetch("/delete-item", {
+    method: "POST",
+    body: JSON.stringify({ wishItemId: wishItemId }),
+  }).then((_res) => {
+    window.location.href = nextUrl;
+  });
+}
+
 function deleteNote(noteId) 
 {
   fetch("/delete-note", {
