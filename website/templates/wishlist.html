@@ -11,11 +11,12 @@
     }
 
    </style>
-
   <!-- this is the same as base.html and overwrite any blocks -->
-  <h1 align="center">Wish List</h1>
-  <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}';">Go to my Unhooked list</button>
+  <h2 align="center">&#128155; Wish List &#128155;</h2>
+  <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}';">Go to my Unhooked List</button>
   <br>
+  <br>
+  <button type="button" class="btn btn-info" style="float: right;" onclick="window.location.href='{{ url_for( 'views.purchased_list') }}';">Go to my Purchase List</button>
   <br>
   {% set totalprice = namespace(value=0.00) %}
   {% set totalpurchasedprice = namespace(value=0.00) %}
@@ -30,8 +31,7 @@
   {% set totalprice.value =  totalprice.value|round(2) %}
   {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
   <div style="display: flex; justify-content: space-between;">
-    <p> <b> Total value of items: <font color="#ff0000">${{ totalprice.value }} </b> </font></p>
-    <p> <b> Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} </b></font></p>
+    <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value }} </b> </font>&nbsp; &#128717;<b> Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} </b></font></p>
   </div>
 
   <ul class="list-group list-group-flush" id="wishItems">
@@ -59,7 +59,7 @@
           <td> {{wishitem.brand}} </td>
           <td> {{wishitem.category}} </td>
           <td> {{wishitem.name}} </td>
-          <td onClick="location.href='{{ wishitem.link }}'"> 
+          <td onClick="window.open('{{ wishitem.link }}', '_blank')">
             <span style="color: blue; text-decoration: underline; font-size:11pt"> Click here</span>
           </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
@@ -73,15 +73,23 @@
           <span id='purchase-button' style="color: red; font-size: 13.5pt;" aria-hidden="true"> purchase </span>
           </button>
           </td>
+          <td>
+          <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/my-wishlist')">
+            <span aria-hidden="true">&times;</span>
+          </td>
+          </button>
         </tr>
       {% endif %}
       </li>
       {% endfor %}
       </table>
     </ul>
+  <!--br>
+  <hr width="50%" color="green" size="50px" />
+  <img src="./website/static/" alt="Italian Trulli"-->
   <br>
   <hr width="50%" color="green" size="50px" />
-  <h1 align="center">Add New Item</h1>
+  <h2 align="center">&#128156; Add New Item &#128156;</h2>
  <form method="POST">
    <!-- sample: Madewell, Dress, Linen Blue, madewell.com, 129.12-->
    <table align="center">
