@@ -4,6 +4,8 @@ from .models import Note, WishItem
 from . import db
 import json
 import os
+import matplotlib.pyplot as plt
+import numpy as np
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -35,6 +37,20 @@ def home():
     # render the template using name of template
     # now when go to '/', render home.html
     return render_template("home.html", user=current_user)  # return html when we got root
+
+@views.route('/delete-item', methods=['POST'])
+def delete_item():  
+    wishitem = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
+    wishitemId = wishitem['wishItemId']
+    print(f"wishitemId: {wishitemId}")
+    wishitem = WishItem.query.get(wishitemId)
+    if wishitem:
+        print("there is a wishitem")
+        if wishitem.user_id == current_user.id:
+            db.session.delete(wishitem)
+            db.session.commit()
+    print(f"jsonify: {jsonify({})}")
+    return jsonify({})
 
 # notes
 @views.route('/delete-note', methods=['POST'])
@@ -116,6 +132,22 @@ def wishlist():
             db.session.commit()
             flash('Item added to Wish List!', category='success')
 
+    # create pie chart for brand
+    elif request.method == 'GET': 
+        data = dict()  # brand data
+        for wishitem in current_user.wishitems:
+            brand = wishitem.brand
+            if brand in data.keys():
+                data[brand] += 1
+            else:
+                data[brand] = 1
+        
+        labels = list(data.keys())
+        values = list(data.values())
+        # pie = plt.pie(values, labels=labels)
+        #  plt.show()
+        # pie.savefig('./website/img/brand-pie.png')
+
     # render the template using name of template
     # now when go to '/', render home.html
     return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
@@ -128,24 +160,28 @@ def toggle_wishitem():
     unhooked =  json.loads(request.data)['unhooked']
     purchased = json.loads(request.data)['purchased']
     wishitem = WishItem.query.get(wishItemId)
+    print(f"wishitem: {wishitem}")
     if wishitem:
         if wishitem.user_id == current_user.id:
             wishitem.unhooked = unhooked
             wishitem.purchased = purchased
             if unhooked and not purchased:
                 flash("Item unhooked!", category='success')
-            if not unhooked and purchased:
-                flash("Item purchased.", category='success')  # lol
+            elif not unhooked and purchased:
+                flash("Item purchased.", category='success')
+            elif not unhooked and not purchased:
+                flash("Item added to wish list", category='success')
             db.session.commit()
     return jsonify({})
 
-
+# unhooked-list
 @views.route('/unhooked-list', methods=['GET', 'POST'])
 def unhooked_list():
     # render the template using name of template
     # now when go to '/', render home.html
     return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 
+# purchased-list
 @views.route('/purchased-list', methods=['GET', 'POST'])
 def purchased_list():
     # render the template using name of template
