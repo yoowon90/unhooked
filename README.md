@@ -28,10 +28,16 @@ pip install -r requirements.txt
 
 ## Running The App
 
+For `main`:
 ```bash
-python main.py
+FLASK_ENV=main python main.py
 ```
-
+For `develop`:
+```bash
+FLASK_EN
+V=develop python main.py
+```
 ## Viewing The App
 
-Go to `http://127.0.0.1:5000`
+For `main`: Go to `http://127.0.0.1:5000`
+For `develop`: Go to `http://127.0.0.1:5001`
