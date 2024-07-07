@@ -1,17 +1,26 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from os import path
 from flask_login import LoginManager
+from flask_migrate import Migrate
+from config import ProductionConfig, DevelopmentConfig
 
-db = SQLAlchemy()
-DB_NAME = "database.db"
-
+db = SQLAlchemy()  # not sure if this is right if want to use migrate
 
 def create_app():
-    app = Flask(__name__)  # initialize the Flask app
-    app.config['SECRET_KEY'] = 'hjshjhdjah kjshkjdhjs'  # encrypt the cookie/session data in our website
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_NAME}'  # 
+    # initialize the Flask app
+    app = Flask(__name__)
+    app.config.from_object('config')  # from config.py
+
+    # Load configuration based on FLASK_ENV
+    print(f'flask env: {os.getenv('FLASK_ENV')}')
+    if os.getenv('FLASK_ENV') == 'production':
+        app.config.from_object(ProductionConfig)
+    elif os.getenv('FLASK_ENV') == 'development':
+        app.config.from_object(DevelopmentConfig)
+        
     db.init_app(app)
+    migrate = Migrate(app, db)  # Initialize Flask-Migrate
 
     from .views import views
     from .auth import auth
@@ -37,7 +46,7 @@ def create_app():
 
 
 def create_database(app):
-    if not path.exists('website/' + DB_NAME):
+    if not os.path.exists('website/' + DB_NAME):
         with app.app_context():  # https://stackoverflow.com/questions/44941757/sqlalchemy-exc-operationalerror-sqlite3-operationalerror-no-such-table
             db.create_all()
         print('Created Database!')
