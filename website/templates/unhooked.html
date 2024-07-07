@@ -50,8 +50,8 @@
           <td> {{wishitem.link}} </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
           <td>
-            <button type="button" class="close" onClic k="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list' )">
-            <span aria-hidden="true" style="font-size: 12pt; color: #ff00bbdb">Re-add to Wishlist</span>
+            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list')">
+            <span id='readd-button' style="color: #ff00bbdb; font-size: 12pt" aria-hidden="true">Re-add to Wishlist</span>
             </button>
           </td>
         </tr>
