@@ -15,8 +15,8 @@
   <br>
   {% set totalprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
-  {% if wishitem.unhooked and not wishitem.unhooked %}
-  {% set totalprice.value = totalprice.value + wishitem.price|float %}
+  {% if wishitem.unhooked and not wishitem.purchased %}
+  {% set totalprice.value = totalprice.value + wishitem.taxed_price %}
   {% endif %}
   {% endfor %}
   {% set totalprice.value =  totalprice.value|round(2) %}
@@ -48,10 +48,10 @@
           <td> {{wishitem.category}} </td>
           <td> {{wishitem.name}} </td>
           <td> {{wishitem.link}} </td>
-          <td> {{wishitem.price}} </td>
+          <td> {{wishitem.taxed_price|round(2)}} </td>
           <td>
-            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list' )">
-            <span aria-hidden="true">Re-add to Wishlist</span>
+            <button type="button" class="close" onClic k="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list' )">
+            <span aria-hidden="true" style="font-size: 12pt; color: #ff00bbdb">Re-add to Wishlist</span>
             </button>
           </td>
         </tr>

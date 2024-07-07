@@ -17,13 +17,14 @@ class WishItem(db.Model):
     category = db.Column(db.String(10000))  # dress, bag, skirt, jeans, non-denim pants, shoes, accessories, etc.
     brand = db.Column(db.String(10000))
     name = db.Column(db.String(10000))
-    price = db.Column(db.String(10000))
+    price = db.Column(db.Float(1000000.00))
+    taxed_price = db.Column(db.Float(1000000.00))
     link = db.Column(db.String(10000))
     heightened_interest = db.Column(db.String(10000), default=False)
     unhooked = db.Column(db.Boolean, default=False)
     ineligible = db.Column(db.Boolean, default=True)
     purchased = db.Column(db.Boolean, default=False)
-    notes = db.Column(db.String(10000))  # free note to store promo code, sale, etc
+    notes = db.Column(db.String(10000), default="")  # free note to store promo code, sale, etc
 
 
 class User(db.Model, UserMixin):

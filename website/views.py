@@ -8,6 +8,13 @@ import os
 # store standard routes (url defined), anything that users can navitage to.
 
 views = Blueprint('views', __name__)  # define blueprint
+TAX = {'11217': 0.0875}
+# manhattan, brooklyn, queens, bronx, staten island
+NYC = ['10001', '10011', '11019', '10023', '10128',
+                '11201', '11211', '11217', '11231', '11238',
+                '11101', '11354', '11375', '11432', '11691', 
+                '10451', '10452', '10463', '10467', '10469',
+                '10301', '10304', '10306', '10314']
 
 # login
 @views.route('/', methods=['GET', 'POST'])  # url (homepage). run function when opening root.
@@ -16,8 +23,8 @@ def home():
     if request.method == 'POST': 
         # TODO: edit home.html to say "Welcome!" such as via <p> Welcome </p>
         note = request.form.get('note')#Gets the note from the HTML 
-
-        if len(note) < 1:
+    
+        if note is None or len(note) < 1:
             flash('Note is too short!', category='error') 
         else:
             new_note = Note(data=note, user_id=current_user.id)  #providing the schema for the note 
@@ -73,13 +80,11 @@ def dir_last_updated(folder):
 def wishlist():
     if request.method == 'POST': 
         wish_item_name = request.form.get('name')#Gets the wish item from the HTML 
-        wish_item_price = request.form.get('price')#Gets the wish item from the HTML  
+        wish_item_price = float(request.form.get('price'))#Gets the wish item from the HTML  
         wish_item_category = request.form.get('category')#Gets the wish item from the HTML
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
-
         try:
-            wish_item_price = float(wish_item_price)
             if wish_item_price < 0:
                 flash('Price cannot be below zero!', category='error')
         except:
@@ -97,11 +102,15 @@ def wishlist():
             flash('Invalid link!', category='error')
                     
         else:
+            # extra tax rules for nyc
+            zipcode = current_user.zipcode
+            tax = 0 if (zipcode in NYC and (wish_item_price < 110.00)) else TAX.get(zipcode, 0)
             new_item = WishItem(user_id=current_user.id,
-                                name=wish_item_name, 
-                                price=wish_item_price,
                                 category=wish_item_category,
                                 brand=wish_item_brand,
+                                name=wish_item_name, 
+                                price=wish_item_price,
+                                taxed_price=wish_item_price*(1+tax),
                                 link=wish_item_link)  #providing the schema for the note 
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
@@ -110,45 +119,6 @@ def wishlist():
     # render the template using name of template
     # now when go to '/', render home.html
     return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
-
-
-@views.route('/add-wishitem', methods=['GET', 'POST'])
-def add_wishitem():
-    if request.method == 'POST': 
-        wish_item_name = request.form.get('name')#Gets the wish item from the HTML 
-        wish_item_price = request.form.get('price')#Gets the wish item from the HTML  
-        wish_item_category = request.form.get('category')#Gets the wish item from the HTML
-        wish_item_brand = request.form.get('brand')
-        wish_item_link = request.form.get('link')
-
-        if len(wish_item_name) < 1:
-            flash('Item is too short!', category='error') 
-        if float(wish_item_price) < 0:
-            flash('Price cannot be below zero!', category='error')
-        if len(wish_item_category) < 1:
-            flash('Speciy a category!', category='error')
-        if len(wish_item_brand) < 1:
-            flash('Specify a brand!', category='error')
-        if (len(wish_item_link) < 5) or not (('.com' in wish_item_link.lower()) 
-                                    or ('.org' in wish_item_link.lower()) 
-                                    or ('.net' in wish_item_link.lower())):
-            flash('Invalid link!', category='error')
-                    
-        else:
-            new_item = WishItem(user_id=current_user.id,
-                                name=wish_item_name, 
-                                price=wish_item_price,
-                                category=wish_item_category,
-                                brand=wish_item_brand,
-                                link=wish_item_link)  #providing the schema for the note 
-            db.session.add(new_item) #adding the note to the database 
-            db.session.commit()
-            flash('Item added to Wish List!', category='success')
-
-    # render the template using name of template
-    # now when go to '/', render home.html
-    return render_template("wishitem.html", user=current_user)  # return html when we got root
-
 
 
 @views.route('/toggle-wishitem', methods=['POST'])

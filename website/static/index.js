@@ -1,13 +1,3 @@
-function deleteWishItem(wishItemId) 
-{
-  fetch("/delete-wishitem", {
-    method: "POST",
-    body: JSON.stringify({ wishItemId: wishItemId }),
-  }).then((_res) => {
-    window.location.href = "/my-wishlist";
-  });
-}
-
 function toggleWishItem(wishItemId, unhooked, purchased, nextUrl)
 {
   fetch("/toggle-wishitem", {
