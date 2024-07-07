@@ -9,9 +9,11 @@
    </style>
 
   <!-- this is the same as base.html and overwrite any blocks -->
-  <h1 align="center">Unhooked List</h1>
-  <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist') }}';">Go to Wish List</button>
+  <h2 align="center">&#129653; Unhooked List &#129653;</h2>
+  <button type="button" class="btn btn-warning" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist') }}';">Go to Wish List</button>
   <br>
+  <br>
+  <button type="button" class="btn btn-info" style="float: right;" onclick="window.location.href='{{ url_for( 'views.purchased_list') }}';">Go to Purchase List</button>
   <br>
   {% set totalprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
@@ -20,7 +22,7 @@
   {% endif %}
   {% endfor %}
   {% set totalprice.value =  totalprice.value|round(2) %}
-  <b> Total saved: <font color="#ff0000">${{ totalprice.value }} </font> </b>
+  <b> &#128091; Total saved: <font color="green">${{ totalprice.value }} </font> </b>
 
   <ul class="list-group list-group-flush" id="wishItems">
     <table class="table table-sm">
@@ -32,7 +34,7 @@
           <th scope="col">Category</th>
           <th scope="col">Name</th>
           <th scope="col">Link</th>
-          <th scope="col">Price</th>
+          <th scope="col">Price (+tax)</th>
 
         </tr>
       </thead>
@@ -47,13 +49,19 @@
           <td> {{wishitem.brand}} </td>
           <td> {{wishitem.category}} </td>
           <td> {{wishitem.name}} </td>
-          <td> {{wishitem.link}} </td>
+          <td onClick="window.open('{{ wishitem.link }}', '_blank')">
+            <span style="color: blue; text-decoration: underline; font-size:11pt"> Click here</span>
+          </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
           <td>
-            <button type="button" class="close" onClic k="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list' )">
-            <span aria-hidden="true" style="font-size: 12pt; color: #ff00bbdb">Re-add to Wishlist</span>
+            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list')">
+            <span id='readd-button' style="color: #ff00bbdb; font-size: 12pt" aria-hidden="true">Re-add to Wishlist</span>
             </button>
           </td>
+          <td>
+            <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/unhooked-list')">
+              <span aria-hidden="true">&times;</span>
+            </td>
         </tr>
       {% endif %}
       </li>

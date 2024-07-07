@@ -1,4 +1,4 @@
-{% extends "base.html" %} {% block title %}Perchase List{% endblock %} {% block content
+{% extends "base.html" %} {% block title %}Purchase List{% endblock %} {% block content
   %}
   <!-- below is sample style -->
    <style>
@@ -14,8 +14,8 @@
    </style>
 
   <!-- this is the same as base.html and overwrite any blocks -->
-  <h1 align="center">Purchase List</h1>
-    <button type="button" class="btn btn-danger" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist') }}';">Go to my Wish List</button>
+  <h2 align="center">&#128154; Purchase List &#128154;</h2>
+    <button type="button" class="btn btn-warning" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist') }}';">Go to my Wish List</button>
     <br>
     <br>
     <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}';">Go to my Unhooked List</button>
@@ -30,7 +30,7 @@
   {% endfor %}
   {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
   <div style="display: flex; justify-content: space-between;">
-    <p> <b> Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} </b></font></p>
+    <p> <b> &#128717; Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} </b></font></p>
   </div>
   <ul class="list-group list-group-flush" id="wishItems">
     <table class="table table-sm">
@@ -42,7 +42,7 @@
           <th scope="col">Category</th>
           <th scope="col">Name</th>
           <th scope="col">Link</th>
-          <th scope="col">Price</th>
+          <th scope="col">Price (+tax)</th>
 
         </tr>
       </thead>
@@ -57,8 +57,15 @@
           <td> {{wishitem.brand}} </td>
           <td> {{wishitem.category}} </td>
           <td> {{wishitem.name}} </td>
-          <td> {{wishitem.link}} </td>
+          <td onClick="window.open('{{ wishitem.link }}', '_blank')">
+            <span style="color: blue; text-decoration: underline; font-size:11pt"> Click here</span>
+          </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
+          <td>
+          <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/purchased-list')">
+            <span aria-hidden="true">&times;</span>
+          </td>
+          </button>
         </tr>
       {% endif %}
       </li>
