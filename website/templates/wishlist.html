@@ -59,7 +59,9 @@
           <td> {{wishitem.brand}} </td>
           <td> {{wishitem.category}} </td>
           <td> {{wishitem.name}} </td>
-          <td> {{wishitem.link}} </td>
+          <td onClick="location.href='{{ wishitem.link }}'"> 
+            <span style="color: blue; text-decoration: underline; font-size:11pt"> Click here</span>
+          </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
           <td>
             <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist')">

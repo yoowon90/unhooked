@@ -128,14 +128,17 @@ def toggle_wishitem():
     unhooked =  json.loads(request.data)['unhooked']
     purchased = json.loads(request.data)['purchased']
     wishitem = WishItem.query.get(wishItemId)
+    print(f"wishitem: {wishitem}")
     if wishitem:
         if wishitem.user_id == current_user.id:
             wishitem.unhooked = unhooked
             wishitem.purchased = purchased
             if unhooked and not purchased:
                 flash("Item unhooked!", category='success')
-            if not unhooked and purchased:
-                flash("Item purchased.", category='success')  # lol
+            elif not unhooked and purchased:
+                flash("Item purchased.", category='success')
+            elif not unhooked and not purchased:
+                flash("Item added to wish list", category='success')
             db.session.commit()
     return jsonify({})
 
