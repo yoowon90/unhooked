@@ -55,14 +55,14 @@ For `development`: `development flask db init --directory=migrations_dev`
 For `production`:
 ```bash
 export FLASK_APP=website
-flask db migrate -m "Description of changes" --directory=migrations_prod --multidb
-flask db upgrade --directory=migrations_prod --multidb
+FLASK_ENV=production flask db migrate -m "Description of changes" --directory=migrations_prod --multidb
+FLASK_ENV=production flask db upgrade --directory=migrations_prod --multidb
 ```
 
 For `development`:
 ```bash
 export FLASK_APP=website
-flask db migrate -m "Description of changes" --directory=migrations_dev
-flask db upgrade --directory=migrations_dev
+FLASK_ENV=development flask db migrate -m "Description of changes" --directory=migrations_dev
+FLASK_ENV=development flask db upgrade --directory=migrations_dev
 ```
 
