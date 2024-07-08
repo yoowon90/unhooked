@@ -1,0 +1,1 @@
+DELETE FROM alembic_version WHERE version_num LIKE '%b1156a7cd478%';
