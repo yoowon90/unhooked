@@ -32,6 +32,7 @@ For `production`:
 ```bash
 FLASK_ENV=production python main.py
 ```
+
 For `development`:
 ```bash
 FLASK_ENV=development python main.py
@@ -39,6 +40,7 @@ FLASK_ENV=development python main.py
 ## Viewing The App
 
 For `production`: Go to `http://127.0.0.1:5000`
+
 For `development`: Go to `http://127.0.0.1:5001`
 
 ## To run production code in background
@@ -48,6 +50,7 @@ For `development`: Go to `http://127.0.0.1:5001`
 ## To initialize migrations
 
 For `production`: `FLASK_ENV=production flask db init --directory=migrations_prod --multidb`
+
 For `development`: `development flask db init --directory=migrations_dev`
 
 
@@ -56,7 +59,7 @@ For `production`:
 ```bash
 export FLASK_APP=website
 FLASK_ENV=production flask db migrate -m "Description of changes" --directory=migrations_prod
-FLASK_ENV=production flask db upgrade --directory=migrations_prod --multidb
+FLASK_ENV=production flask db upgrade --directory=migrations_prod
 ```
 
 For `development`:
