@@ -13,12 +13,14 @@ def create_app():
     app.config.from_object('config')  # from config.py
 
     # Load configuration based on FLASK_ENV
-    print(f'flask env: {os.getenv('FLASK_ENV')}')
-    if os.getenv('FLASK_ENV') == 'production':
+    flask_env = os.getenv('FLASK_ENV')
+    print(f'Flask env: {flask_env}')
+    if flask_env == 'production':
         app.config.from_object(ProductionConfig)
-    elif os.getenv('FLASK_ENV') == 'development':
+    elif flask_env == 'development':
         app.config.from_object(DevelopmentConfig)
-        
+
+    
     db.init_app(app)
     migrate = Migrate(app, db)  # Initialize Flask-Migrate
 
@@ -44,9 +46,9 @@ def create_app():
 
     return app
 
-
 def create_database(app):
-    if not os.path.exists('website/' + DB_NAME):
+    db_name = app.config['DB_NAME']
+    if not os.path.exists('website/' + db_name):
         with app.app_context():  # https://stackoverflow.com/questions/44941757/sqlalchemy-exc-operationalerror-sqlite3-operationalerror-no-such-table
             db.create_all()
         print('Created Database!')
