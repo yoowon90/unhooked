@@ -32,6 +32,7 @@ For `production`:
 ```bash
 FLASK_ENV=production python main.py
 ```
+
 For `development`:
 ```bash
 FLASK_ENV=development python main.py
@@ -39,6 +40,7 @@ FLASK_ENV=development python main.py
 ## Viewing The App
 
 For `production`: Go to `http://127.0.0.1:5000`
+
 For `development`: Go to `http://127.0.0.1:5001`
 
 ## To run production code in background
