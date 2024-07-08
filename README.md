@@ -39,16 +39,30 @@ FLASK_ENV=development python main.py
 ## Viewing The App
 
 For `production`: Go to `http://127.0.0.1:5000`
-
 For `development`: Go to `http://127.0.0.1:5001`
 
 ## To run production code in background
 
-`sudo nohup FLASK_ENV=production python main.py > log.txt 2>&1`
+`# sudo nohup FLASK_ENV=production python main.py > log.txt 2>&1`
+
+## To initialize migrations
+
+For `production`: `FLASK_ENV=production flask db init --directory=migrations_prod --multidb`
+For `development`: `development flask db init --directory=migrations_dev`
+
 
 ## Generate and Apply Migrations
+For `production`:
 ```bash
 export FLASK_APP=website
-flask db migrate -m "your message about added columns or other changes"
-flask db upgrade
+flask db migrate -m "Description of changes" --directory=migrations_prod --multidb
+flask db upgrade --directory=migrations_prod --multidb
 ```
+
+For `development`:
+```bash
+export FLASK_APP=website
+flask db migrate -m "Description of changes" --directory=migrations_dev
+flask db upgrade --directory=migrations_dev
+```
+
