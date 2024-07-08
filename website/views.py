@@ -96,8 +96,9 @@ def dir_last_updated(folder):
 def wishlist():
     if request.method == 'POST': 
         wish_item_name = request.form.get('name')#Gets the wish item from the HTML 
-        wish_item_price = float(request.form.get('price'))#Gets the wish item from the HTML  
-        wish_item_category = request.form.get('category')#Gets the wish item from the HTML
+        wish_item_price = float(request.form.get('price'))
+        wish_item_delivery_fee = float(request.form.get('delivery-fee'))
+        wish_item_category = request.form.get('category')
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
         try:
@@ -118,6 +119,7 @@ def wishlist():
             flash('Invalid link!', category='error')
                     
         else:
+            print(f"delivery_fee: {wish_item_delivery_fee}")
             # extra tax rules for nyc
             zipcode = current_user.zipcode
             tax = 0 if (zipcode in NYC and (wish_item_price < 110.00)) else TAX.get(zipcode, 0)
@@ -127,6 +129,7 @@ def wishlist():
                                 name=wish_item_name, 
                                 price=wish_item_price,
                                 taxed_price=wish_item_price*(1+tax),
+                                delivery_fee=wish_item_brand.delivery_fee,
                                 link=wish_item_link)  #providing the schema for the note 
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
