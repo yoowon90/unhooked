@@ -62,6 +62,11 @@
           </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
           <td>
+            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/unhooked-list')">
+            <span id='unhook-button' style="color: blue; font-size: 13.5pt;" aria-hidden="true"> return </span>
+            </button>
+          </td>
+          <td>
           <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/purchased-list')">
             <span aria-hidden="true">&times;</span>
           </td>
