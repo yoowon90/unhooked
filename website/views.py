@@ -97,14 +97,14 @@ def wishlist():
     if request.method == 'POST': 
         wish_item_name = request.form.get('name')#Gets the wish item from the HTML 
         wish_item_price = float(request.form.get('price'))
-        wish_item_delivery_fee = float(request.form.get('delivery-fee'))
+        # wish_item_delivery_fee = float(request.form.get('delivery-fee'))
         wish_item_category = request.form.get('category')
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
-        if wish_item_delivery_fee < 0:
-            flash('Delivery fee cannot be below zero!', category='error')
+        # if wish_item_delivery_fee < 0:
+        #    flash('Delivery fee cannot be below zero!', category='error')
         if len(wish_item_name) < 1:
             flash('Item is too short!', category='error')
         if len(wish_item_category) < 1:
