@@ -104,11 +104,8 @@ def wishlist():
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
         # if wish_item_delivery_fee < 0:
-<<<<<<< HEAD
         #    flash('Delivery fee cannot be below zero!', category='error')
-=======
-        #     flash('Delivery fee cannot be below zero!', category='error')
->>>>>>> develop
+
         if len(wish_item_name) < 1:
             flash('Item is too short!', category='error')
         if len(wish_item_category) < 1:
