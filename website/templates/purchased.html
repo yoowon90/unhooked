@@ -15,10 +15,10 @@
 
   <!-- this is the same as base.html and overwrite any blocks -->
   <h2 align="center">&#128154; Purchase List &#128154;</h2>
-    <button type="button" class="btn btn-warning" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist') }}';">Go to my Wish List</button>
+    <button type="button" class="btn btn-warning" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist' ) }}'">Go to my Wish List</button>
     <br>
     <br>
-    <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}';">Go to my Unhooked List</button>
+    <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}'">Go to my Unhooked List</button>
   <br>
   {% set totalpurchasedprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
