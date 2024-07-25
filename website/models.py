@@ -25,6 +25,7 @@ class WishItem(db.Model):
     ineligible = db.Column(db.Boolean, default=True)
     purchased = db.Column(db.Boolean, default=False)
     delivery_fee = db.Column(db.Float(100.00), default=0.00, nullable=True)  # adding nullable to avoid migration error
+    total_price = db.Column(db.Float(100.00), default=0.00)
     notes = db.Column(db.String(10000), default="")  # free note to store promo code, sale, etc
 
 
