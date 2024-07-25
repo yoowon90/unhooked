@@ -97,14 +97,14 @@ def wishlist():
     if request.method == 'POST': 
         wish_item_name = request.form.get('name')#Gets the wish item from the HTML 
         wish_item_price = float(request.form.get('price'))
-        # wish_item_delivery_fee = float(request.form.get('delivery-fee'))
+        wish_item_delivery_fee = float(request.form.get('delivery-fee')) if request.form.get('delivery-fee') != "" else 0
         wish_item_category = request.form.get('category')
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
-        # if wish_item_delivery_fee < 0:
-        #     flash('Delivery fee cannot be below zero!', category='error')
+        if wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
+            flash('Delivery fee cannot be below zero!', category='error')
         if len(wish_item_name) < 1:
             flash('Item is too short!', category='error')
         if len(wish_item_category) < 1:
@@ -118,13 +118,15 @@ def wishlist():
             # extra tax rules for nyc
             zipcode = current_user.zipcode
             tax = 0 if (zipcode in NYC and (wish_item_price < 110.00)) else TAX.get(zipcode, 0)
+            taxed_price = wish_item_price*(1+tax)
             new_item = WishItem(user_id=current_user.id,
                                 category=wish_item_category,
                                 brand=wish_item_brand,
                                 name=wish_item_name, 
                                 price=wish_item_price,
-                                taxed_price=wish_item_price*(1+tax),
-                                # delivery_fee=wish_item_brand.delivery_fee,
+                                taxed_price=taxed_price,
+                                delivery_fee=wish_item_delivery_fee,
+                                total_price=taxed_price + wish_item_delivery_fee,  # taxed price plus delivery fee
                                 link=wish_item_link)  #providing the schema for the note 
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
