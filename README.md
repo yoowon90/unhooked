@@ -51,7 +51,7 @@ For `development`: Go to `http://127.0.0.1:5001`
 
 For `production`: `FLASK_ENV=production flask db init --directory=migrations_prod --multidb`
 
-For `development`: `development flask db init --directory=migrations_dev`
+For `development`: `FLASK_ENV=development flask db init --directory=migrations_dev`
 
 
 ## Generate and Apply Migrations
