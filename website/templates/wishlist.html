@@ -62,7 +62,7 @@
           <td onClick="window.open('{{ wishitem.link }}', '_blank')">
             <span style="color: blue; text-decoration: underline; font-size:11pt"> Click here</span>
           </td>
-          <td> {{wishitem.taxed_price|round(2)}} </td>
+          <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
           <td>
             <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist')">
             <span id='unhook-button' style="color: blue; font-size: 13.5pt;" aria-hidden="true"> unhook </span>
