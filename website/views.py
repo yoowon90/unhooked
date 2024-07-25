@@ -6,6 +6,7 @@ import json
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import datetime
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -148,10 +149,13 @@ def wishlist():
         # pie = plt.pie(values, labels=labels)
         #  plt.show()
         # pie.savefig('./website/img/brand-pie.png')
+    
+    # get current time
+    current_time = datetime.datetime.utcnow() # Get the current time
 
     # render the template using name of template
     # now when go to '/', render home.html
-    return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
+    return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'), current_time=current_time)  # return html when we got root
 
 
 @views.route('/toggle-wishitem', methods=['POST'])
@@ -188,3 +192,4 @@ def purchased_list():
     # render the template using name of template
     # now when go to '/', render home.html
     return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
+
