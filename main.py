@@ -11,9 +11,9 @@ def format_time(timedelta: datetime.timedelta):
         return f"{timedelta.days} days ago"
     
     elif timedelta.seconds > 3600:
-            return f"{timedelta.seconds // 60} hrs ago"
+        return f"{timedelta.seconds // 3600} hrs ago"
     else: 
-            return f"{timedelta.seconds} secs ago"
+        return f"{timedelta.seconds} secs ago"
             
 if __name__ == '__main__':
     app.run(debug=app.config['DEBUG'], port=app.config['FLASK_RUN_PORT']) 
