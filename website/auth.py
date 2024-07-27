@@ -11,6 +11,7 @@ auth = Blueprint('auth', __name__)  # define url
 # POST is usually a change to the DB or state of webpage
 
 @auth.route('/login', methods=['GET', 'POST'])
+@login_required
 def login():
     if request.method == 'POST':
         email = request.form.get('email')  # whenever access route, has information in request.form that was sent as form

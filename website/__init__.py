@@ -27,10 +27,15 @@ def create_app():
 
     from .views import views
     from .auth import auth
+    from .reports import reports
+    # TODO: ADD MORE
 
     app.register_blueprint(views, url_prefix='/')  # how to access all of the urls inside blueprint files
     app.register_blueprint(auth, url_prefix='/')  # '/' means no prefix
-    # TODO: register and adjust prefix whatever you want
+    app.register_blueprint(reports, url_prefix='/')  # '/' means no prefix
+    # TODO: ADD MORE
+
+
 
     from .models import User, Note, WishItem
     
