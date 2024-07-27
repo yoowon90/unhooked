@@ -27,7 +27,7 @@ class WishItem(db.Model):
     delivery_fee = db.Column(db.Float(100.00), default=0.00, nullable=True)  # adding nullable to avoid migration error
     total_price = db.Column(db.Float(100.00), default=0.00)
     notes = db.Column(db.String(10000), default="")  # free note to store promo code, sale, etc
-
+    wish_period = db.Column(db.Interval)
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -37,5 +37,3 @@ class User(db.Model, UserMixin):
     zipcode = db.Column(db.String(5))
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
-
-

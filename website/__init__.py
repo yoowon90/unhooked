@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from config import ProductionConfig, DevelopmentConfig
+import datetime
 
 db = SQLAlchemy()  # not sure if this is right if want to use migrate
 
@@ -52,3 +53,17 @@ def create_database(app):
         with app.app_context():  # https://stackoverflow.com/questions/44941757/sqlalchemy-exc-operationalerror-sqlite3-operationalerror-no-such-table
             db.create_all()
         print('Created Database!')
+
+def format_time(timedelta: datetime.timedelta):
+    if timedelta is None:
+        return ""
+    else:
+        if timedelta.days > 0:
+            leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
+            leftover_hours = leftover_seconds // 3600
+            return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days} days ago"
+        
+        elif timedelta.seconds > 3600:
+            return f"{timedelta.seconds // 3600} hrs ago"
+        else: 
+            return f"{timedelta.seconds} secs ago"

@@ -35,6 +35,7 @@
           <th scope="col">Name</th>
           <th scope="col">Link</th>
           <th scope="col">Price (+tax)</th>
+          <th scope="col">Wish Period</th>
 
         </tr>
       </thead>
@@ -53,6 +54,7 @@
             <span style="color: blue; text-decoration: underline; font-size:11pt"> Click here</span>
           </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
+          <td> {{(wishitem.wish_period | format_time).replace("ago", "") }} </td>
           <td>
             <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list')">
             <span id='readd-button' style="color: #ff00bbdb; font-size: 11pt" aria-hidden="true">Re-add to Wishlist &#128722;</span>
