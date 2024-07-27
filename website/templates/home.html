@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
 %}
 <!-- this is the same as base.html and overwrite any blocks -->
-<h1 align="center">Notes</h1>
+<h1 align="center">My Wish List Report</h1>
 <ul class="list-group list-group-flush" id="notes">
   {% for note in user.notes %}
   <li class="list-group-item">
@@ -12,6 +12,7 @@
   </li>
   {% endfor %}
 </ul>
+<img src="/category.png" alt="my plot">
 <form method="POST">
   <textarea name="note" id="note" class="form-control"></textarea>
   <br />

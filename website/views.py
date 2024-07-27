@@ -1,12 +1,16 @@
-from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for, Response
 from flask_login import login_required, current_user
 from .models import Note, WishItem
 from . import db
 import json
 import os
-import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
 import numpy as np
 import datetime
+import io
+# from .reports import create_figure  # Import the function from utils.py
+
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -19,25 +23,6 @@ NYC = ['10001', '10011', '11019', '10023', '10128',
                 '10451', '10452', '10463', '10467', '10469',
                 '10301', '10304', '10306', '10314']
 
-# login
-@views.route('/', methods=['GET', 'POST'])  # url (homepage). run function when opening root.
-@login_required
-def home():
-    if request.method == 'POST': 
-        # TODO: edit home.html to say "Welcome!" such as via <p> Welcome </p>
-        note = request.form.get('note')#Gets the note from the HTML 
-    
-        if note is None or len(note) < 1:
-            flash('Note is too short!', category='error') 
-        else:
-            new_note = Note(data=note, user_id=current_user.id)  #providing the schema for the note 
-            db.session.add(new_note) #adding the note to the database 
-            db.session.commit()
-            flash('Note added!', category='success')
-
-    # render the template using name of template
-    # now when go to '/', render home.html
-    return render_template("home.html", user=current_user)  # return html when we got root
 
 @views.route('/delete-item', methods=['POST'])
 def delete_item():  
