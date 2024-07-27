@@ -165,7 +165,6 @@ def toggle_wishitem():
     unhooked =  json.loads(request.data)['unhooked']
     purchased = json.loads(request.data)['purchased']
     wishitem = WishItem.query.get(wishItemId)
-    print(f"wishitem: {wishitem}")
     if wishitem:
         if wishitem.user_id == current_user.id:
             wishitem.unhooked = unhooked
@@ -176,6 +175,19 @@ def toggle_wishitem():
                 flash("Item purchased.", category='success')
             elif not unhooked and not purchased:
                 flash("Item added to wish list", category='success')
+            db.session.commit()
+    return jsonify({})
+
+@views.route('/add-wishitem-period', methods=['POST'])
+def add_wishitem_period():
+    # sample data: {'wishItemId': 2, 'unhooked': False, 'purchased': False}
+    wishItemId = json.loads(request.data)['wishItemId']
+    wishitem = WishItem.query.get(wishItemId)
+    if wishitem:
+        if wishitem.user_id == current_user.id:
+            current_time = datetime.datetime.utcnow()
+            wish_timedelta = current_time - wishitem.date
+            wishitem.wish_period = current_time - wishitem.date
             db.session.commit()
     return jsonify({})
 
