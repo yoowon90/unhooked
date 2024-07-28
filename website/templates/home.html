@@ -1,23 +1,37 @@
-{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
-%}
-<!-- this is the same as base.html and overwrite any blocks -->
-<h1 align="center">My Wish List Report</h1>
-<ul class="list-group list-group-flush" id="notes">
-  {% for note in user.notes %}
-  <li class="list-group-item">
-    {{ note.data }}
-    <button type="button" class="close" onClick="deleteNote({{ note.id }})">
-      <span aria-hidden="true">&times;</span>
-    </button>
-  </li>
-  {% endfor %}
-</ul>
-<img src="/category.png" alt="my plot">
-<form method="POST">
-  <textarea name="note" id="note" class="form-control"></textarea>
-  <br />
-  <div align="center">
-    <button type="submit" class="btn btn-primary">Add Note</button>
-  </div>
-</form>
+{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content%}
+  <!-- this is the same as base.html and overwrite any blocks -->
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+    margin-top: 20px; /* Add some space between the title and the images */
+  }
+  .item {
+    text-align: center;
+  }
+  .title {
+    text-align: center;
+    margin-bottom: 20px; /* Add some space below the title */
+  }
+</style>
+<!--
+<div class="title">
+  <h1>My Report</h1>
+</div>
+-->
+<div class="container">
+    <div class="item">
+        <h5>Wish List Category</h5>
+        <img src="/wishlist_category.png" alt="Wish List Category Plot">
+    </div>
+    <div class="item">
+        <h5>Wish List Brand</h5>
+        <img src="/wishlist_brand.png" alt="Wish List Brand Plot">
+    </div>
+</div>
 {% endblock %}
