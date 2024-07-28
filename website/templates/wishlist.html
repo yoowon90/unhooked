@@ -58,7 +58,12 @@
           <th scope="row">{{count.value}}</th>
           <td> {{wishitem.date}} </td>
           <td> {{wishitem.brand}} </td>
-          <td> {{wishitem.category}} </td>
+          <td>
+            {{ wishitem.category }}<br>
+            <span style="font-size: smaller; color: grey; font-style: italic;">
+              {{ wishitem.tag | format_tag }}
+            </span>
+          </td>
           <td> {{wishitem.name}} </td>
           <td onClick="window.open('{{ wishitem.link }}', '_blank')">
             <span style="color: blue; text-decoration: underline; font-size:11pt"> Click here</span>
@@ -114,6 +119,14 @@
          <input type="text" id="category" name="category" size=60 placeholder="Dress">
        </td>
       </tr>
+      <tr>
+        <td>
+          Enter Tag:
+        </td>
+        <td>
+          <input type="text" id="tag" name="tag" size=60 placeholder="Tag">
+        </td>
+       </tr>
       <tr>
        <td>
          Enter Name:
