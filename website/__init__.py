@@ -35,8 +35,6 @@ def create_app():
     app.register_blueprint(reports, url_prefix='/')  # '/' means no prefix
     # TODO: ADD MORE
 
-
-
     from .models import User, Note, WishItem
     
     with app.app_context():
