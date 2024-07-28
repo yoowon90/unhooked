@@ -9,8 +9,6 @@ from matplotlib.figure import Figure
 import numpy as np
 import datetime
 import io
-# from .reports import create_figure  # Import the function from utils.py
-
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -85,6 +83,7 @@ def wishlist():
         wish_item_price = float(request.form.get('price'))
         wish_item_delivery_fee = float(request.form.get('delivery-fee')) if request.form.get('delivery-fee') != "" else 0
         wish_item_category = request.form.get('category')
+        wish_item_tag = request.form.get('tag')
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
         if wish_item_price < 0:
@@ -108,6 +107,7 @@ def wishlist():
             taxed_price = wish_item_price*(1+tax)
             new_item = WishItem(user_id=current_user.id,
                                 category=wish_item_category,
+                                tag=wish_item_tag,
                                 brand=wish_item_brand,
                                 name=wish_item_name, 
                                 price=wish_item_price,

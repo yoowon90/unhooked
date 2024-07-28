@@ -57,16 +57,31 @@ def create_database(app):
             db.create_all()
         print('Created Database!')
 
-def format_time(timedelta: datetime.timedelta):
-    if timedelta is None:
-        return ""
-    else:
-        if timedelta.days > 0:
-            leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
-            leftover_hours = leftover_seconds // 3600
-            return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days} days ago"
-        
-        elif timedelta.seconds > 3600:
-            return f"{timedelta.seconds // 3600} hrs ago"
-        else: 
-            return f"{timedelta.seconds} secs ago"
+class Format:
+
+    def __init__(self):
+        pass
+
+    def format_time(self, timedelta: datetime.timedelta):
+        if timedelta is None:
+            return ""
+        else:
+            if timedelta.days > 0:
+                leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
+                leftover_hours = leftover_seconds // 3600
+                return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days} days ago"
+            
+            elif timedelta.seconds > 3600:  # 1 hour
+                return f"{timedelta.seconds // 3600} hrs ago"
+            
+            elif timedelta.seconds > 60:
+                return f"{timedelta.seconds // 60} mins ago"
+
+            else:
+                return f"{timedelta.seconds} secs ago"
+
+    def format_tag(self, tag):
+        if tag is None:
+            return ""
+        else:
+            return "#" + tag
