@@ -65,6 +65,9 @@
           </td>
           <td onClick="window.open('{{ wishitem.link }}', '_blank')">
             <span style="color: blue; text-decoration: underline; font-size:11pt"> {{wishitem.name}} </span>
+            <span style="font-size: smaller; color: grey; font-style: italic;">
+              {{ wishitem.description | format_description }}
+            </span>
           </td>
           <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
           <td> 
@@ -133,6 +136,14 @@
          <input type="text" id="name" name="name" size=60 placeholder="CYRIELLE DRESS">
        </td>
       </tr>
+      <tr>
+        <td>
+          Enter Description:
+        </td>
+        <td>
+          <input type="text" id="description" name="description" size=60 placeholder="Pink Dress">
+        </td>
+       </tr>
       <tr>
        <td>
          Enter Price:

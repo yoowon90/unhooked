@@ -96,6 +96,7 @@ def wishlist():
         wish_item_tag = request.form.get('tag')
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
+        wish_item_description = request.form.get('description')
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
         if wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
@@ -124,7 +125,8 @@ def wishlist():
                                 taxed_price=taxed_price,
                                 delivery_fee=wish_item_delivery_fee,
                                 total_price=taxed_price + wish_item_delivery_fee,  # taxed price plus delivery fee
-                                link=wish_item_link)  #providing the schema for the note 
+                                link=wish_item_link,
+                                description=wish_item_description)  #providing the schema for the note 
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
             flash('Item added to Wish List!', category='success')
