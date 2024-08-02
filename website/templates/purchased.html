@@ -41,7 +41,6 @@
           <th scope="col">Brand</th>
           <th scope="col">Category</th>
           <th scope="col">Name</th>
-          <th scope="col">Link</th>
           <th scope="col">Price (+tax)</th>
 
         </tr>
@@ -56,9 +55,8 @@
           <td> {{wishitem.date}} </td>
           <td> {{wishitem.brand}} </td>
           <td> {{wishitem.category}} </td>
-          <td> {{wishitem.name}} </td>
           <td onClick="window.open('{{ wishitem.link }}', '_blank')">
-            <span style="color: blue; text-decoration: underline; font-size:11pt"> Click here</span>
+            <span style="color: blue; text-decoration: underline; font-size:11pt"> {{wishitem.name}} </span>
           </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
           <td>
