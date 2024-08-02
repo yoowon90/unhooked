@@ -82,7 +82,7 @@ def wishlist():
         # allow flexibility with price
         raw_price = request.form.get('price')
         if raw_price.startswith('$'):
-            raw_price = raw_price[1:]
+            raw_price = raw_price[1:].strip().replace(',', '')
         wish_item_price = float(raw_price) 
 
         # format name

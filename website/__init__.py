@@ -81,7 +81,7 @@ class Format:
                 return f"{timedelta.seconds} secs ago"
 
     def format_tag(self, tag):
-        if tag is None:
+        if tag is None or tag.strip() == "":
             return ""
         else:
             return "#" + tag
