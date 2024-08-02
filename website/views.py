@@ -78,9 +78,15 @@ def dir_last_updated(folder):
 # wishlist
 @views.route('/my-wishlist', methods=['GET', 'POST'])
 def wishlist():
-    if request.method == 'POST': 
-        wish_item_name = request.form.get('name')#Gets the wish item from the HTML 
-        wish_item_price = float(request.form.get('price'))
+    if request.method == 'POST':         
+        # allow flexibility with price
+        raw_price = request.form.get('price')
+        if raw_price.startswith('$'):
+            raw_price = raw_price[1:]
+        wish_item_price = float(raw_price) 
+        
+        # grab other fields
+        wish_item_name = request.form.get('name')  # Gets the wish item from the HTML 
         wish_item_delivery_fee = float(request.form.get('delivery-fee')) if request.form.get('delivery-fee') != "" else 0
         wish_item_category = request.form.get('category')
         wish_item_tag = request.form.get('tag')
