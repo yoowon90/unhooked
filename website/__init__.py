@@ -85,3 +85,10 @@ class Format:
             return ""
         else:
             return "#" + tag
+    
+    def format_description(self, description):
+        if description is None or description.strip() == "":
+            return ""
+        else:
+            return description
+    
