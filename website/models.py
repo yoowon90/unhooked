@@ -38,3 +38,4 @@ class User(db.Model, UserMixin):
     zipcode = db.Column(db.String(5))
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
+    # last_purchase_date = db.Column(db.DateTime(timezone=True), default=None)
