@@ -1,37 +1,70 @@
-{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content%}
-  <!-- this is the same as base.html and overwrite any blocks -->
-<style>
-  body {
-    margin: 0;
-    padding: 0;
-  }
-  .container {
-    display: flex;
-    width: 100%;
-    justify-content: space-around;
-    margin-top: 20px; /* Add some space between the title and the images */
-  }
-  .item {
-    text-align: center;
-  }
-  .title {
-    text-align: center;
-    margin-bottom: 20px; /* Add some space below the title */
-  }
-</style>
-<!--
-<div class="title">
-  <h1>My Report</h1>
-</div>
--->
-<div class="container">
-    <div class="item">
-        <h5>Wish List Category</h5>
-        <img src="/wishlist_category.png" alt="Wish List Category Plot">
+{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
+  %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <!-- FullCalendar CSS -->
+    <link href='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css' rel='stylesheet' />
+    <!-- jQuery -->
+    <script src='https://code.jquery.com/jquery-3.5.1.min.js'></script>
+    <!-- FullCalendar JS -->
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js'></script>
+    <style>
+      .item {
+        text-align: center;
+      }
+      .title {
+        text-align: center;
+        margin-bottom: 20px; /* Add some space below the title */
+      }
+      #calendar {
+        max-width: 600px; /* Set the maximum width of the calendar */
+        margin: 0 auto; /* Center the calendar horizontally */
+      }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>My Report</h1>
     </div>
-    <div class="item">
-        <h5>Wish List Brand</h5>
-        <img src="/wishlist_brand.png" alt="Wish List Brand Plot">
+    <div id='calendar'></div>
+    <form>
+        <label for="start_date">Start Date:</label>
+        <input type="text" id="start_date" name="start_date" disabled>
+        <label for="end_date">End Date:</label>
+        <input type="text" id="end_date" name="end_date" disabled>
+    </form>
+    <div class="container">
+        <div class="item">
+            <h5>Wish List Category</h5>
+            <img src="/wishlist_category.png" alt="Wish List Category Plot">
+        </div>
+        <div class="item">
+            <h5>Wish List Brand</h5>
+            <img src="/wishlist_brand.png" alt="Wish List Brand Plot">
+        </div>
     </div>
-</div>
+    <script>
+        $(document).ready(function() {
+            let clickCount = 0;
+            $('#calendar').fullCalendar({
+                selectable: true,
+                selectHelper: true,
+                select: function(start, end) {
+                    clickCount++;
+                    if (clickCount % 2 !== 0) {
+                        $('#start_date').val(start.format('YYYY-MM-DD')).prop('disabled', false);
+                    } else {
+                        $('#end_date').val(end.format('YYYY-MM-DD')).prop('disabled', false);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
 {% endblock %}

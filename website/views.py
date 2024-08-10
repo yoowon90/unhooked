@@ -110,6 +110,7 @@ def wishlist():
             flash('Specify a brand!', category='error')
         if (len(wish_item_link) < 5):
             flash('Invalid link!', category='error')
+        
         else:
             # print(f"delivery_fee: {wish_item_delivery_fee}")
             # extra tax rules for nyc
@@ -177,7 +178,6 @@ def toggle_wishitem():
 
 @views.route('/add-wishitem-period', methods=['POST'])
 def add_wishitem_period():
-    # sample data: {'wishItemId': 2, 'unhooked': False, 'purchased': False}
     wishItemId = json.loads(request.data)['wishItemId']
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
@@ -198,7 +198,6 @@ def unhooked_list():
 # purchased-list
 @views.route('/purchased-list', methods=['GET', 'POST'])
 def purchased_list():
-    # render the template using name of template
-    # now when go to '/', render home.html
+    # define wish_to_purchase_period
     return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 

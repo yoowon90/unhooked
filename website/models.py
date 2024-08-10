@@ -28,6 +28,7 @@ class WishItem(db.Model):
     total_price = db.Column(db.Float(100.00), default=0.00)
     description = db.Column(db.String(10000), default="")  # free note to store promo code, sale, etc
     wish_period = db.Column(db.Interval)
+    wish_to_purchase_period = db.Column(db.Interval)
     tag = db.Column(db.String(10000), nullable=True)
 
 class User(db.Model, UserMixin):
