@@ -79,7 +79,7 @@
             </button>
           </td>
           <td>
-          <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, true, '/my-wishlist')">
+          <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, true, '/my-wishlist'), addWishItemPeriod({{wishitem.id}}, '/my-wishlist')"">
           <span id='purchase-button' style="color: red; font-size: 11pt;" aria-hidden="true"> purchase&#129297;</span>
           </button>
           </td>

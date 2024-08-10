@@ -42,7 +42,7 @@
           <th scope="col">Category</th>
           <th scope="col">Name</th>
           <th scope="col">Price (+tax)</th>
-
+          <th scope="col">Wish Period</th>
         </tr>
       </thead>
       <li class="list-group-item">
@@ -59,6 +59,7 @@
             <span style="color: blue; text-decoration: underline; font-size:11pt"> {{wishitem.name}} </span>
           </td>
           <td> {{wishitem.taxed_price|round(2)}} </td>
+          <td> {{(wishitem.wish_period | format_time).replace("ago", "") }} </td>
           <td>
             <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/purchased-list')">
             <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> return &#128230</span>
