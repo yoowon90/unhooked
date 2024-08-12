@@ -9,6 +9,8 @@ from matplotlib.figure import Figure
 import numpy as np
 import datetime
 import io
+import requests
+from bs4 import BeautifulSoup
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -156,6 +158,7 @@ def wishlist():
     return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'), current_time=current_time)  # return html when we got root
 
 
+# wishlist
 @views.route('/toggle-wishitem', methods=['POST'])
 def toggle_wishitem():
     # sample data: {'wishItemId': 2, 'unhooked': False, 'purchased': False}
@@ -201,3 +204,42 @@ def purchased_list():
     # define wish_to_purchase_period
     return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 
+
+@views.route('/fetch-url-info', methods=['POST'])
+def fetch_url_info():
+    header = {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36" ,
+        'referer':'https://www.google.com/'
+        }
+
+    data = request.get_json()
+    url = data.get('url')
+    if not url:
+        return jsonify({'success': False, 'error': 'No URL provided'})
+
+    try:
+        response = requests.get(url, headers=header)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        try:
+            # Reformation
+            # Find the script tag with type "application/ld+json"
+            script_tag = soup.find('script', {'type': 'application/ld+json'})
+            if script_tag:
+                json_data = json.loads(script_tag.string)
+                name = json_data.get('name')
+                price = json_data.get('offers', {}).get('price')
+                brand = json_data.get('brand', {}).get('name')
+                print(name, price, brand)
+                return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand})
+            else:
+                return jsonify({'success': False, 'error': 'No JSON-LD script tag found'})
+            
+            # Sezane
+
+            # Rouje
+    
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
