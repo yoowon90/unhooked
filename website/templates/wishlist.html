@@ -102,6 +102,7 @@
   <h2 align="center">&#128156; Add New Item &#128156;</h2>
  <form method="POST">
    <!-- sample: Madewell, Dress, Linen Blue, madewell.com, 129.12-->
+   <body>
    <table align="center">
      <tbody>
        <tr>
@@ -170,10 +171,38 @@
        </tr>
      </tbody>
    </table>
+   
+    <!-- Add the JavaScript code here -->
+    <script>
+      document.getElementById('link').addEventListener('blur', function() {
+          const url = this.value;
+          if (url) {
+              fetch('/fetch-url-info', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ url: url })
+              })
+              .then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      document.getElementById('name').value = data.name;
+                      document.getElementById('price').value = data.price;
+                      document.getElementById('brand').value = data.brand;
+                  } else {
+                      alert('Failed to fetch URL information');
+                  }
+              })
+              .catch(error => console.error('Error:', error));
+          }
+      });
+      </script>
    <br />
    <div align="center">
     <button type="submit" class="btn btn-primary">Add Item</button>
    </div>
+  </body>
  </form>
  {% endblock %} 
   
