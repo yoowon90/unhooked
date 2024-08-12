@@ -21,9 +21,13 @@
         text-align: center;
         margin-bottom: 20px; /* Add some space below the title */
       }
+      .calendar-form-container {
+        display: flex;
+        align-items: flex-start; /* Align items to the top */
+      }
       #calendar {
         max-width: 600px; /* Set the maximum width of the calendar */
-        margin: 0 auto; /* Center the calendar horizontally */
+        /* margin: 0 auto; Center the calendar horizontally */
         transform: scale(0.8); /* Scale down to 50% */
         transform-origin: top left; /* Adjust the origin as needed */
       }
@@ -31,20 +35,60 @@
       background-color: rgba(239, 237, 237, 0.916);
       color: white;
       }
+      .form-container {
+          margin-left: 20px; /* Add some space between the calendar and the form */
+      }
+
+      .form-container label,
+      .form-container input {
+          display: block; /* Ensure each label and input is on a separate line */
+          margin-bottom: 10px; /* Add some space between form elements */
+      }
+      .date-fields {
+          display: flex; /* Use flexbox to align items side by side */
+          gap: 10px; /* Add some space between the fields */
+        }
+      
+      .pie-chart-container {
+          display: flex; /* Use flexbox to align items side by side */
+          justify-content: space-around; /* Distribute space around the items */
+          margin-top: 20px; /* Add some space above the pie chart container */
+      }
+
+      .pie-chart-container .item {
+          flex: 1; /* Allow items to grow and fill the container */
+          text-align: center; /* Center the text within each item */
+          margin: 0 10px; /* Add some horizontal space between items */
+      }
     </style>
 </head>
 <body>
     <div class="title">
         <h1>My Report</h1>
     </div>
-    <div id='calendar'></div>
-    <form>
-        <label for="start_date">Start Date:</label>
-        <input type="text" id="start_date" name="start_date" disabled>
-        <label for="end_date">End Date:</label>
-        <input type="text" id="end_date" name="end_date" disabled>
-    </form>
-    <div class="container">
+    <div class="calendar-form-container">
+      <div id='calendar'></div>
+      <div class="form-container">
+        <form>
+          <div class="date-fields">
+              <div>
+                  <label for="start_date">Start Date:</label>
+                  <input type="text" id="start_date" name="start_date">
+              </div>
+              <div>
+                  <label for="end_date">End Date:</label>
+                  <input type="text" id="end_date" name="end_date">
+              </div>
+              <div>
+                <label>&nbsp;</label> <!-- Empty label for alignment -->
+                <button type="submit">Submit</button>
+            </div>
+          </div>
+      </form>
+      </div>
+      </div>
+
+    <div class="pie-chart-container">
         <div class="item">
             <h5>Wish List Category</h5>
             <img src="/wishlist_category.png" alt="Wish List Category Plot">
