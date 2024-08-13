@@ -237,6 +237,7 @@ def fetch_url_info():
                 return jsonify({'success': False, 'error': 'No JSON-LD script tag found'})
             
             # Sezane
+            # Need to get around captcha
 
             # Rouje
     
