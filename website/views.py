@@ -218,29 +218,44 @@ def fetch_url_info():
         return jsonify({'success': False, 'error': 'No URL provided'})
 
     try:
-        response = requests.get(url, headers=header)
+        response = requests.get(url)  # maybe use header here
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        try:
-            # Reformation
-            # Find the script tag with type "application/ld+json"
-            script_tag = soup.find('script', {'type': 'application/ld+json'})
-            if script_tag:
-                json_data = json.loads(script_tag.string)
-                name = json_data.get('name')
-                price = json_data.get('offers', {}).get('price')
-                brand = json_data.get('brand', {}).get('name')
-                print(name, price, brand)
-                return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand})
-            else:
-                return jsonify({'success': False, 'error': 'No JSON-LD script tag found'})
-            
-            # Sezane
-            # Need to get around captcha
+        # Reformation. e.g. https://www.thereformation.com/products/tam-knit-dress/1306570SLA0XS.html
+        # Find the script tag with type "application/ld+json"
+        script_tag = soup.find('script', {'type': 'application/ld+json'})
+        if script_tag:
+            json_data = json.loads(script_tag.string)
+            name = json_data.get('name')
+            price = json_data.get('offers', {}).get('price')
+            brand = json_data.get('brand', {}).get('name')
+            print(name, price, brand)
 
-            # Rouje
+            # return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand, 'description': description,
+            #                 'currency': currency}) 
+        # else:
+        #     return jsonify({'success': False, 'error': 'No JSON-LD script tag found'})
+
+
+        # Rouje. e.g. https://www.rouje.com/products/daria-dress-jacquard-fleurs-rouge
+        if soup.find('meta'):
+            name = soup.find('meta', {'property': 'og:title'}).get('content') if name is None else name
+            price = soup.find('meta', {'property': 'product:price:amount'}).get('content') if (
+                price is None and soup.find('meta', {'property': 'product:price:amount'}) is not None) else price
+            description = soup.find('meta', {'property': 'og:description'}).get('content') if (
+                description is None and soup.find('meta', {'property': 'og:description'}) is not None) else description # E.g. "EUR"
+            currency = soup.find('meta', {'property': 'product:price:currency'}).get('content') if (
+                currency is None and soup.find('meta', {'property': 'product:price:currency'}) is not None) else currency  # E.g. "EUR"
+            brand = soup.find('meta', {'property': 'og:site_name'}).get('content') if (
+                brand is None and soup.find('meta', {'property': 'og:site_name'}) is not None) else brand
+        
+        print(name, price, description, currency, brand)
+
+        
+        return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand, 'description': description,
+                        'currency': currency}) 
+        
     
-
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
