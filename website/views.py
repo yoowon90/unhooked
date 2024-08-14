@@ -84,7 +84,8 @@ def wishlist():
         # allow flexibility with price
         raw_price = request.form.get('price')
         if raw_price.startswith('$'):
-            raw_price = raw_price[1:].strip().replace(',', '')
+            raw_price = raw_price[1:].strip()
+        raw_price = raw_price.replace(',', '.')  # replace comma with period
         wish_item_price = float(raw_price) 
 
         # format name
@@ -107,7 +108,7 @@ def wishlist():
         if len(wish_item_name) < 1:
             flash('Item is too short!', category='error')
         if len(wish_item_category) < 1:
-            flash('Speciy a category!', category='error')
+            flash('Specify a category!', category='error')
         if len(wish_item_brand) < 1:
             flash('Specify a brand!', category='error')
         if (len(wish_item_link) < 5):
@@ -204,6 +205,31 @@ def purchased_list():
     # define wish_to_purchase_period
     return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 
+# reformation url fetch logic
+def extract_url_reformation(script_tag):
+    # Reformation. e.g. https://www.thereformation.com/products/tam-knit-dress/1306570SLA0XS.html
+    try:
+        json_data = json.loads(script_tag.string)
+        name = json_data.get('name')
+        price = json_data.get('offers', {}).get('price')
+        brand = json_data.get('brand', {}).get('name')
+        print(name, price, brand)
+        return name, price, brand
+    except Exception as e:
+        return None, None, None
+
+def extract_url_rouje(soup):
+    # Rouje. e.g. https://www.rouje.com/products/daria-dress-jacquard-fleurs-rouge
+    try:
+        name = soup.find('meta', {'property': 'og:title'}).get('content')
+        price = soup.find('meta', {'property': 'product:price:amount'}).get('content') 
+        description = soup.find('meta', {'property': 'og:description'}).get('content')
+        currency = soup.find('meta', {'property': 'product:price:currency'}).get('content')
+        brand = soup.find('meta', {'property': 'og:site_name'}).get('content')
+        print(name, price, brand, description, currency)
+        return name, price, description, currency, brand
+    except Exception as e:
+        return None, None, None, None, None
 
 @views.route('/fetch-url-info', methods=['POST'])
 def fetch_url_info():
@@ -222,37 +248,21 @@ def fetch_url_info():
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Reformation. e.g. https://www.thereformation.com/products/tam-knit-dress/1306570SLA0XS.html
+        # Reformation
         # Find the script tag with type "application/ld+json"
         script_tag = soup.find('script', {'type': 'application/ld+json'})
         if script_tag:
-            json_data = json.loads(script_tag.string)
-            name = json_data.get('name')
-            price = json_data.get('offers', {}).get('price')
-            brand = json_data.get('brand', {}).get('name')
-            print(name, price, brand)
+            name, price, brand = extract_url_reformation(script_tag)
 
-            # return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand, 'description': description,
-            #                 'currency': currency}) 
-        # else:
-        #     return jsonify({'success': False, 'error': 'No JSON-LD script tag found'})
-
-
-        # Rouje. e.g. https://www.rouje.com/products/daria-dress-jacquard-fleurs-rouge
+        # Rouje
         if soup.find('meta'):
-            name = soup.find('meta', {'property': 'og:title'}).get('content') if name is None else name
-            price = soup.find('meta', {'property': 'product:price:amount'}).get('content') if (
-                price is None and soup.find('meta', {'property': 'product:price:amount'}) is not None) else price
-            description = soup.find('meta', {'property': 'og:description'}).get('content') if (
-                description is None and soup.find('meta', {'property': 'og:description'}) is not None) else description # E.g. "EUR"
-            currency = soup.find('meta', {'property': 'product:price:currency'}).get('content') if (
-                currency is None and soup.find('meta', {'property': 'product:price:currency'}) is not None) else currency  # E.g. "EUR"
-            brand = soup.find('meta', {'property': 'og:site_name'}).get('content') if (
-                brand is None and soup.find('meta', {'property': 'og:site_name'}) is not None) else brand
-        
-        print(name, price, description, currency, brand)
+            name, price, description, currency, brand = extract_url_rouje(soup)
+            
 
-        
+        if not (name and price and brand):
+            return jsonify({'success': False, 'error': 'No name, price, or brand found'})
+
+
         return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand, 'description': description,
                         'currency': currency}) 
         
