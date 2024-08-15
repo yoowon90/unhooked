@@ -217,8 +217,22 @@ def extract_url_reformation(script_tag):
         return name, price, brand
     except Exception as e:
         return None, None, None
+        
 
 def extract_url_rouje(soup):
+    # Rouje. e.g. https://www.rouje.com/products/daria-dress-jacquard-fleurs-rouge
+    try:
+        name = soup.find('meta', {'property': 'og:title'}).get('content')
+        price = soup.find('meta', {'property': 'product:price:amount'}).get('content') 
+        description = soup.find('meta', {'property': 'og:description'}).get('content')
+        currency = soup.find('meta', {'property': 'product:price:currency'}).get('content')
+        brand = soup.find('meta', {'property': 'og:site_name'}).get('content')
+        print(name, price, brand, description, currency)
+        return name, price, description, currency, brand
+    except Exception as e:
+        return None, None, None, None, None
+
+def extract_url_zara(soup):
     # Rouje. e.g. https://www.rouje.com/products/daria-dress-jacquard-fleurs-rouge
     try:
         name = soup.find('meta', {'property': 'og:title'}).get('content')
@@ -234,9 +248,15 @@ def extract_url_rouje(soup):
 @views.route('/fetch-url-info', methods=['POST'])
 def fetch_url_info():
     header = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36" ,
-        'referer':'https://www.google.com/'
-        }
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+                'Accept-Encoding': 'none',
+                'Accept-Language': 'en-US,en;q=0.8',
+                'Connection': 'keep-alive',
+                'refere': 'https://example.com',
+                'cookie': """your cookie value ( you can get that from your web page) """
+             }
 
     data = request.get_json()
     url = data.get('url')
@@ -244,7 +264,7 @@ def fetch_url_info():
         return jsonify({'success': False, 'error': 'No URL provided'})
 
     try:
-        response = requests.get(url)  # maybe use header here
+        response = requests.get(url, headers=header)  # maybe use header here
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -257,7 +277,12 @@ def fetch_url_info():
         # Rouje
         if soup.find('meta'):
             name, price, description, currency, brand = extract_url_rouje(soup)
-            
+        
+        # Zara
+        # https://www.zara.com/us/en/ribbed-polo-shirt-p00858313.html?v1=392930429&v2=2420954
+        if soup.find('meta'):
+            name, price, description, currency, brand = extract_url_rouje(soup)
+          
 
         if not (name and price and brand):
             return jsonify({'success': False, 'error': 'No name, price, or brand found'})
