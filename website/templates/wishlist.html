@@ -43,6 +43,7 @@
           <th scope="col">Brand</th>
           <th scope="col">Category</th>
           <th scope="col">Name</th>
+          <th scope="col">Favorite</th>
           <th scope="col">Price (+tax)</th>
           <th scope="col">Time Passed</th>
 
@@ -69,6 +70,11 @@
               {{ wishitem.description | format_description }}
             </span>
           </td>
+          <td>
+            <button type="button" class="favorite-button" onClick="toggleFavorite(this)">
+              <span class="favorite-icon" style="font-size: 11pt;" aria-hidden="true">&#10084;</span> <!-- Heart emoji -->
+            </button>
+          </td>
           <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
           <td> 
               {{ (current_time - wishitem.date) | format_time }}
@@ -86,12 +92,22 @@
           <td>
           <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/my-wishlist')">
             <span aria-hidden="true">&times;</span>
-          </td>
           </button>
+          </td>
         </tr>
       {% endif %}
       </li>
       {% endfor %}
+      <script>
+      function toggleFavorite(button) {
+        const icon = button.querySelector('.favorite-icon');
+        if (icon.innerHTML === '❤️') { // Heart emoji
+          icon.innerHTML = '⭐'; // Star emoji
+        } else {
+          icon.innerHTML = '❤️'; // Heart emoji
+        }
+      }
+      </script>
       </table>
     </ul>
   <!--br>
