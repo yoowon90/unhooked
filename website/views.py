@@ -9,6 +9,9 @@ from matplotlib.figure import Figure
 import numpy as np
 import datetime
 import io
+import requests
+from bs4 import BeautifulSoup
+from .url_extraction import URLInfo
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -20,6 +23,8 @@ NYC = ['10001', '10011', '11019', '10023', '10128',
                 '11101', '11354', '11375', '11432', '11691', 
                 '10451', '10452', '10463', '10467', '10469',
                 '10301', '10304', '10306', '10314']
+
+BRANDS = ['Reformation', 'Rouje', 'Zara']
 
 
 @views.route('/delete-item', methods=['POST'])
@@ -82,7 +87,8 @@ def wishlist():
         # allow flexibility with price
         raw_price = request.form.get('price')
         if raw_price.startswith('$'):
-            raw_price = raw_price[1:].strip().replace(',', '')
+            raw_price = raw_price[1:].strip()
+        raw_price = raw_price.replace(',', '.')  # replace comma with period
         wish_item_price = float(raw_price) 
 
         # format name
@@ -99,16 +105,16 @@ def wishlist():
         wish_item_description = request.form.get('description')
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
-        if wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
+        elif wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
            flash('Delivery fee cannot be below zero!', category='error')
 
-        if len(wish_item_name) < 1:
+        elif len(wish_item_name) < 1:
             flash('Item is too short!', category='error')
-        if len(wish_item_category) < 1:
-            flash('Speciy a category!', category='error')
-        if len(wish_item_brand) < 1:
+        elif len(wish_item_category) < 1:
+            flash('Specify a category!', category='error')
+        elif len(wish_item_brand) < 1:
             flash('Specify a brand!', category='error')
-        if (len(wish_item_link) < 5):
+        elif (len(wish_item_link) < 5):
             flash('Invalid link!', category='error')
         
         else:
@@ -156,6 +162,7 @@ def wishlist():
     return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'), current_time=current_time)  # return html when we got root
 
 
+# wishlist
 @views.route('/toggle-wishitem', methods=['POST'])
 def toggle_wishitem():
     # sample data: {'wishItemId': 2, 'unhooked': False, 'purchased': False}
@@ -201,3 +208,53 @@ def purchased_list():
     # define wish_to_purchase_period
     return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 
+
+@views.route('/fetch-url-info', methods=['POST'])
+def fetch_url_info():
+    header = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+                'Accept-Encoding': 'none',
+                'Accept-Language': 'en-US,en;q=0.8',
+                'Connection': 'keep-alive',
+                'refere': 'https://example.com',
+                'cookie': """your cookie value ( you can get that from your web page) """
+             }
+
+    data = request.get_json()
+    url = data.get('url')
+    if not url:
+        return jsonify({'success': False, 'error': 'No URL provided'})
+
+    try:
+        response = requests.get(url, headers=header)  # maybe use header here
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        name, price, description, currency, brand = None, None, None, None, None
+        
+        for brand in BRANDS: 
+            print(f"extraction started with {brand}")
+            brand_extract_dict = URLInfo(soup).extract_brand_from_soup(brand)
+            print(f"brand extract dict: {brand_extract_dict}")
+            name, price, description, currency, brand, category = (brand_extract_dict['name'],
+                                                         brand_extract_dict['price'],
+                                                         brand_extract_dict['description'],
+                                                         brand_extract_dict['currency'],
+                                                         brand_extract_dict['brand'],
+                                                         brand_extract_dict['category'])
+            if not (name is None and price is None and description is None
+                and currency is None and brand is None):
+                print("Some valid data found")
+                break
+            else:
+                print("No data found")
+
+
+        return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand, 'description': description,
+                        'currency': currency}) 
+        
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})

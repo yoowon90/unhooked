@@ -3,3 +3,6 @@ Flask-SQLAlchemy
 flask-login
 flask-migrate
 matplotlib
+beautifulsoup4
+requests
+notebook

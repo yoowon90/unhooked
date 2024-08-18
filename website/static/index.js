@@ -18,6 +18,7 @@ function addWishItemPeriod(wishItemId, nextUrl)
     });
 }
 
+
 function deleteItem(wishItemId, nextUrl) 
 {
   fetch("/delete-item", {
