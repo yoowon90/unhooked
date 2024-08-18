@@ -11,6 +11,7 @@ import datetime
 import io
 import requests
 from bs4 import BeautifulSoup
+from .url_extraction import URLInfo
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -23,62 +24,8 @@ NYC = ['10001', '10011', '11019', '10023', '10128',
                 '10451', '10452', '10463', '10467', '10469',
                 '10301', '10304', '10306', '10314']
 
-class URLInfo:
-    def __init__(self, brand):
-        self.brand = brand
-        self.extract_url = self.choose_brand_extraction(brand)
-    
-    def choose_brand_extraction(self, brand):
-        if brand == 'Reformation':
-            return self.extract_url_reformation
-        elif brand == 'Rouje':
-            return self.extract_url_rouje
-        elif brand == 'Zara':
-            return self.extract_url_zara
-        else:
-            return None
-    
-    # reformation url fetch logic
-    def extract_url_reformation(script_tag):
-        # Reformation. e.g. https://www.thereformation.com/products/tam-knit-dress/1306570SLA0XS.html
-        try:
-            json_data = json.loads(script_tag.string)
-            name = json_data.get('name')
-            price = json_data.get('offers', {}).get('price')
-            brand = json_data.get('brand', {}).get('name')
-            print(name, price, brand)
-            return name, price, brand
-        except Exception as e:
-            return None, None, None
-            
+BRANDS = ['Reformation', 'Rouje', 'Zara']
 
-    def extract_url_rouje(soup):
-        # Rouje. e.g. https://www.rouje.com/products/daria-dress-jacquard-fleurs-rouge
-        try:
-            name = soup.find('meta', {'property': 'og:title'}).get('content')
-            price = soup.find('meta', {'property': 'product:price:amount'}).get('content') 
-            description = soup.find('meta', {'property': 'og:description'}).get('content')
-            currency = soup.find('meta', {'property': 'product:price:currency'}).get('content')
-            brand = soup.find('meta', {'property': 'og:site_name'}).get('content')
-            print(name, price, brand, description, currency)
-            return name, price, description, currency, brand
-        except Exception as e:
-            return None, None, None, None, None
-
-    def extract_url_zara(soup):
-        # Rouje. e.g. https://www.rouje.com/products/daria-dress-jacquard-fleurs-rouge
-        try:
-            name = soup.find('meta', {'property': 'og:title'}).get('content')
-            price = soup.find('meta', {'property': 'product:price:amount'}).get('content') 
-            description = soup.find('meta', {'property': 'og:description'}).get('content')
-            currency = soup.find('meta', {'property': 'product:price:currency'}).get('content')
-            brand = soup.find('meta', {'property': 'og:site_name'}).get('content')
-            print(name, price, brand, description, currency)
-            return name, price, description, currency, brand
-        except Exception as e:
-            return None, None, None, None, None
-
- 
 
 @views.route('/delete-item', methods=['POST'])
 def delete_item():  
@@ -158,16 +105,16 @@ def wishlist():
         wish_item_description = request.form.get('description')
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
-        if wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
+        elif wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
            flash('Delivery fee cannot be below zero!', category='error')
 
-        if len(wish_item_name) < 1:
+        elif len(wish_item_name) < 1:
             flash('Item is too short!', category='error')
-        if len(wish_item_category) < 1:
+        elif len(wish_item_category) < 1:
             flash('Specify a category!', category='error')
-        if len(wish_item_brand) < 1:
+        elif len(wish_item_brand) < 1:
             flash('Specify a brand!', category='error')
-        if (len(wish_item_link) < 5):
+        elif (len(wish_item_link) < 5):
             flash('Invalid link!', category='error')
         
         else:
@@ -285,24 +232,24 @@ def fetch_url_info():
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Reformation
-        # Find the script tag with type "application/ld+json"
-        script_tag = soup.find('script', {'type': 'application/ld+json'})
-        if script_tag:
-            name, price, brand = extract_url_reformation(script_tag)
-
-        # Rouje
-        if soup.find('meta'):
-            name, price, description, currency, brand = extract_url_rouje(soup)
+        name, price, description, currency, brand = None, None, None, None, None
         
-        # Zara
-        # https://www.zara.com/us/en/ribbed-polo-shirt-p00858313.html?v1=392930429&v2=2420954
-        if soup.find('meta'):
-            name, price, description, currency, brand = extract_url_zara(soup)
-          
-
-        if not (name and price and brand):
-            return jsonify({'success': False, 'error': 'No name, price, or brand found'})
+        for brand in BRANDS: 
+            print(f"extraction started with {brand}")
+            brand_extract_dict = URLInfo(soup).extract_brand_from_soup(brand)
+            print(f"brand extract dict: {brand_extract_dict}")
+            name, price, description, currency, brand, category = (brand_extract_dict['name'],
+                                                         brand_extract_dict['price'],
+                                                         brand_extract_dict['description'],
+                                                         brand_extract_dict['currency'],
+                                                         brand_extract_dict['brand'],
+                                                         brand_extract_dict['category'])
+            if not (name is None and price is None and description is None
+                and currency is None and brand is None):
+                print("Some valid data found")
+                break
+            else:
+                print("No data found")
 
 
         return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand, 'description': description,
