@@ -102,11 +102,12 @@
   <h2 align="center">&#128156; Add New Item &#128156;</h2>
  <form method="POST">
    <!-- sample: Madewell, Dress, Linen Blue, madewell.com, 129.12-->
+   <body>
    <table align="center">
      <tbody>
        <tr>
          <td>
-           Enter Brand:
+           Enter Brand*:
          </td>
          <td>
            <input type="text" id="brand" name="brand" size=60 placeholder="Rouje">
@@ -114,7 +115,7 @@
        </tr>
       <tr>
        <td>
-         Enter Category:
+         Enter Category*:
        </td>
        <td>
          <input type="text" id="category" name="category" size=60 placeholder="Dress">
@@ -130,7 +131,7 @@
        </tr>
       <tr>
        <td>
-         Enter Name:
+         Enter Name*:
        </td>
        <td>
          <input type="text" id="name" name="name" size=60 placeholder="CYRIELLE DRESS">
@@ -146,7 +147,7 @@
        </tr>
       <tr>
        <td>
-         Enter Price:
+         Enter Price*:
        </td>
        <td>
          <input type="text" id="price" name="price" size=60 placeholder="212.00">
@@ -162,7 +163,7 @@
       </tr>
       <tr>
         <td>
-          Enter Link:
+          Enter Link*:
         </td>
         <td>
           <input type="text" id="link" name="link" size=60 placeholder="https://us.rouje.com/products/cyrielle-fleurdepechepeche">
@@ -170,10 +171,39 @@
        </tr>
      </tbody>
    </table>
+   
+    <!-- Add the JavaScript code here -->
+    <script>
+      document.getElementById('link').addEventListener('blur', function() {
+          const url = this.value;
+          if (url) {
+              fetch('/fetch-url-info', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ url: url })
+              })
+              .then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      document.getElementById('name').value = data.name;
+                      document.getElementById('price').value = data.price;
+                      document.getElementById('brand').value = data.brand;
+                      document.getElementById('description').value = data.description;
+                  } else {
+                      alert('Failed to fetch URL information');
+                  }
+              })
+              .catch(error => console.error('Error:', error));
+          }
+      });
+      </script>
    <br />
    <div align="center">
     <button type="submit" class="btn btn-primary">Add Item</button>
    </div>
+  </body>
  </form>
  {% endblock %} 
   
