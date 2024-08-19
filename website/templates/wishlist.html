@@ -10,6 +10,10 @@
       color: red;
     }
 
+    .favorite-button {
+      border: none;
+    }
+
    </style>
   <!-- this is the same as base.html and overwrite any blocks -->
   <h2 align="center">&#128155; Wish List &#128155;</h2>
@@ -72,7 +76,7 @@
           </td>
           <td>
             <button type="button" class="favorite-button" onClick="toggleFavorite(this)">
-              <span class="favorite-icon" style="font-size: 11pt;" aria-hidden="true">&#10084;</span> <!-- Heart emoji -->
+              <span class="favorite-icon" style="font-size: 11pt;" aria-hidden="true">⠀</span> <!-- Heart emoji &#10084;-->
             </button>
           </td>
           <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
@@ -101,10 +105,10 @@
       <script>
       function toggleFavorite(button) {
         const icon = button.querySelector('.favorite-icon');
-        if (icon.innerHTML === '❤️') { // Heart emoji
-          icon.innerHTML = '⭐'; // Star emoji
+        if (icon.innerHTML === '⠀') { // Heart emoji
+          icon.innerHTML = '💖'; // Star emoji
         } else {
-          icon.innerHTML = '❤️'; // Heart emoji
+          icon.innerHTML = '⠀'; // Heart emoji
         }
       }
       </script>
