@@ -10,10 +10,6 @@
       color: red;
     }
 
-    .favorite-button {
-      border: none;
-    }
-
    </style>
   <!-- this is the same as base.html and overwrite any blocks -->
   <h2 align="center">&#128155; Wish List &#128155;</h2>
@@ -47,7 +43,6 @@
           <th scope="col">Brand</th>
           <th scope="col">Category</th>
           <th scope="col">Name</th>
-          <th scope="col">Favorite</th>
           <th scope="col">Price (+tax)</th>
           <th scope="col">Time Passed</th>
 
@@ -75,7 +70,7 @@
             </span>
           </td>
           <td>
-            <button type="button" class="favorite-button" onClick="toggleFavorite(this, {{ wishitem.id}} )">
+            <button type="button" class="favorite-button" onClick="toggleFavorite(this)">
               <span class="favorite-icon" style="font-size: 11pt;" aria-hidden="true">⠀</span> <!-- Heart emoji &#10084;-->
             </button>
           </td>
@@ -96,29 +91,20 @@
           <td>
           <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/my-wishlist')">
             <span aria-hidden="true">&times;</span>
-          </button>
           </td>
+          </button>
         </tr>
       {% endif %}
       </li>
       {% endfor %}
       <script>
-      function toggleFavorite(button, wishitem_id) {
+      function toggleFavorite(button) {
         const icon = button.querySelector('.favorite-icon');
-        // fetch(`/toggle-favorite/${wishitem_id}`)
-        //   .then(response => response.json())
-        //   .then(data => {
-        //     if (data.favorite) {
-        //       icon.innerHTML = '💝'; // Star emoji
-        //     } else {
-        //       icon.innerHTML = '⠀'; // Heart emoji
-        //     }
-        //   });
-        // if (icon.innerHTML === '⠀') { // Heart emoji
-        //   icon.innerHTML = '💝'; // Star emoji
-        // } else {
-        //   icon.innerHTML = '⠀'; // Heart emoji
-        // }
+        if (icon.innerHTML === '⠀') { // Heart emoji
+          icon.innerHTML = '💖'; // Star emoji
+        } else {
+          icon.innerHTML = '⠀'; // Heart emoji
+        }
       }
       </script>
       </table>
