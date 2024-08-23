@@ -75,7 +75,7 @@
             </span>
           </td>
           <td>
-            <button type="button" class="favorite-button" onClick="toggleFavorite(this)">
+            <button type="button" class="favorite-button" onClick="toggleFavorite(this, {{ wishitem.id}} )">
               <span class="favorite-icon" style="font-size: 11pt;" aria-hidden="true">⠀</span> <!-- Heart emoji &#10084;-->
             </button>
           </td>
@@ -103,13 +103,22 @@
       </li>
       {% endfor %}
       <script>
-      function toggleFavorite(button) {
+      function toggleFavorite(button, wishitem_id) {
         const icon = button.querySelector('.favorite-icon');
-        if (icon.innerHTML === '⠀') { // Heart emoji
-          icon.innerHTML = '💖'; // Star emoji
-        } else {
-          icon.innerHTML = '⠀'; // Heart emoji
-        }
+        // fetch(`/toggle-favorite/${wishitem_id}`)
+        //   .then(response => response.json())
+        //   .then(data => {
+        //     if (data.favorite) {
+        //       icon.innerHTML = '💝'; // Star emoji
+        //     } else {
+        //       icon.innerHTML = '⠀'; // Heart emoji
+        //     }
+        //   });
+        // if (icon.innerHTML === '⠀') { // Heart emoji
+        //   icon.innerHTML = '💝'; // Star emoji
+        // } else {
+        //   icon.innerHTML = '⠀'; // Heart emoji
+        // }
       }
       </script>
       </table>
