@@ -8,43 +8,27 @@ function toggleWishItem(wishItemId, unhooked, purchased, nextUrl)
     });
 }
 
-// function toggleFavoriteWishItem(wishItemId, button) 
-// {
-//   fetch("/toggle-favorite-wishitem", {
-//     method: "POST",
-//     body: JSON.stringify({ wishItemId: wishItemId}),
-//     }).then((_res) => {
-//       const icon = button.querySelector('.favorite-icon');
-//       if (icon.innerHTML === '⠀') { // Heart emoji
-//         icon.innerHTML = '💖'; // Star emoji
-//       } else {
-//         icon.innerHTML = '⠀'; // Heart emoji
-//       }
-//     }
-//   );
-// }
+function toggleFavoriteWishItem(wishItemId){
+  // Store the current scroll position
+  const scrollPosition = window.scrollY;
+  localStorage.setItem('scrollPosition', scrollPosition);
 
-function toggleFavoriteWishItem(wishItemId, this) {
   fetch("/toggle-favorite-wishitem", {
     method: "POST",
-    body: JSON.stringify({ wishItemId: wishItemId }),
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    const icon = button.querySelector('.favorite-icon');
-    if (data.favorited) {
-      icon.innerHTML = '💖';
-      // document.getElementById(`icon-${wishItemId}`).innerHTML = '❤️'; // Heart emoji
-    } else {
-      icon.innerHTML = '⠀'; 
-      // document.getElementById(`icon-${wishItemId}`).innerHTML = '🤍'; // Blank emoji
-    }
-  })
-  .catch(error => console.error('Error:', error));
+    body: JSON.stringify({wishItemId: wishItemId}),
+    }).then((_res) => {
+      window.location.href = 'my-wishlist';
+    });
 }
+
+// Restore the scroll position after the page has loaded
+window.addEventListener('load', () => {
+  const scrollPosition = localStorage.getItem('scrollPosition');
+  if (scrollPosition !== null) {
+    window.scrollTo(0, parseInt(scrollPosition, 10));
+    localStorage.removeItem('scrollPosition'); // Clean up
+  }
+});
 
 function addWishItemPeriod(wishItemId, nextUrl)
 {
