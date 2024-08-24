@@ -8,6 +8,44 @@ function toggleWishItem(wishItemId, unhooked, purchased, nextUrl)
     });
 }
 
+// function toggleFavoriteWishItem(wishItemId, button) 
+// {
+//   fetch("/toggle-favorite-wishitem", {
+//     method: "POST",
+//     body: JSON.stringify({ wishItemId: wishItemId}),
+//     }).then((_res) => {
+//       const icon = button.querySelector('.favorite-icon');
+//       if (icon.innerHTML === '⠀') { // Heart emoji
+//         icon.innerHTML = '💖'; // Star emoji
+//       } else {
+//         icon.innerHTML = '⠀'; // Heart emoji
+//       }
+//     }
+//   );
+// }
+
+function toggleFavoriteWishItem(wishItemId, this) {
+  fetch("/toggle-favorite-wishitem", {
+    method: "POST",
+    body: JSON.stringify({ wishItemId: wishItemId }),
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    const icon = button.querySelector('.favorite-icon');
+    if (data.favorited) {
+      icon.innerHTML = '💖';
+      // document.getElementById(`icon-${wishItemId}`).innerHTML = '❤️'; // Heart emoji
+    } else {
+      icon.innerHTML = '⠀'; 
+      // document.getElementById(`icon-${wishItemId}`).innerHTML = '🤍'; // Blank emoji
+    }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
 function addWishItemPeriod(wishItemId, nextUrl)
 {
   fetch("/add-wishitem-period", {

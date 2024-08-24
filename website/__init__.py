@@ -20,6 +20,8 @@ def create_app():
         app.config.from_object(ProductionConfig)
     elif flask_env == 'development':
         app.config.from_object(DevelopmentConfig)
+    
+    print(app.config)
 
     
     db.init_app(app)
@@ -90,5 +92,5 @@ class Format:
         if description is None or description.strip() == "":
             return ""
         else:
-            return description
+            return "\n" + description
     
