@@ -39,12 +39,13 @@
       <thead>
         <tr>
           <th scope="col">#</th>
-          <th scope="col">Added Date</th>
+          <th scope="col">Time</th>
           <th scope="col">Brand</th>
           <th scope="col">Category</th>
           <th scope="col">Name</th>
+          <th scope="col">💖</th>
           <th scope="col">Price (+tax)</th>
-          <th scope="col">Time Passed</th>
+          <th scope="col">Added</th>
 
         </tr>
       </thead>
@@ -70,8 +71,15 @@
             </span>
           </td>
           <td>
-            <button type="button" class="favorite-button" onClick="toggleFavorite(this)">
-              <span class="favorite-icon" style="font-size: 11pt;" aria-hidden="true">⠀</span> <!-- Heart emoji &#10084;-->
+            <button type="button" class="close" onClick="toggleFavoriteWishItem({{ wishitem.id }})">
+              <!-- <span class="favorite-icon" style="font-size: 11pt;" aria-hidden="true">⠀</span> Heart emoji &#10084;-->
+              <span id="favorite-button" style="font-size: 11pt;" aria-hidden="true">
+                {% if wishitem.favorited %}
+                  💖
+                {% else %}
+                  ◽️
+                {% endif %}
+              </span>
             </button>
           </td>
           <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
@@ -97,16 +105,6 @@
       {% endif %}
       </li>
       {% endfor %}
-      <script>
-      function toggleFavorite(button) {
-        const icon = button.querySelector('.favorite-icon');
-        if (icon.innerHTML === '⠀') { // Heart emoji
-          icon.innerHTML = '💖'; // Star emoji
-        } else {
-          icon.innerHTML = '⠀'; // Heart emoji
-        }
-      }
-      </script>
       </table>
     </ul>
   <!--br>
