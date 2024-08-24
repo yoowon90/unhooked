@@ -188,6 +188,17 @@ def add_wishitem_period():
             db.session.commit()
     return jsonify({})
 
+@views.route('/toggle-favorite-wishitem', methods=['POST'])
+def toggle_favorite_wishitem():
+    wishItemId = json.loads(request.data)['wishItemId']
+    wishitem = WishItem.query.get(wishItemId)
+    if wishitem:
+        if wishitem.user_id == current_user.id:
+            wishitem.favorited = not wishitem.favorited
+            db.session.commit()
+    print(f"jsonify: {jsonify({})}")
+    return jsonify({})
+
 # unhooked-list
 @views.route('/unhooked-list', methods=['GET', 'POST'])
 def unhooked_list():
