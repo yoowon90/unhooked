@@ -190,10 +190,13 @@ def add_wishitem_period():
 
 @views.route('/toggle-favorite-wishitem', methods=['POST'])
 def toggle_favorite_wishitem():
+    print("wishitem click detected and now toggling")
     wishItemId = json.loads(request.data)['wishItemId']
+    print(wishItemId)
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
         if wishitem.user_id == current_user.id:
+            print("toggling favorited")
             wishitem.favorited = not wishitem.favorited
             db.session.commit()
     print(f"jsonify: {jsonify({})}")

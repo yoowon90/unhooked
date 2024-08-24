@@ -20,9 +20,7 @@ def create_app():
         app.config.from_object(ProductionConfig)
     elif flask_env == 'development':
         app.config.from_object(DevelopmentConfig)
-    
-    print(app.config)
-
+        
     
     db.init_app(app)
     migrate = Migrate(app, db)  # Initialize Flask-Migrate
