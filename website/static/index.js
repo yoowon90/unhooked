@@ -1,5 +1,8 @@
-function toggleWishItem(wishItemId, unhooked, purchased, nextUrl)
-{
+function toggleWishItem(wishItemId, unhooked, purchased, nextUrl){
+  // Store the current scroll position
+  const scrollPosition = window.scrollY;
+  localStorage.setItem('scrollPosition', scrollPosition);
+
   fetch("/toggle-wishitem", {
     method: "POST",
     body: JSON.stringify({ wishItemId: wishItemId, unhooked: unhooked, purchased: purchased }),
@@ -40,9 +43,11 @@ function addWishItemPeriod(wishItemId, nextUrl)
     });
 }
 
-
-function deleteItem(wishItemId, nextUrl) 
-{
+function deleteItem(wishItemId, nextUrl){
+  // Store the current scroll position
+  const scrollPosition = window.scrollY;
+  localStorage.setItem('scrollPosition', scrollPosition);
+  
   fetch("/delete-item", {
     method: "POST",
     body: JSON.stringify({ wishItemId: wishItemId }),

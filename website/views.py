@@ -12,6 +12,7 @@ import io
 import requests
 from bs4 import BeautifulSoup
 from .url_extraction import URLInfo
+from sqlalchemy.sql import func
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -177,6 +178,7 @@ def toggle_wishitem():
             if unhooked and not purchased:
                 flash("Item unhooked!", category='success')
             elif not unhooked and purchased:
+                wishitem.purchase_date = func.now() #  datetime.datetime.utcnow()
                 flash("Item purchased.", category='success')
             elif not unhooked and not purchased:
                 flash("Item added to wish list", category='success')

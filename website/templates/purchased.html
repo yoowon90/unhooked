@@ -37,7 +37,7 @@
       <thead>
         <tr>
           <th scope="col">#</th>
-          <th scope="col">Added Date</th>
+          <th scope="col">Purchase Date</th>
           <th scope="col">Brand</th>
           <th scope="col">Category</th>
           <th scope="col">Name</th>
@@ -52,7 +52,13 @@
       {% set count.value = count.value + 1 %}
         <tr>
           <th scope="row">{{count.value}}</th>
-          <td> {{wishitem.date}} </td>
+          <td>
+            {% if wishitem.purchase_date is not none %}
+            {{ wishitem.purchase_date }}
+            {% else %}
+            {{ wishitem.date }}  <!-- as an estimate of purchase date, use date when added to wishlist -->
+            {% endif %}
+          </td>
           <td> {{wishitem.brand}} </td>
           <td> {{wishitem.category}} </td>
           <td onClick="window.open('{{ wishitem.link }}', '_blank')">
