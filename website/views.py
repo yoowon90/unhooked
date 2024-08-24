@@ -257,4 +257,5 @@ def fetch_url_info():
         
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return None
+        # return jsonify({'success': False, 'error': str(e)})
