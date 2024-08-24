@@ -271,4 +271,7 @@ def fetch_url_info():
         
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        # return jsonify({'success': False, 'error': str(e)})
+        default_value = None
+        return jsonify({'success': True, 'name': default_value, 'price': default_value, 'brand': default_value, 'description': default_value,
+                 'currency': default_value}) 
