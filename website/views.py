@@ -1,18 +1,16 @@
-from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for, Response
-from flask_login import login_required, current_user
-from .models import Note, WishItem
-from . import db
-import json
+""" Description: This file contains the routes for the website."""
+# Imports
 import os
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
-import numpy as np
 import datetime
-import io
+import json
 import requests
 from bs4 import BeautifulSoup
+from flask import Blueprint, render_template, request, flash, jsonify
+from flask_login import current_user
+from .models import Note, WishItem
+from . import db
 from .url_extraction import URLInfo
-from sqlalchemy.sql import func
+
 
 # store standard routes (url defined), anything that users can navitage to.
 
