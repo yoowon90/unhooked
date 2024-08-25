@@ -217,6 +217,21 @@
     <button type="submit" class="btn btn-primary">Add Item</button>
    </div>
   </body>
+  <script>
+    // Save scroll position before form submission
+    document.querySelector('form').addEventListener('submit', function() {
+      localStorage.setItem('scrollPosition', window.scrollY);
+    });
+
+    // Restore scroll position after page reload
+    window.addEventListener('load', function() {
+      const scrollPosition = localStorage.getItem('scrollPosition');
+      if (scrollPosition) {
+        window.scrollTo(0, scrollPosition);
+        localStorage.removeItem('scrollPosition'); // Clean up
+      }
+    });
+  </script>
  </form>
  {% endblock %} 
   
