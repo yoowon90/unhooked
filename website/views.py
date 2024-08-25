@@ -246,32 +246,14 @@ def fetch_url_info():
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        name, price, description, currency, brand = None, None, None, None, None
-        
-        for brand in BRANDS: 
-            print(f"extraction started with {brand}")
-            brand_extract_dict = URLInfo(soup).extract_brand_from_soup(brand)
-            print(f"brand extract dict: {brand_extract_dict}")
-            name, price, description, currency, brand, category = (brand_extract_dict['name'],
-                                                         brand_extract_dict['price'],
-                                                         brand_extract_dict['description'],
-                                                         brand_extract_dict['currency'],
-                                                         brand_extract_dict['brand'],
-                                                         brand_extract_dict['category'])
-            if not (name is None and price is None and description is None
-                and currency is None and brand is None):
-                print("Some valid data found")
-                break
-            else:
-                print("No data found")
+        item_data_dict = URLInfo(soup).extract_item_data()
+        item_data_dict['success'] = True
 
-
-        return jsonify({'success': True, 'name': name, 'price': price, 'brand': brand, 'description': description,
-                        'currency': currency}) 
-        
+        return jsonify(item_data_dict)
     
     except Exception as e:
         # return jsonify({'success': False, 'error': str(e)})
         default_value = None
+        print(f"error: {str(e)}")
         return jsonify({'success': True, 'name': default_value, 'price': default_value, 'brand': default_value, 'description': default_value,
                  'currency': default_value}) 
