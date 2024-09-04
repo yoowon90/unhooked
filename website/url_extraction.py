@@ -1,7 +1,7 @@
 import copy
 import json 
 
-BRANDS = ['Reformation', 'Rouje', 'Zara']  # TODO: Massimo Dutti, American Vintage, Mango, Sezane, Free People, & Other Stories, Aritzia
+BRANDS = ['Reformation', 'Rouje', 'Zara', 'Aamerican Vintage', 'Aritzia']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
 
 class URLInfo:
     def __init__(self, soup):
@@ -33,12 +33,16 @@ class URLInfo:
                 print("No data found")
 
     def extract_brand_from_soup(self, brand):
-        if brand == 'Reformation':
+        if brand == 'Reformation' or brand == 'American Vintage':
             return self.extract_reformation()
         elif brand == 'Rouje':
             return self.extract_rouje()
         elif brand == 'Zara':
             return self.extract_zara()
+        elif brand == 'Massimo Dutti':
+            return self.extract_massimo_dutti()
+        elif brand == 'Aritzia':
+            return self.extract_aritzia()
         else:
             return self.__default_data
 
@@ -65,6 +69,31 @@ class URLInfo:
 
         finally:
             return data_copy
+    
+    def extract_massimo_dutti(self):
+        # Massimo Dutti. e.g. https://www.massimodutti.com
+        data_copy = copy.deepcopy(self.__default_data)
+        try:
+            soup = self.soup
+            # use selenium
+            # https://stackoverflow.com/questions/52687372/beautifulsoup-not-returning-complete-html-of-the-page
+        
+        finally:
+            return data_copy
+    
+    def extract_aritzia(self):
+        data_copy = copy.deepcopy(self.__default_data)
+        try:
+            soup = self.soup
+            data_copy['name'] = soup.find('meta', {'property': 'og:title'}).get('content')
+            data_copy['price'] = soup.find('meta', {'property': 'og:price:amount'}).get('content')
+            data_copy['currency'] = soup.find('meta', {'property': 'og:price:currency'}).get('content')
+            data_copy['description'] = (f"{soup.find('meta', {'property': 'og:description'}).get('content')}."
+                                        f" {soup.find('meta', {'property': 'product:color'}).get('content')}"
+                                        f" ({soup.find('meta', {'property': 'product:color:map'}).get('content')})")
+        finally:
+            return data_copy
+
 
     def extract_rouje(self):
         # soup.find('meta'):

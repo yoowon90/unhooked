@@ -5,6 +5,7 @@ import datetime
 import json
 import requests
 from bs4 import BeautifulSoup
+from sqlalchemy.sql import func
 from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import current_user
 from .models import Note, WishItem
