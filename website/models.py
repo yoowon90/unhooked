@@ -41,3 +41,5 @@ class User(db.Model, UserMixin):
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
     # last_purchase_date = db.Column(db.DateTime(timezone=True), default=None)
+    # report_start_date = db.Column(db.DateTime(timezone=True), default=None)
+    # report_end_date = db.Column(db.DateTime(timezone=True), default=None)
