@@ -1,4 +1,4 @@
-from website import create_app, Format # format_time, format_tag
+from website import create_app, debug, Format # format_time, format_tag
 import datetime
 
 app = create_app()
@@ -7,6 +7,8 @@ app = create_app()
 app.template_filter('format_time')(Format().format_time)
 app.template_filter('format_tag')(Format().format_tag)
 app.template_filter('format_description')(Format().format_description)
+app.template_filter('format_last_purchase_date')(Format().format_last_purchase_date)
+app.template_filter('debug')(debug)
 
             
 if __name__ == '__main__':

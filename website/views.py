@@ -11,6 +11,7 @@ from flask_login import current_user
 from .models import Note, WishItem
 from . import db
 from .url_extraction import URLInfo
+from pytz import timezone
 
 
 # store standard routes (url defined), anything that users can navitage to.
@@ -155,10 +156,13 @@ def wishlist():
         # pie.savefig('./website/img/brand-pie.png')
     
     # get current time
-    current_time = datetime.datetime.utcnow() # Get the current time
+    current_time = datetime.datetime.now() # Get the current time
+    # current_time = func.now() # Get the current time
+
 
     # render the template using name of template
     # now when go to '/', render home.html
+
     return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'), current_time=current_time)  # return html when we got root
 
 
@@ -177,7 +181,8 @@ def toggle_wishitem():
             if unhooked and not purchased:
                 flash("Item unhooked!", category='success')
             elif not unhooked and purchased:
-                wishitem.purchase_date = func.now() #  datetime.datetime.utcnow()
+                wishitem.purchase_date = datetime.datetime.now()  # current datetime. was func.now()
+                current_user.last_purchase_date = wishitem.purchase_date  # update last purchase date
                 flash("Item purchased.", category='success')
             elif not unhooked and not purchased:
                 flash("Item added to wish list", category='success')
@@ -190,8 +195,7 @@ def add_wishitem_period():
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
         if wishitem.user_id == current_user.id:
-            current_time = datetime.datetime.utcnow()
-            wish_timedelta = current_time - wishitem.date
+            current_time = datetime.datetime.now()
             wishitem.wish_period = current_time - wishitem.date
             db.session.commit()
     return jsonify({})
@@ -215,6 +219,7 @@ def toggle_favorite_wishitem():
 def unhooked_list():
     # render the template using name of template
     # now when go to '/', render home.html
+    
     return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
 
 # purchased-list

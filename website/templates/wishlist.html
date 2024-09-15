@@ -84,7 +84,12 @@
           </td>
           <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
           <td> 
+            {% if wishitem.date %}
+              {{ (current_time - wishitem.date) | debug }}
               {{ (current_time - wishitem.date) | format_time }}
+              {% else %}
+                None
+              {% endif %}
           </td>
           <td>
             <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist'), addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">

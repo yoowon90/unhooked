@@ -57,6 +57,10 @@ def create_database(app):
             db.create_all()
         print('Created Database!')
 
+def debug(text):
+    print(f"DEBUG | Type: {(type(text))} Text: {text}")
+    return ''
+
 class Format:
 
     def __init__(self):
@@ -66,19 +70,22 @@ class Format:
         if timedelta is None:
             return ""
         else:
-            if timedelta.days > 0:
-                leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
-                leftover_hours = leftover_seconds // 3600
-                return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days} days ago"
-            
-            elif timedelta.seconds > 3600:  # 1 hour
-                return f"{timedelta.seconds // 3600} hrs ago"
-            
-            elif timedelta.seconds > 60:
-                return f"{timedelta.seconds // 60} mins ago"
+            try:
+                if timedelta.days > 0:
+                    leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
+                    return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days} days ago"
+                
+                elif timedelta.seconds > 3600:  # 1 hour
+                    return f"{timedelta.seconds // 3600} hrs ago"
+                
+                elif timedelta.seconds > 60:
+                    return f"{timedelta.seconds // 60} mins ago"
 
-            else:
-                return f"{timedelta.seconds} secs ago"
+                else:
+                    return f"{timedelta.seconds} secs ago"
+            except:
+                print(f"Error in format_time: {timedelta}")
+                return f"{timedelta.day} day"
 
     def format_tag(self, tag):
         if tag is None or tag.strip() == "":
@@ -91,4 +98,11 @@ class Format:
             return ""
         else:
             return "\n" + description
+    
+    def format_last_purchase_date(self, last_purchase_date):
+        # last_purchase_date is defined using datetime.datetime.now()
+        if last_purchase_date is None:
+            # grab last purchase date from purchase list
+            return ""
+        return last_purchase_date
     

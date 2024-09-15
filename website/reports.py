@@ -10,6 +10,8 @@ import numpy as np
 import datetime
 import io
 import random
+from pytz import timezone
+
 
 reports = Blueprint('reports', __name__)  # define blueprint
 
@@ -30,8 +32,10 @@ COLOR_SCHEME = [
 # @login_required
 def home():
     if request.method == 'POST' or request.method == 'GET': 
-
-        return render_template("home.html", user=current_user)  # return html when we got root
+        # get current time
+        current_time = datetime.datetime.now() # Get the current time
+        ten_days = datetime.timedelta(days=10)
+        return render_template("home.html", user=current_user, current_time=current_time, ten_days=ten_days)  # return html when we got root
 
 def create_figure(figure_type, figure_content):
     fig = Figure()
