@@ -1,18 +1,20 @@
 from . import db
 from flask_login import UserMixin
 from sqlalchemy.sql import func
+import datetime
+from pytz import timezone
 
 
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.String(10000))
-    date = db.Column(db.DateTime(timezone=True), default=func.now())
+    date = db.Column(db.DateTime(timezone=True), default=datetime.datetime.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # allow associate (relationship) note to user
 
 
 class WishItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.DateTime(timezone=True), default=func.now())
+    date = db.Column(db.DateTime(timezone=True),default=datetime.datetime.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # referencing another column in the db. one to many relationship.
     category = db.Column(db.String(10000))  # dress, bag, skirt, jeans, non-denim pants, shoes, accessories, etc.
     brand = db.Column(db.String(10000))
@@ -40,4 +42,4 @@ class User(db.Model, UserMixin):
     zipcode = db.Column(db.String(5))
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
-    # last_purchase_date = db.Column(db.DateTime(timezone=True), default=None)
+    last_purchase_date = db.Column(db.DateTime(timezone=True), default=None)
