@@ -72,7 +72,7 @@
         <br>
         {{ (current_time) | debug }}
         {{ (user.last_purchase_date) | debug }}
-        {% set time_difference = ten_days if user.last_purchase_date is defined else current_time - user.last_purchase_date %}
+        {% set time_difference = current_time - user.last_purchase_date %}
         ⭐️ Your last purchase date is {{ user.last_purchase_date | format_last_purchase_date }} which is
         <span style="color: {% if time_difference >= ten_days %}blue{% else %}red{% endif %};">
           <b> {{ (time_difference) | format_time}}</b>
