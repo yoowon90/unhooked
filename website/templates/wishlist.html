@@ -35,7 +35,7 @@
   </div>
 
   <ul class="list-group list-group-flush" id="wishItems">
-    <table class="table table-sm">
+    <table id="wishlist-table" class="table table-sm">
       <thead>
         <tr>
           <th scope="col">#</th>
@@ -57,14 +57,14 @@
         <tr>
           <th scope="row">{{count.value}}</th>
           <td> {{wishitem.date}} </td>
-          <td> {{wishitem.brand}} </td>
-          <td>
+          <td contenteditable="true" oninput="autoSave(this)"> {{wishitem.brand}} </td>
+          <td contenteditable="true" oninput="autoSave(this)">
             {{ wishitem.category }}<br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ wishitem.tag | format_tag }}
             </span>
           </td>
-          <td onClick="window.open('{{ wishitem.link }}', '_blank')">
+          <td contenteditable="true" oninput="autoSave(this)" onClick="window.open('{{ wishitem.link }}', '_blank')">
             <span style="color: blue; text-decoration: underline; font-size:11pt"> {{wishitem.name}} </span> <br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ wishitem.description | format_description }}
@@ -88,8 +88,12 @@
               {{ wishitem.wish_period | debug }}
               {{ wishitem.wish_period | format_time }}
               {% else %}
-                {{ (current_time - wishitem.date) | debug }}
-                {{ (current_time - wishitem.date) | format_time }}
+                {% if wishitem.date %}
+                  {{ (current_time - wishitem.date) | debug }}
+                  {{ (current_time - wishitem.date) | format_time }}
+                {% else %}
+                  {{ None }}
+                {% endif %}
               {% endif %}
           </td>
           <td>
@@ -217,6 +221,26 @@
               .catch(error => console.error('Error:', error));
           }
       });
+
+      function autoSave(cell) {
+            const row = cell.parentNode;
+            const cells = row.querySelectorAll('td[contenteditable="true"]');
+            const data = Array.from(cells).map(cell => cell.innerText);
+
+            // Example: Log the data to the console
+            console.log(data);
+
+            // TODO: Send the data to the server using fetch or XMLHttpRequest
+            fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ item: data[0], quantity: data[1], price: data[2] })
+            }).then(response => response.json())
+            .then(data => console.log(data))
+            .catch(error => console.error('Error:', error));
+        }
       </script>
    <br />
    <div align="center">
@@ -237,6 +261,8 @@
         localStorage.removeItem('scrollPosition'); // Clean up
       }
     });
+
+    
   </script>
  </form>
  {% endblock %} 
