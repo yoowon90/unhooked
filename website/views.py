@@ -135,7 +135,8 @@ def wishlist():
                                 total_price=taxed_price + wish_item_delivery_fee,  # taxed price plus delivery fee
                                 link=wish_item_link,
                                 description=wish_item_description,
-                                wish_period=datetime.timedelta(seconds=0))  # providing the schema for the note
+                                wish_period=datetime.timedelta(seconds=0),
+                                date=datetime.datetime.now())  # providing the schema for the note
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
             flash('Item added to Wish List!', category='success')
