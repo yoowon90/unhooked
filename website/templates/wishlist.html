@@ -85,11 +85,11 @@
           <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
           <td> 
             {% if wishitem.wish_period %}
-              {{ wishitem.wish_period | debug }}
+              <!-- {{ wishitem.wish_period | debug }} -->
               {{ wishitem.wish_period | format_time }}
               {% else %}
                 {% if wishitem.date %}
-                  {{ (current_time - wishitem.date) | debug }}
+                  <!-- {{ (current_time - wishitem.date) | debug }} -->
                   {{ (current_time - wishitem.date) | format_time }}
                 {% else %}
                   {{ None }}
@@ -231,7 +231,7 @@
             console.log(data);
 
             // TODO: Send the data to the server using fetch or XMLHttpRequest
-            fetch('/save', {
+            fetch('/save-table', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
