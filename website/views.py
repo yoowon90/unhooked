@@ -217,6 +217,13 @@ def toggle_favorite_wishitem():
     print(f"jsonify: {jsonify({})}")
     return jsonify({})
 
+@views.route('/save-table', methods=['POST'])
+def save_table():
+    data = request.json
+    # Process the data (e.g., save to the database)
+    print(data)
+    return jsonify({'status': 'success', 'data': data})
+
 # unhooked-list
 @views.route('/unhooked-list', methods=['GET', 'POST'])
 def unhooked_list():
