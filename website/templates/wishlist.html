@@ -54,7 +54,7 @@
       {% for wishitem in user.wishitems %}
       {% if not wishitem.unhooked and not wishitem.purchased %}
       {% set count.value = count.value + 1 %}
-        <tr>
+        <tr data-wishitem-id="{{ wishitem.id }}">
           <th scope="row">{{count.value}}</th>
           <td> {{wishitem.date}} </td>
           <td contenteditable="true" oninput="autoSave(this)"> {{wishitem.brand}} </td>
@@ -224,11 +224,12 @@
 
       function autoSave(cell) {
             const row = cell.parentNode;
+            const wishitemId = row.getAttribute('data-wishitem-id');
             const cells = row.querySelectorAll('td[contenteditable="true"]');
             const data = Array.from(cells).map(cell => cell.innerText);
 
-            // Example: Log the data to the console
-            console.log(data);
+            // print/log the data to the console
+            console.log(data); // print data array to browser console (F12 -> Console tab)
 
             // TODO: Send the data to the server using fetch or XMLHttpRequest
             fetch('/save-table', {
@@ -236,7 +237,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ item: data[0], quantity: data[1], price: data[2] })
+                body: JSON.stringify({ wishItemId: wishitemId, Brand: data[0], Category_Tag: data[1], Name_Description: data[2] })
             }).then(response => response.json())
             .then(data => console.log(data))
             .catch(error => console.error('Error:', error));
