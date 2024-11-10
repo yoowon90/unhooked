@@ -207,11 +207,9 @@ def add_wishitem_period():
 def toggle_favorite_wishitem():
     print("wishitem click detected and now toggling")
     wishItemId = json.loads(request.data)['wishItemId']
-    print(wishItemId)
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
         if wishitem.user_id == current_user.id:
-            print("toggling favorited")
             wishitem.favorited = not wishitem.favorited
             db.session.commit()
     print(f"jsonify: {jsonify({})}")
@@ -219,9 +217,29 @@ def toggle_favorite_wishitem():
 
 @views.route('/save-table', methods=['POST'])
 def save_table():
-    data = request.json
+    wishItemId = json.loads(request.data)['wishItemId']
     # Process the data (e.g., save to the database)
-    print(data)
+    wishitem = WishItem.query.get(wishItemId)
+    if wishitem:
+        if wishitem.user_id == current_user.id:
+            brand = json.loads(request.data)['Brand'].split('\n')[0].strip()
+            category_and_tag = json.loads(request.data)['Category_Tag']
+            category = category_and_tag.split('#')[0].strip()
+            tag = category_and_tag.split('#')[1].strip() if '#' in category_and_tag else None
+            name_and_desc = json.loads(request.data)['Name_Description']
+            name = name_and_desc.split('\n')[0].strip()
+            desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None
+            print(f"brand: {brand}, category: {category}, tag: {tag}, name: {name}, desc: {desc}")
+            
+            wishitem.brand = brand
+            wishitem.category = category
+            wishitem.tag = tag
+            wishitem.name = name
+            wishitem.description = desc
+            db.session.commit()
+    print(f"jsonify: {jsonify({})}")
+    return jsonify({})
+
     return jsonify({'status': 'success', 'data': data})
 
 # unhooked-list
