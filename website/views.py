@@ -57,24 +57,6 @@ def delete_note():
     print(f"jsonify: {jsonify({})}")
     return jsonify({})
 
-# test
-@views.route('/test', methods=['GET', 'POST'])
-def test():
-    if request.method == 'POST': 
-        wishitem = request.form.get('wishitem')  #Gets the wish item from the HTML 
-
-        if len(wishitem) < 1:
-            flash('Item is too short!', category='error') 
-        else:
-            new_item = WishItem(data=wishitem, user_id=current_user.id)  #providing the schema for the note 
-            db.session.add(new_item) #adding the note to the database 
-            db.session.commit()
-            flash('Item added to Wish List!', category='success')
-
-    # render the template using name of template
-    # now when go to '/', render home.html
-    return render_template("test.html", user=current_user)  # return html when we got root
-
 def dir_last_updated(folder):
     # https://stackoverflow.com/questions/41144565/flask-does-not-see-change-in-js-file
     return str(max(os.path.getmtime(os.path.join(root_path, f))
@@ -228,9 +210,7 @@ def save_table():
             tag = category_and_tag.split('#')[1].strip() if '#' in category_and_tag else None
             name_and_desc = json.loads(request.data)['Name_Description']
             name = name_and_desc.split('\n')[0].strip()
-            desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None
-            print(f"brand: {brand}, category: {category}, tag: {tag}, name: {name}, desc: {desc}")
-            
+            desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None            
             wishitem.brand = brand
             wishitem.category = category
             wishitem.tag = tag
