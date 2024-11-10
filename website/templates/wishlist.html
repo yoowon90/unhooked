@@ -64,8 +64,8 @@
               {{ wishitem.tag | format_tag }}
             </span>
           </td>
-          <td contenteditable="true" oninput="autoSave(this)" onClick="window.open('{{ wishitem.link }}', '_blank')">
-            <span style="color: blue; text-decoration: underline; font-size:11pt"> {{wishitem.name}} </span> <br>
+          <td contenteditable="true" oninput="autoSave(this)">
+            <span style="color: blue; text-decoration: underline; font-size:11pt" onClick="window.open('{{ wishitem.link }}', '_blank')"> {{wishitem.name}} </span> <br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ wishitem.description | format_description }}
             </span>
