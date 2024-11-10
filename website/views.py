@@ -143,11 +143,22 @@ def wishlist():
     current_time = datetime.datetime.now() # Get the current time
     # current_time = func.now() # Get the current time
 
+    # get all unique categories in wishlist
+    wishlist_tags = set()
+    for wishitem in current_user.wishitems:
+        if not wishitem.purchased and not wishitem.unhooked:
+            if not wishitem.tag == "":  # if not tag unknown
+                wishlist_tags.add(wishitem.tag)
+    tags = list(wishlist_tags)
 
     # render the template using name of template
     # now when go to '/', render home.html
 
-    return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'), current_time=current_time)  # return html when we got root
+    return render_template("wishlist.html", 
+                           user=current_user, 
+                           last_updated=dir_last_updated(r'./website/static'), 
+                           current_time=current_time,
+                           tags=tags)  # return html when we got root
 
 
 # wishlist
