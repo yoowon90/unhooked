@@ -35,7 +35,8 @@ def home():
         # get current time
         current_time = datetime.datetime.now() # Get the current time
         ten_days = datetime.timedelta(days=10)
-        return render_template("home.html", user=current_user, current_time=current_time, ten_days=ten_days)  # return html when we got root
+        last_purchase_date = current_user.last_purchase_date
+        return render_template("home.html", user=current_user, current_time=current_time, ten_days=ten_days, last_purchase_date=last_purchase_date)  # return html when we got root
 
 def create_figure(figure_type, figure_content):
     fig = Figure()

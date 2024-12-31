@@ -73,7 +73,7 @@ class Format:
             try:
                 if timedelta.days > 0:
                     leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
-                    return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days} days ago"
+                    return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days}d ago"
                 
                 elif timedelta.seconds > 3600:  # 1 hour
                     return f"{timedelta.seconds // 3600} hrs ago"

@@ -33,6 +33,7 @@ class WishItem(db.Model):
     wish_period = db.Column(db.Interval)
     tag = db.Column(db.String(10000), nullable=True)
     favorited = db.Column(db.Boolean, default=False)
+    unhooked_date = db.Column(db.DateTime(timezone=True), default=None)
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
