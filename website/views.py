@@ -85,7 +85,7 @@ def wishlist():
         wish_item_tag = request.form.get('tag')
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
-        wish_item_description = request.form.get('description')
+        wish_item_description = request.form.get('description').replace("<br>", ". ").replace("<br/>", ". ")
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
         elif wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
@@ -174,9 +174,10 @@ def toggle_wishitem():
             wishitem.unhooked = unhooked
             wishitem.purchased = purchased
             if unhooked and not purchased:
+                wishitem.unhooked_date = datetime.datetime.now()
                 flash("Item unhooked!", category='success')
             elif not unhooked and purchased:
-                wishitem.purchase_date = datetime.datetime.now()  # current datetime. was func.now()
+                wishitem.purchase_date = datetime.datetime.now()
                 current_user.last_purchase_date = wishitem.purchase_date  # update last purchase date
                 flash("Item purchased.", category='success')
             elif not unhooked and not purchased:
