@@ -180,8 +180,8 @@ def toggle_wishitem():
                 wishitem.purchase_date = datetime.datetime.now()
                 current_user.last_purchase_date = wishitem.purchase_date  # update last purchase date
                 flash("Item purchased.", category='success')
-            elif not unhooked and not purchased:
-                wishitem.date = datetime.datetime.now() 
+            elif not unhooked and not purchased:  # e.g. re-adding to wishlist
+                # wishitem.date = datetime.datetime.now() # update date
                 flash("Item added to wish list", category='success')
             db.session.commit()
     return jsonify({})

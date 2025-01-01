@@ -39,7 +39,7 @@
     <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value }} 
     </b></font>&nbsp; &#128150;<b> Total favorited: <font color="gold"> ${{ totalfavoriteprice.value }}
     <br>
-    </b></font>&nbsp;&#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} 
+    </b></font>&nbsp; &#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} 
     </b></font></p>
   </div>
 
@@ -101,7 +101,6 @@
           <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
           <td> 
             {% if wishitem.wish_period %}
-              <!-- {{ wishitem.wish_period | debug }} -->
               {{ wishitem.wish_period | format_time }}
               {% else %}
                 {% if wishitem.date %}
@@ -114,7 +113,7 @@
           </td>
           <td>
             <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist'), addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
-            <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> unhook&#129693;</span>
+              <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> unhook&#129693;</span>
             </button>
           </td>
           <td>

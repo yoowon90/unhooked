@@ -57,7 +57,7 @@
           <td> {{wishitem.taxed_price|round(2)}} </td>
           <td> {{(wishitem.wish_period | format_time).replace("ago", "") }} </td>
           <td>
-            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list')">
+            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list'), addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
             <span id='readd-button' style="color: #ff00bbdb; font-size: 11pt" aria-hidden="true">Re-add to Wishlist &#128722;</span>
             </button>
           </td>
