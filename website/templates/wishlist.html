@@ -36,7 +36,7 @@
   {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
   {% set totalfavoriteprice.value =  totalfavoriteprice.value|round(2) %}
   <div style="display: flex; justify-content: space-between;">
-    <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value }} 
+    <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value | format_money }} 
     </b></font>&nbsp; &#128150;<b> Total favorited: <font color="gold"> ${{ totalfavoriteprice.value }}
     <br>
     </b></font>&nbsp; &#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} 
@@ -271,8 +271,6 @@
                 }
             });
         }
-
-
       </script>
    <br />
    <div align="center">
@@ -283,7 +281,20 @@
     // Save scroll position before form submission
     document.querySelector('form').addEventListener('submit', function() {
       localStorage.setItem('scrollPosition', window.scrollY);
-    });
+    });// Function to filter table based on category
+      function filterTable() {
+            var filter = document.getElementById("tagFilter").value.toLowerCase();
+            var rows = document.querySelectorAll("#wishlist-table tbody tr");
+
+            rows.forEach(row => {
+                var tag = row.getAttribute("data-wishitem-tag").toLowerCase();
+                if (filter === "" || tag === filter) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
 
     // Restore scroll position after page reload
     window.addEventListener('load', function() {
