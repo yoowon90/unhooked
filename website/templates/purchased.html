@@ -30,7 +30,7 @@
   {% endfor %}
   {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
   <div style="display: flex; justify-content: space-between;">
-    <p> <b> &#128717; Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} </b></font></p>
+    <p> <b> &#128717; Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }} </b></font></p>
   </div>
   <ul class="list-group list-group-flush" id="wishItems">
     <table class="table table-sm">

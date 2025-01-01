@@ -22,16 +22,23 @@
   {% endif %}
   {% endfor %}
   {% set totalprice.value =  totalprice.value|round(2) %}
-  <b> &#128091; Total saved: <font color="green">${{ totalprice.value }} </font> </b>
+  <b> &#128091; Total saved: <font color="green">${{ totalprice.value | format_money }} </font> </b>
 
   <ul class="list-group list-group-flush" id="wishItems">
-    <table class="table table-sm">
+    <table id="purchaselist-table" class="table table-sm">
       <thead>
         <tr>
           <th scope="col">#</th>
           <th scope="col">Added Date</th>
           <th scope="col">Brand</th>
-          <th scope="col">Category</th>
+          <th scope="col">Category
+          <select id="tagFilter" onchange="filterTable()">
+            <option value="">All</option>
+            {% for tag in tags %}
+            <option value="{{ tag }}">{{ tag }}</option>
+            {% endfor %}
+          </select>
+          </th>
           <th scope="col">Name</th>
           <th scope="col">Price (+tax)</th>
           <th scope="col">Wish Period</th>
@@ -43,8 +50,8 @@
       {% for wishitem in user.wishitems %}
       {% if wishitem.unhooked and not wishitem.purchased %}
       {% set count.value = count.value + 1 %}
-        <tr>
-          <th scope="row">{{count.value}}</th>
+      <tr data-wishitem-category="{{ wishitem.category }}">
+        <th scope="row">{{count.value}}</th>
           <td> {{wishitem.date}} </td>
           <td> {{wishitem.brand}} </td>
           <td> {{wishitem.category}} </td>
@@ -70,5 +77,22 @@
       </li>
       {% endfor %}
       </table>
+    <!-- Add the JavaScript code here -->
+    <script>
+      // Function to filter table based on category
+      function filterTable() {
+            var filter = document.getElementById("tagFilter").value.toLowerCase();
+            var rows = document.querySelectorAll("#purchaselist-table tbody tr");
+
+            rows.forEach(row => {
+                var tag = row.getAttribute("data-wishitem-category").toLowerCase();
+                if (filter === "" || tag === filter) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+    </script>
   </ul>
   {% endblock %}

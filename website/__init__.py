@@ -92,6 +92,25 @@ class Format:
             return ""
         else:
             return "#" + tag
+        
+    def format_money(self, money):
+        def add_commas(money):
+            if len(money) <= 3:
+                return money
+            return add_commas(money[:-3]) + ',' + money[-3:]
+        
+        money = str(money)
+        if "." in money:
+            dollars = money.split(".")[0]
+            cents = money.split(".")[1]
+        else:
+            dollars = money
+            cents = "00"
+    
+        
+        money = add_commas(dollars) + "." + cents
+        return money
+            
     
     def format_description(self, description):
         if description is None or description.strip() == "":
