@@ -87,7 +87,7 @@
         {% endif %}
         {% endfor %}
         {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
-        <p> ⭐️ Your total purchase amount is <b> ${{ totalpurchasedprice.value }} </b> </p>
+        <p> ⭐️ Your total purchase amount is <b> ${{ totalpurchasedprice.value | format_money }} </b> </p>
         <br>
         <div class="calendar-form-container">
       <div id='calendar'></div>
