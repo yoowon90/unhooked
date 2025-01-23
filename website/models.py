@@ -36,6 +36,14 @@ class WishItem(db.Model):
     unhooked_date = db.Column(db.DateTime(timezone=True), default=None)
 
 class User(db.Model, UserMixin):
+
+    # @staticmethod
+    # def get_default_report_start():
+    #     """ get beginning date and time of the current month """
+    #     today = datetime.datetime.now()
+    #     report_start = datetime.datetime(today.year, today.month, 1, 0, 0, 0) # 1st day of the month
+    #     return report_start
+    
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True)
     password = db.Column(db.String(150))
@@ -44,3 +52,6 @@ class User(db.Model, UserMixin):
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
     last_purchase_date = db.Column(db.DateTime(timezone=True), default=None)
+    # report_start = db.Column(db.DateTime(timezone=True), default=get_default_report_start())
+    # report_end = db.Column(db.DateTime(timezone=True), default=datetime.datetime.now())
+

@@ -123,5 +123,7 @@ class Format:
         if last_purchase_date is None:
             # grab last purchase date from purchase list
             return ""
-        return last_purchase_date
+        return last_purchase_date.strftime("%Y-%m-%d %H:%M:%S")
     
+    def format_report_date(self, report_date):
+        return report_date.strftime("%Y-%m-%d")

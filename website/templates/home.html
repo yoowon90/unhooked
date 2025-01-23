@@ -104,11 +104,17 @@
               </div>
               <div>
                 <label>&nbsp;</label> <!-- Empty label for alignment -->
-            </div>
+              </div>
           </div>
-      </form>
+          <div>
+          <button type="submit" class="btn btn-primary">Create Report</button>
+          </div>
+        </form>
       </div>
       </div>
+    </div>
+    <br>
+    This report is based on {{ default_report_start | format_report_date }} to {{ default_report_end | format_report_date }}.
     <div class="pie-chart-container">
         <div class="item">
             <h5>Wish List Category</h5>
