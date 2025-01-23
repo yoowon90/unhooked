@@ -9,6 +9,7 @@ app.template_filter('format_description')(Format().format_description)
 app.template_filter('format_last_purchase_date')(Format().format_last_purchase_date)
 app.template_filter('format_last_purchase_date')(Format().format_last_purchase_date)
 app.template_filter('format_money')(Format().format_money)
+app.template_filter('format_report_date')(Format().format_report_date)
 app.template_filter('debug')(debug)
 
             

@@ -36,7 +36,21 @@ def home():
         current_time = datetime.datetime.now() # Get the current time
         ten_days = datetime.timedelta(days=10)
         last_purchase_date = current_user.last_purchase_date
-        return render_template("home.html", user=current_user, current_time=current_time, ten_days=ten_days, last_purchase_date=last_purchase_date)  # return html when we got root
+        report_end = datetime.datetime.now()
+        report_start = datetime.datetime(report_end.year, report_end.month, 1, 0, 0, 0) # 1st day of the month
+        if report_end.day == report_start.day:
+            # if the report_end is the first day of the month, then we need to go back to the first day of yesterday's month
+            yesterday = report_end - datetime.timedelta(days=1)
+            report_start = datetime.datetime(yesterday.year, yesterday.month, 1, 0, 0, 0) # 1st day of yesterday's month
+        
+        return render_template("home.html", 
+                    user=current_user, 
+                    current_time=current_time, 
+                    ten_days=ten_days, 
+                    last_purchase_date=last_purchase_date,
+                    default_report_start=report_start,
+                    default_report_end=report_end
+                    )  # return html when we got root
 
 def create_figure(figure_type, figure_content):
     fig = Figure()

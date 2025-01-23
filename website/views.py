@@ -141,13 +141,12 @@ def wishlist():
     
     # get current time
     current_time = datetime.datetime.now() # Get the current time
-    # current_time = func.now() # Get the current time
 
-    # get all unique categories in wishlist
+    # get all unique tags in wishlist
     wishlist_tags = set()
     for wishitem in current_user.wishitems:
         if not wishitem.purchased and not wishitem.unhooked:
-            if not wishitem.tag == "":  # if not tag unknown
+            if not wishitem.tag == "" and wishitem.tag is not None:  # if not tag unknown
                 wishlist_tags.add(wishitem.tag)
     tags = list(wishlist_tags)
 
@@ -239,8 +238,17 @@ def save_table():
 def unhooked_list():
     # render the template using name of template
     # now when go to '/', render home.html
+    # get all unique tags in wishlist
+    unhooked_cats = set()
+    for wishitem in current_user.wishitems:
+        if not wishitem.purchased and wishitem.unhooked:
+            if not wishitem.category == "" and wishitem.category is not None:  # if not tag unknown
+                unhooked_cats.add(wishitem.category)
+
+    unhooked_cats = list(unhooked_cats)
     
-    return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
+    return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
+                           unhooked_cats=unhooked_cats)  # return html when we got root
 
 # purchased-list
 @views.route('/purchased-list', methods=['GET', 'POST'])

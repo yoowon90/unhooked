@@ -25,7 +25,7 @@
   <b> &#128091; Total saved: <font color="green">${{ totalprice.value | format_money }} </font> </b>
 
   <ul class="list-group list-group-flush" id="wishItems">
-    <table id="purchaselist-table" class="table table-sm">
+    <table id="unhookedlist-table" class="table table-sm">
       <thead>
         <tr>
           <th scope="col">#</th>
@@ -33,9 +33,9 @@
           <th scope="col">Brand</th>
           <th scope="col">Category
           <select id="tagFilter" onchange="filterTable()">
-            <option value="">All</option>
-            {% for tag in tags %}
-            <option value="{{ tag }}">{{ tag }}</option>
+            <option value="">All categories</option>
+            {% for unhooked_cat in unhooked_cats %}
+            <option value="{{ unhooked_cat }}">{{ unhooked_cat }}</option>
             {% endfor %}
           </select>
           </th>
@@ -82,11 +82,11 @@
       // Function to filter table based on category
       function filterTable() {
             var filter = document.getElementById("tagFilter").value.toLowerCase();
-            var rows = document.querySelectorAll("#purchaselist-table tbody tr");
+            var rows = document.querySelectorAll("#unhookedlist-table tbody tr");
 
             rows.forEach(row => {
                 var tag = row.getAttribute("data-wishitem-category").toLowerCase();
-                if (filter === "" || tag === filter) {
+                if (filter === "" || tag === filter || filter === NaN) {
                     row.style.display = "";
                 } else {
                     row.style.display = "none";

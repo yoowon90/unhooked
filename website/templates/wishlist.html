@@ -52,7 +52,7 @@
           <th scope="col">Brand</th>
           <th scope="col">Category
             <select id="tagFilter" onchange="filterTable()">
-              <option value="">All</option>
+              <option value="">All tags</option>
               {% for tag in tags %}
               <option value="{{ tag }}">{{ tag }}</option>
               {% endfor %}
@@ -281,7 +281,7 @@
     // Save scroll position before form submission
     document.querySelector('form').addEventListener('submit', function() {
       localStorage.setItem('scrollPosition', window.scrollY);
-    });// Function to filter table based on category
+    });// Function to filter table based on tag
       function filterTable() {
             var filter = document.getElementById("tagFilter").value.toLowerCase();
             var rows = document.querySelectorAll("#wishlist-table tbody tr");
