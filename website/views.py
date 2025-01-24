@@ -246,15 +246,22 @@ def unhooked_list():
                 unhooked_cats.add(wishitem.category)
 
     unhooked_cats = list(unhooked_cats)
+
+    # sort user's wishitems by unhooked date
+    unhooked_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=True, purchased=False).order_by(WishItem.unhooked_date.asc()).all()
     
     return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
-                           unhooked_cats=unhooked_cats)  # return html when we got root
+                           unhooked_cats=unhooked_cats, unhooked_items=unhooked_items)  # return html when we got root
 
 # purchased-list
 @views.route('/purchased-list', methods=['GET', 'POST'])
 def purchased_list():
     # define wish_to_purchase_period
-    return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
+    purchased_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=False, purchased=True).order_by(WishItem.purchase_date.asc()).all()
+
+
+    return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
+                           purchased_items=purchased_items)  # return html when we got root
 
 
 @views.route('/fetch-url-info', methods=['POST'])

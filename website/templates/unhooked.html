@@ -16,9 +16,9 @@
   <button type="button" class="btn btn-info" style="float: right;" onclick="window.location.href='{{ url_for( 'views.purchased_list') }}';">Go to Purchase List</button>
   <br>
   {% set totalprice = namespace(value=0.00) %}
-  {% for wishitem in user.wishitems %}
-  {% if wishitem.unhooked and not wishitem.purchased %}
-  {% set totalprice.value = totalprice.value + wishitem.taxed_price %}
+  {% for unhooked_item in unhooked_items %}
+  {% if unhooked_item.unhooked and not unhooked_item.purchased %}
+  {% set totalprice.value = totalprice.value + unhooked_item.taxed_price %}
   {% endif %}
   {% endfor %}
   {% set totalprice.value =  totalprice.value|round(2) %}
@@ -29,7 +29,7 @@
       <thead>
         <tr>
           <th scope="col">#</th>
-          <th scope="col">Added Date</th>
+          <th scope="col">Unhooked Date</th>
           <th scope="col">Brand</th>
           <th scope="col">Category
           <select id="tagFilter" onchange="filterTable()">
@@ -47,33 +47,31 @@
       </thead>
       <li class="list-group-item">
       {% set count = namespace(value=0) %}
-      {% for wishitem in user.wishitems %}
-      {% if wishitem.unhooked and not wishitem.purchased %}
+      {% for unhooked_item in unhooked_items %}
       {% set count.value = count.value + 1 %}
-      <tr data-wishitem-category="{{ wishitem.category }}">
+      <tr data-wishitem-category="{{ unhooked_item.category }}">
         <th scope="row">{{count.value}}</th>
-          <td> {{wishitem.date}} </td>
-          <td> {{wishitem.brand}} </td>
-          <td> {{wishitem.category}} </td>
-          <td onClick="window.open('{{ wishitem.link }}', '_blank')">
-            <span style="color: blue; text-decoration: underline; font-size:11pt"> {{wishitem.name}} </span> <br>
+          <td> {{ (unhooked_item.unhooked_date if unhooked_item.unhooked_date is not none else unhooked_item.date) | format_datetime}} </td>
+          <td> {{unhooked_item.brand}} </td>
+          <td> {{unhooked_item.category}} </td>
+          <td onClick="window.open('{{ unhooked_item.link }}', '_blank')">
+            <span style="color: blue; text-decoration: underline; font-size:11pt"> {{unhooked_item.name}} </span> <br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
-              {{ wishitem.description | format_description }}
+              {{ unhooked_item.description | format_description }}
             </span>
           </td>
-          <td> {{wishitem.taxed_price|round(2)}} </td>
-          <td> {{(wishitem.wish_period | format_time).replace("ago", "") }} </td>
+          <td> {{( unhooked_item.taxed_price|round(2) ) | format_money}} </td>
+          <td> {{(unhooked_item.wish_period | format_time).replace("ago", "") }} </td>
           <td>
-            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, false, '/unhooked-list'), addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
+            <button type="button" class="close" onClick="toggleWishItem({{ unhooked_item.id }}, false, false, '/unhooked-list'), addWishItemPeriod({{unhooked_item.id}}, '/my-wishlist')">
             <span id='readd-button' style="color: #ff00bbdb; font-size: 11pt" aria-hidden="true">Re-add to Wishlist &#128722;</span>
             </button>
           </td>
           <td>
-            <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/unhooked-list')">
+            <button type="button" class="close" onClick="deleteItem({{ unhooked_item.id }}, '/unhooked-list')">
               <span aria-hidden="true">&times;</span>
             </td>
         </tr>
-      {% endif %}
       </li>
       {% endfor %}
       </table>

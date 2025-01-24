@@ -47,40 +47,38 @@
       </thead>
       <li class="list-group-item">
       {% set count = namespace(value=0) %}
-      {% for wishitem in user.wishitems %}
-      {% if not wishitem.unhooked and wishitem.purchased %}
+      {% for purchased_item in purchased_items %}
       {% set count.value = count.value + 1 %}
         <tr>
           <th scope="row">{{count.value}}</th>
           <td>
-            {% if wishitem.purchase_date is not none %}
-            {{ wishitem.purchase_date }}
+            {% if purchased_item.purchase_date is not none %}
+            {{ purchased_item.purchase_date | format_datetime}}
             {% else %}
-            {{ wishitem.date }}  <!-- as an estimate of purchase date, use date when added to wishlist -->
+            {{ purchased_item.date | format_datetime}}  <!-- as an estimate of purchase date, use date when added to wishlist -->
             {% endif %}
           </td>
-          <td> {{wishitem.brand}} </td>
-          <td> {{wishitem.category}} </td>
-          <td onClick="window.open('{{ wishitem.link }}', '_blank')">
-            <span style="color: blue; text-decoration: underline; font-size:11pt"> {{wishitem.name}} </span> <br>
+          <td> {{purchased_item.brand}} </td>
+          <td> {{purchased_item.category}} </td>
+          <td onClick="window.open('{{ purchased_item.link }}', '_blank')">
+            <span style="color: blue; text-decoration: underline; font-size:11pt"> {{purchased_item.name}} </span> <br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
-              {{ wishitem.description | format_description }}
+              {{ purchased_item.description | format_description }}
             </span>
           </td>
-          <td> {{wishitem.taxed_price|round(2)}} </td>
-          <td> {{(wishitem.wish_period | format_time).replace("ago", "") }} </td>
+          <td> {{ (purchased_item.taxed_price|round(2)) | format_money }} </td>
+          <td> {{(purchased_item.wish_period | format_time).replace("ago", "") }} </td>
           <td>
-            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/purchased-list')">
+            <button type="button" class="close" onClick="toggleWishItem({{ purchased_item.id }}, true, false, '/purchased-list')">
             <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> return &#128230</span>
             </button>
           </td>
           <td>
-          <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/purchased-list')">
+          <button type="button" class="close" onClick="deleteItem({{ purchased_item.id }}, '/purchased-list')">
             <span aria-hidden="true">&times;</span>
           </td>
           </button>
         </tr>
-      {% endif %}
       </li>
       {% endfor %}
       </table>
