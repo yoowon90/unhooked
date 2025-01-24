@@ -1,2 +1,5 @@
 # Ignore Python bytecode files
 *.pyc
+.vscode
+.ipynb_checkpoints
+.DS_Store

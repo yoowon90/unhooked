@@ -20,6 +20,7 @@
   <br>
   {% set totalprice = namespace(value=0.00) %}
   {% set totalpurchasedprice = namespace(value=0.00) %}
+  {% set totalfavoriteprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
   {% if not wishitem.unhooked and not wishitem.purchased %}
   {% set totalprice.value = totalprice.value + wishitem.taxed_price %}
@@ -27,21 +28,36 @@
   {% if not wishitem.unhooked and wishitem.purchased %}
   {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.taxed_price %}
   {% endif %}
+  {% if wishitem.favorited and not wishitem.unhooked and not wishitem.purchased%}
+  {% set totalfavoriteprice.value = totalfavoriteprice.value + wishitem.taxed_price %}
+  {% endif %}
   {% endfor %}
   {% set totalprice.value =  totalprice.value|round(2) %}
   {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
+  {% set totalfavoriteprice.value =  totalfavoriteprice.value|round(2) %}
   <div style="display: flex; justify-content: space-between;">
-    <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value }} </b> </font>&nbsp; &#128717;<b> Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} </b></font></p>
+    <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value | format_money }} 
+    </b></font>&nbsp; &#128150;<b> Total favorited: <font color="gold"> ${{ totalfavoriteprice.value }}
+    <br>
+    </b></font>&nbsp; &#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} 
+    </b></font></p>
   </div>
 
   <ul class="list-group list-group-flush" id="wishItems">
-    <table class="table table-sm">
+    <table id="wishlist-table" class="table table-sm">
       <thead>
         <tr>
           <th scope="col">#</th>
           <th scope="col">Time</th>
           <th scope="col">Brand</th>
-          <th scope="col">Category</th>
+          <th scope="col">Category
+            <select id="tagFilter" onchange="filterTable()">
+              <option value="">All tags</option>
+              {% for tag in tags %}
+              <option value="{{ tag }}">{{ tag }}</option>
+              {% endfor %}
+            </select>
+          </th>
           <th scope="col">Name</th>
           <th scope="col">💖</th>
           <th scope="col">Price (+tax)</th>
@@ -54,18 +70,18 @@
       {% for wishitem in user.wishitems %}
       {% if not wishitem.unhooked and not wishitem.purchased %}
       {% set count.value = count.value + 1 %}
-        <tr>
+        <tr data-wishitem-id="{{ wishitem.id }}", data-wishitem-tag="{{ wishitem.tag }}">
           <th scope="row">{{count.value}}</th>
-          <td> {{wishitem.date}} </td>
-          <td> {{wishitem.brand}} </td>
-          <td>
+          <td> {{wishitem.date | format_datetime}} </td>
+          <td contenteditable="true" oninput="autoSave(this)"> {{wishitem.brand}} </td>
+          <td contenteditable="true" oninput="autoSave(this)">
             {{ wishitem.category }}<br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ wishitem.tag | format_tag }}
             </span>
           </td>
-          <td onClick="window.open('{{ wishitem.link }}', '_blank')">
-            <span style="color: blue; text-decoration: underline; font-size:11pt"> {{wishitem.name}} </span> <br>
+          <td contenteditable="true" oninput="autoSave(this)">
+            <span style="color: blue; text-decoration: underline; font-size:11pt" onClick="window.open('{{ wishitem.link }}', '_blank')"> {{wishitem.name}} </span> <br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ wishitem.description | format_description }}
             </span>
@@ -82,13 +98,22 @@
               </span>
             </button>
           </td>
-          <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
+          <td> {{ (wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2) ) | format_money}} </td>
           <td> 
-              {{ (current_time - wishitem.date) | format_time }}
+            {% if wishitem.wish_period %}
+              {{ wishitem.wish_period | format_time }}
+              {% else %}
+                {% if wishitem.date %}
+                  <!-- {{ (current_time - wishitem.date) | debug }} -->
+                  {{ (current_time - wishitem.date) | format_time }}
+                {% else %}
+                  {{ None }}
+                {% endif %}
+              {% endif %}
           </td>
           <td>
             <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist'), addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
-            <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> unhook&#129693;</span>
+              <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> unhook&#129693;</span>
             </button>
           </td>
           <td>
@@ -211,6 +236,41 @@
               .catch(error => console.error('Error:', error));
           }
       });
+
+      function autoSave(cell) {
+            const row = cell.parentNode;
+            const wishitemId = row.getAttribute('data-wishitem-id');
+            const cells = row.querySelectorAll('td[contenteditable="true"]');
+            const data = Array.from(cells).map(cell => cell.innerText);
+
+            // print/log the data to the console
+            console.log(data); // print data array to browser console (F12 -> Console tab)
+
+            // TODO: Send the data to the server using fetch or XMLHttpRequest
+            fetch('/save-table', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ wishItemId: wishitemId, Brand: data[0], Category_Tag: data[1], Name_Description: data[2] })
+            }).then(response => response.json())
+            .then(data => console.log(data))
+            .catch(error => console.error('Error:', error));
+        }
+      // Function to filter table based on category
+      function filterTable() {
+            var filter = document.getElementById("tagFilter").value.toLowerCase();
+            var rows = document.querySelectorAll("#wishlist-table tbody tr");
+
+            rows.forEach(row => {
+                var tag = row.getAttribute("data-wishitem-tag").toLowerCase();
+                if (filter === "" || tag === filter) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
       </script>
    <br />
    <div align="center">
@@ -221,7 +281,20 @@
     // Save scroll position before form submission
     document.querySelector('form').addEventListener('submit', function() {
       localStorage.setItem('scrollPosition', window.scrollY);
-    });
+    });// Function to filter table based on tag
+      function filterTable() {
+            var filter = document.getElementById("tagFilter").value.toLowerCase();
+            var rows = document.querySelectorAll("#wishlist-table tbody tr");
+
+            rows.forEach(row => {
+                var tag = row.getAttribute("data-wishitem-tag").toLowerCase();
+                if (filter === "" || tag === filter) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
 
     // Restore scroll position after page reload
     window.addEventListener('load', function() {
