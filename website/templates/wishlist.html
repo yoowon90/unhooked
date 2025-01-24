@@ -37,9 +37,9 @@
   {% set totalfavoriteprice.value =  totalfavoriteprice.value|round(2) %}
   <div style="display: flex; justify-content: space-between;">
     <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value | format_money }} 
-    </b></font>&nbsp; &#128150;<b> Total favorited: <font color="gold"> ${{ totalfavoriteprice.value }}
+    </b></font>&nbsp; &#128150;<b> Total favorited: <font color="gold"> ${{ totalfavoriteprice.value | format_money }}
     <br>
-    </b></font>&nbsp; &#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value }} 
+    </b></font>&nbsp; &#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }} 
     </b></font></p>
   </div>
 
