@@ -72,7 +72,7 @@
       {% set count.value = count.value + 1 %}
         <tr data-wishitem-id="{{ wishitem.id }}", data-wishitem-tag="{{ wishitem.tag }}">
           <th scope="row">{{count.value}}</th>
-          <td> {{wishitem.date}} </td>
+          <td> {{wishitem.date | format_datetime}} </td>
           <td contenteditable="true" oninput="autoSave(this)"> {{wishitem.brand}} </td>
           <td contenteditable="true" oninput="autoSave(this)">
             {{ wishitem.category }}<br>
@@ -98,7 +98,7 @@
               </span>
             </button>
           </td>
-          <td> {{wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2)}} </td>
+          <td> {{ (wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2) ) | format_money}} </td>
           <td> 
             {% if wishitem.wish_period %}
               {{ wishitem.wish_period | format_time }}

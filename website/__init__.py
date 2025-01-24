@@ -103,6 +103,8 @@ class Format:
         if "." in money:
             dollars = money.split(".")[0]
             cents = money.split(".")[1]
+            if len(cents) == 1:
+                cents += "0"
         else:
             dollars = money
             cents = "00"
@@ -127,3 +129,6 @@ class Format:
     
     def format_report_date(self, report_date):
         return report_date.strftime("%Y-%m-%d")
+
+    def format_datetime(self, datetime):
+        return datetime.strftime("%Y-%m-%d %H:%M:%S")
