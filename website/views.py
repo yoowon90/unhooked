@@ -11,6 +11,7 @@ from flask_login import current_user
 from .models import Note, WishItem
 from . import db
 from .url_extraction import URLInfo
+from pytz import timezone
 
 
 # store standard routes (url defined), anything that users can navitage to.
@@ -56,24 +57,6 @@ def delete_note():
     print(f"jsonify: {jsonify({})}")
     return jsonify({})
 
-# test
-@views.route('/test', methods=['GET', 'POST'])
-def test():
-    if request.method == 'POST': 
-        wishitem = request.form.get('wishitem')  #Gets the wish item from the HTML 
-
-        if len(wishitem) < 1:
-            flash('Item is too short!', category='error') 
-        else:
-            new_item = WishItem(data=wishitem, user_id=current_user.id)  #providing the schema for the note 
-            db.session.add(new_item) #adding the note to the database 
-            db.session.commit()
-            flash('Item added to Wish List!', category='success')
-
-    # render the template using name of template
-    # now when go to '/', render home.html
-    return render_template("test.html", user=current_user)  # return html when we got root
-
 def dir_last_updated(folder):
     # https://stackoverflow.com/questions/41144565/flask-does-not-see-change-in-js-file
     return str(max(os.path.getmtime(os.path.join(root_path, f))
@@ -102,7 +85,7 @@ def wishlist():
         wish_item_tag = request.form.get('tag')
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
-        wish_item_description = request.form.get('description')
+        wish_item_description = request.form.get('description').replace("<br>", ". ").replace("<br/>", ". ")
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
         elif wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
@@ -133,7 +116,9 @@ def wishlist():
                                 delivery_fee=wish_item_delivery_fee,
                                 total_price=taxed_price + wish_item_delivery_fee,  # taxed price plus delivery fee
                                 link=wish_item_link,
-                                description=wish_item_description)  #providing the schema for the note 
+                                description=wish_item_description,
+                                wish_period=datetime.timedelta(seconds=0),
+                                date=datetime.datetime.now())  # providing the schema for the note
             db.session.add(new_item) #adding the note to the database 
             db.session.commit()
             flash('Item added to Wish List!', category='success')
@@ -155,11 +140,24 @@ def wishlist():
         # pie.savefig('./website/img/brand-pie.png')
     
     # get current time
-    current_time = datetime.datetime.utcnow() # Get the current time
+    current_time = datetime.datetime.now() # Get the current time
+
+    # get all unique tags in wishlist
+    wishlist_tags = set()
+    for wishitem in current_user.wishitems:
+        if not wishitem.purchased and not wishitem.unhooked:
+            if not wishitem.tag == "" and wishitem.tag is not None:  # if not tag unknown
+                wishlist_tags.add(wishitem.tag)
+    tags = list(wishlist_tags)
 
     # render the template using name of template
     # now when go to '/', render home.html
-    return render_template("wishlist.html", user=current_user, last_updated=dir_last_updated(r'./website/static'), current_time=current_time)  # return html when we got root
+
+    return render_template("wishlist.html", 
+                           user=current_user, 
+                           last_updated=dir_last_updated(r'./website/static'), 
+                           current_time=current_time,
+                           tags=tags)  # return html when we got root
 
 
 # wishlist
@@ -175,11 +173,14 @@ def toggle_wishitem():
             wishitem.unhooked = unhooked
             wishitem.purchased = purchased
             if unhooked and not purchased:
+                wishitem.unhooked_date = datetime.datetime.now()
                 flash("Item unhooked!", category='success')
             elif not unhooked and purchased:
-                wishitem.purchase_date = func.now() #  datetime.datetime.utcnow()
+                wishitem.purchase_date = datetime.datetime.now()
+                current_user.last_purchase_date = wishitem.purchase_date  # update last purchase date
                 flash("Item purchased.", category='success')
-            elif not unhooked and not purchased:
+            elif not unhooked and not purchased:  # e.g. re-adding to wishlist
+                # wishitem.date = datetime.datetime.now() # update date
                 flash("Item added to wish list", category='success')
             db.session.commit()
     return jsonify({})
@@ -190,8 +191,7 @@ def add_wishitem_period():
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
         if wishitem.user_id == current_user.id:
-            current_time = datetime.datetime.utcnow()
-            wish_timedelta = current_time - wishitem.date
+            current_time = datetime.datetime.now()
             wishitem.wish_period = current_time - wishitem.date
             db.session.commit()
     return jsonify({})
@@ -200,28 +200,68 @@ def add_wishitem_period():
 def toggle_favorite_wishitem():
     print("wishitem click detected and now toggling")
     wishItemId = json.loads(request.data)['wishItemId']
-    print(wishItemId)
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
         if wishitem.user_id == current_user.id:
-            print("toggling favorited")
             wishitem.favorited = not wishitem.favorited
             db.session.commit()
     print(f"jsonify: {jsonify({})}")
     return jsonify({})
+
+@views.route('/save-table', methods=['POST'])
+def save_table():
+    wishItemId = json.loads(request.data)['wishItemId']
+    # Process the data (e.g., save to the database)
+    wishitem = WishItem.query.get(wishItemId)
+    if wishitem:
+        if wishitem.user_id == current_user.id:
+            brand = json.loads(request.data)['Brand'].split('\n')[0].strip()
+            category_and_tag = json.loads(request.data)['Category_Tag']
+            category = category_and_tag.split('#')[0].strip()
+            tag = category_and_tag.split('#')[1].strip() if '#' in category_and_tag else None
+            name_and_desc = json.loads(request.data)['Name_Description']
+            name = name_and_desc.split('\n')[0].strip()
+            desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None            
+            wishitem.brand = brand
+            wishitem.category = category
+            wishitem.tag = tag
+            wishitem.name = name
+            wishitem.description = desc
+            db.session.commit()
+    print(f"jsonify: {jsonify({})}")
+    return jsonify({})
+
+    return jsonify({'status': 'success', 'data': data})
 
 # unhooked-list
 @views.route('/unhooked-list', methods=['GET', 'POST'])
 def unhooked_list():
     # render the template using name of template
     # now when go to '/', render home.html
-    return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
+    # get all unique tags in wishlist
+    unhooked_cats = set()
+    for wishitem in current_user.wishitems:
+        if not wishitem.purchased and wishitem.unhooked:
+            if not wishitem.category == "" and wishitem.category is not None:  # if not tag unknown
+                unhooked_cats.add(wishitem.category)
+
+    unhooked_cats = list(unhooked_cats)
+
+    # sort user's wishitems by unhooked date
+    unhooked_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=True, purchased=False).order_by(WishItem.unhooked_date.asc()).all()
+    
+    return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
+                           unhooked_cats=unhooked_cats, unhooked_items=unhooked_items)  # return html when we got root
 
 # purchased-list
 @views.route('/purchased-list', methods=['GET', 'POST'])
 def purchased_list():
     # define wish_to_purchase_period
-    return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'))  # return html when we got root
+    purchased_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=False, purchased=True).order_by(WishItem.purchase_date.asc()).all()
+
+
+    return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
+                           purchased_items=purchased_items)  # return html when we got root
 
 
 @views.route('/fetch-url-info', methods=['POST'])

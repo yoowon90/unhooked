@@ -57,6 +57,10 @@ def create_database(app):
             db.create_all()
         print('Created Database!')
 
+def debug(text):
+    print(f"DEBUG | Type: {(type(text))} Text: {text}")
+    return ''
+
 class Format:
 
     def __init__(self):
@@ -66,25 +70,49 @@ class Format:
         if timedelta is None:
             return ""
         else:
-            if timedelta.days > 0:
-                leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
-                leftover_hours = leftover_seconds // 3600
-                return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days} days ago"
-            
-            elif timedelta.seconds > 3600:  # 1 hour
-                return f"{timedelta.seconds // 3600} hrs ago"
-            
-            elif timedelta.seconds > 60:
-                return f"{timedelta.seconds // 60} mins ago"
+            try:
+                if timedelta.days > 0:
+                    leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
+                    return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days}d ago"
+                
+                elif timedelta.seconds > 3600:  # 1 hour
+                    return f"{timedelta.seconds // 3600} hrs ago"
+                
+                elif timedelta.seconds > 60:
+                    return f"{timedelta.seconds // 60} mins ago"
 
-            else:
-                return f"{timedelta.seconds} secs ago"
+                else:
+                    return f"{timedelta.seconds} secs ago"
+            except:
+                print(f"Error in format_time: {timedelta}")
+                return f"{timedelta.day} day"
 
     def format_tag(self, tag):
         if tag is None or tag.strip() == "":
             return ""
         else:
             return "#" + tag
+        
+    def format_money(self, money):
+        def add_commas(money):
+            if len(money) <= 3:
+                return money
+            return add_commas(money[:-3]) + ',' + money[-3:]
+        
+        money = str(money)
+        if "." in money:
+            dollars = money.split(".")[0]
+            cents = money.split(".")[1]
+            if len(cents) == 1:
+                cents += "0"
+        else:
+            dollars = money
+            cents = "00"
+    
+        
+        money = add_commas(dollars) + "." + cents
+        return money
+            
     
     def format_description(self, description):
         if description is None or description.strip() == "":
@@ -92,3 +120,15 @@ class Format:
         else:
             return "\n" + description
     
+    def format_last_purchase_date(self, last_purchase_date):
+        # last_purchase_date is defined using datetime.datetime.now()
+        if last_purchase_date is None:
+            # grab last purchase date from purchase list
+            return ""
+        return last_purchase_date.strftime("%Y-%m-%d %H:%M:%S")
+    
+    def format_report_date(self, report_date):
+        return report_date.strftime("%Y-%m-%d")
+
+    def format_datetime(self, datetime):
+        return datetime.strftime("%Y-%m-%d %H:%M:%S")

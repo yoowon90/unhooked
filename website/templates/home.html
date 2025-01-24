@@ -49,6 +49,17 @@
           gap: 10px; /* Add some space between the fields */
         }
       
+      .report-headline {
+          text-align: center;
+          font-weight: bold;
+          font-size: 1.5em; /* Adjust the size as needed */
+      }
+      
+      .button-container {
+          display: flex;
+          justify-content: center;
+      }
+      
       .pie-chart-container {
           display: flex; /* Use flexbox to align items side by side */
           justify-content: space-around; /* Distribute space around the items */
@@ -64,29 +75,56 @@
 </head>
 <body>
     <div class="title">
-        <h1>My Report</h1>
+        <br>
+        <h1>Hello {{ user.first_name }} !</h1>
     </div>
-    <div class="calendar-form-container">
+    <div>
+        <p>  <b> Welcome back to Unhooked. Here is your report. </b> </p>
+        <br>
+        {{ (current_time) | debug }}
+        {{ (user.last_purchase_date) | debug }}
+        {% set time_difference = current_time - user.last_purchase_date %}
+        ⭐️ Your last online purchase date is {{ user.last_purchase_date | format_last_purchase_date }} which is
+        <span style="color: {% if time_difference >= ten_days %}blue{% else %}red{% endif %};">
+          <b> {{ (time_difference) | format_time}}</b>
+        </span>
+        .
+        {% set totalpurchasedprice = namespace(value=0.00) %}
+        {% for wishitem in user.wishitems %}
+        {% if not wishitem.unhooked and wishitem.purchased %}
+        {% endif %}
+        {% if not wishitem.unhooked and wishitem.purchased %}
+        {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.taxed_price %}
+        {% endif %}
+        {% endfor %}
+        {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
+        <p> ⭐️ Your total purchase amount is <b> ${{ totalpurchasedprice.value | format_money }} </b> </p>
+        <br>
+        <div class="calendar-form-container">
       <div id='calendar'></div>
       <div class="form-container">
         <form>
           <div class="date-fields">
               <div>
                   <label for="start_date">Start Date:</label>
-                  <input type="text" id="start_date" name="start_date", default="">
+                  <input type="text" id="start_date" name="start_date" value="{{ report_start if report_start is defined else '' }}" readonly>
               </div>
               <div>
                   <label for="end_date">End Date:</label>
-                  <input type="text" id="end_date" name="end_date">
+                  <input type="text" id="end_date" name="end_date" value="{{ report_end if report_end is defined else '' }}" readonly>
               </div>
               <div>
                 <label>&nbsp;</label> <!-- Empty label for alignment -->
-                <button type="submit">Submit</button>
-            </div>
+              </div>
           </div>
-      </form>
+        </form>
+        <br>
+        <div class="button-container">
+          <button type="submit" class="btn btn-primary">Create Report</button>
+        </div>
       </div>
       </div>
+<<<<<<< HEAD
       
       <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -105,6 +143,9 @@
         });
     </script>
 
+=======
+    <p id="report-dates" class="report-headline"></p>
+>>>>>>> 5813cfcd11a5fceeb0768c120ee828ce65aa6bd9
     <div class="pie-chart-container">
         <div class="item">
             <h5>Wish List Category</h5>
@@ -117,40 +158,29 @@
     </div>
     <script>
         $(document).ready(function() {
-            let clickCount = 0;
-            let startDate, endDate;
-            $('#calendar').fullCalendar({
-                selectable: true,
-                selectHelper: true,
-                select: function(start, end) {
-                    clickCount++;
-                    if (clickCount % 2 !== 0) {
-                        startDate = start;
-                        $('#start_date').val(start.format('YYYY-MM-DD')).prop('disabled', false);
-                        $('#end_date').val('').prop('disabled', true);
-                        clearGreyDates(); // Clear previous grey dates
-                    } else {
-                        endDate = start;
-                        $('#end_date').val(end.clone().subtract(1, 'days').format('YYYY-MM-DD')).prop('disabled', false);
-                        colorGreyDates(startDate, endDate); // Color new grey dates
-                    }
-                }
-            });
+        let clickCount = 0;
+        let startDate, endDate;
 
-            function clearGreyDates() {
-                $('.fc-day').removeClass('grey-date');
+        function clearGreyDates() {
+            $('.fc-day').removeClass('grey-date');
+        }
+
+        function colorGreyDates(start, end) {
+            let current = start.clone();
+            while (current <= end) {
+                $('.fc-day[data-date="' + current.format('YYYY-MM-DD') + '"]').addClass('grey-date');
+                current.add(1, 'days');
             }
+        }
 
-            function colorGreyDates(start, end) {
-                let current = start.clone();
-                while (current <= end) {
-                    $('.fc-day[data-date="' + current.format('YYYY-MM-DD') + '"]').addClass('grey-date');
-                    current.add(1, 'days');
-                }
-            }
+        function updateReportDates() {
+            const startDate = $('#start_date').val();
+            const endDate = $('#end_date').val();
+            $('#report-dates').text(`Report is based on ${startDate || '?'} to ${endDate || '?'}:`);
+        }
 
-            // Add click event listener to the document
-            $(document).click(function(event) {
+        // Add click event listener to the document
+        $(document).click(function(event) {
               if (!$(event.target).closest('#calendar').length && !$(event.target).closest('.fc-button').length) {
                 // Click happened outside the calendar and not on the navigation buttons
                 $('#start_date').val('').prop('disabled', true);
@@ -160,7 +190,29 @@
                 clearGreyDates(); // Clear grey dates
               }
             });
+
+        $('#calendar').fullCalendar({
+            selectable: true,
+            selectHelper: true,
+            select: function(start, end) {
+                clickCount++;
+                if (clickCount % 2 !== 0) {
+                    startDate = start;
+                    $('#start_date').val(start.format('YYYY-MM-DD')).prop('disabled', false);
+                    $('#end_date').val('').prop('disabled', true);
+                    clearGreyDates(); // Clear previous grey dates
+                } else {
+                    endDate = start;
+                    $('#end_date').val(end.clone().subtract(1, 'days').format('YYYY-MM-DD')).prop('disabled', false);
+                    colorGreyDates(startDate, endDate); // Color new grey dates
+                }
+                updateReportDates(); // Update report dates
+            }
         });
+
+        // Initial update
+        updateReportDates();
+    });
     </script>
 </body>
 </html>
