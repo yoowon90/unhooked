@@ -29,7 +29,7 @@
       <thead>
         <tr>
           <th scope="col">#</th>
-          <th scope="col">Unhooked Date</th>
+          <th scope="col" id="unhooked-date-header" style="cursor: pointer;">Unhooked Date</th>
           <th scope="col">Brand</th>
           <th scope="col">Category
           <select id="tagFilter" onchange="filterTable()">
@@ -41,15 +41,14 @@
           </th>
           <th scope="col">Name</th>
           <th scope="col">Price (+tax)</th>
-          <th scope="col">Wish Period</th>
-
+          <th scope="col" id="wish-period-header" style="cursor: pointer;">Wish Period</th>
         </tr>
       </thead>
       <li class="list-group-item">
       {% set count = namespace(value=0) %}
       {% for unhooked_item in unhooked_items %}
       {% set count.value = count.value + 1 %}
-      <tr data-wishitem-category="{{ unhooked_item.category }}">
+      <tr data-wish-period="{{ unhooked_item.wish_period.total_seconds() if unhooked_item.wish_period is not none else 0 }}" data-unhooked-date="{{ unhooked_item.unhooked_date.timestamp() if unhooked_item.unhooked_date is not none else 0 }}" data-wishitem-category="{{ unhooked_item.category }}">
         <th scope="row">{{count.value}}</th>
           <td> {{ (unhooked_item.unhooked_date if unhooked_item.unhooked_date is not none else unhooked_item.date) | format_datetime}} </td>
           <td> {{unhooked_item.brand}} </td>
@@ -70,6 +69,7 @@
           <td>
             <button type="button" class="close" onClick="deleteItem({{ unhooked_item.id }}, '/unhooked-list')">
               <span aria-hidden="true">&times;</span>
+            </button>
             </td>
         </tr>
       </li>
@@ -91,6 +91,35 @@
                 }
             });
         }
-    </script>
+        document.addEventListener('DOMContentLoaded', function() {
+          let wishPeriodSortOrder = 'asc'; // Initial sort order for Wish Period
+          let unhookedDateSortOrder = 'asc'; // Initial sort order for Unhooked Date
+
+          document.getElementById('wish-period-header').addEventListener('click', function() {
+            sortTableByAttribute('data-wish-period', wishPeriodSortOrder);
+            wishPeriodSortOrder = wishPeriodSortOrder === 'asc' ? 'desc' : 'asc'; // Toggle sort order
+          });
+
+          document.getElementById('unhooked-date-header').addEventListener('click', function() {
+            sortTableByAttribute('data-unhooked-date', unhookedDateSortOrder);
+            unhookedDateSortOrder = unhookedDateSortOrder === 'asc' ? 'desc' : 'asc'; // Toggle sort order
+          });
+
+
+        });
+
+        function sortTableByAttribute(attribute, order) {
+            const table = document.getElementById('unhookedlist-table');
+            const rows = Array.from(table.rows).slice(1); // Exclude header row
+
+            rows.sort((a, b) => {
+                const valueA = parseInt(a.getAttribute(attribute)) || 0;
+                const valueB = parseInt(b.getAttribute(attribute)) || 0;
+                return order === 'asc' ? valueA - valueB : valueB - valueA;
+            });
+
+            rows.forEach(row => table.appendChild(row));
+      }
+  </script>
   </ul>
   {% endblock %}
