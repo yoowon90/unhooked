@@ -12,7 +12,8 @@
 
    </style>
   <!-- this is the same as base.html and overwrite any blocks -->
-  <h2 align="center">&#128155; Wish List &#128155;</h2>
+  <br>
+  <h2 align="center">&#128722; Wish List &#128722;</h2>
   <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}';">Go to my Unhooked List</button>
   <br>
   <br>
@@ -39,7 +40,7 @@
     <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value | format_money }} 
     </b></font>&nbsp; &#128150;<b> Total favorited: <font color="gold"> ${{ totalfavoriteprice.value | format_money }}
     <br>
-    </b></font>&nbsp; &#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }} 
+    </b></font>&#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }} 
     </b></font></p>
   </div>
 
