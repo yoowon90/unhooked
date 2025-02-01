@@ -3,7 +3,7 @@ import json
 
 BRANDS = ['Reformation', 'Rouje', 'Zara', 'Aamerican Vintage', 'Aritzia']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
 
-# to be added: A.P.C. , Tiffany & Co., Ralph Lauren, Vuori, Bloomingdales, ssense
+# to be added: A.P.C. , Tiffany & Co., Ralph Lauren, Vuori, Bloomingdales, ssense, Doen
 
 class URLInfo:
     def __init__(self, soup):
