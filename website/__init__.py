@@ -131,4 +131,4 @@ class Format:
         return report_date.strftime("%Y-%m-%d")
 
     def format_datetime(self, datetime):
-        return datetime.strftime("%Y-%m-%d %H:%M:%S") 
+        return datetime.strftime("%Y-%m-%d %H:%M:%S") if datetime is not None else ""
