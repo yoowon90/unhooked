@@ -31,11 +31,26 @@
         transform: scale(0.8); /* Scale down to 50% */
         transform-origin: top left; /* Adjust the origin as needed */
       }
+
       .grey-date {
       background-color: rgba(239, 237, 237, 0.916);
       color: white;
       }
-      .form-container {
+      
+      .light-red-date {
+            background-color: #ffcccc;
+      }
+      .light-blue-date {
+          background-color: #cce5ff;
+      }
+      .red-text {
+          color: red;
+      }
+      .blue-text {
+          color: blue;
+      }
+
+      .form-cogntainer {
           margin-left: 20px; /* Add some space between the calendar and the form */
       }
 
@@ -191,7 +206,11 @@
 
         // Initial update
         updateReportDates();
+
+        // Add the script to update calendar cells with wishitem prices
+
     });
+
     </script>
 </body>
 </html>
