@@ -3,7 +3,7 @@ import json
 
 BRANDS = ['Reformation', 'Rouje', 'Zara', 'Aamerican Vintage', 'Aritzia']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
 
-# to be added: A.P.C. , Tiffany & Co., Ralph Lauren, Vuori
+# to be added: A.P.C. , Tiffany & Co., Ralph Lauren, Vuori, Bloomingdales, ssense
 
 class URLInfo:
     def __init__(self, soup):
@@ -28,23 +28,32 @@ class URLInfo:
                                                          brand_extract_dict['brand'],
                                                          brand_extract_dict['category'])
             matches[brand] = dict(name=name, price=price, description=description, currency=currency, brand=brand, category=category)
-            if any([value is not None for value in brand_extract_dict.values()]):
-                print("Some valid data found")
+            # if any([value is not None for value in brand_extract_dict.values()]):
+                # print("Some valid data found")
                 # return brand_extract_dict  # later comment this out
                 # break
-            else:
+            # else:
                 # matches[brand] = 0
-                print("No data found")
+                # print("No data found")
         
         # get the brand with the most matches. if multiple, pick one where brand_extract_dict['brand'] is equal to brand.
         # if still multiple, pick the first one
         match_counts = {brand: sum([1 for value in brand_dict.values() if value is not None]) for brand, brand_dict in matches.items()}
         max_matches = max(match_counts.values())
         if max_matches == 0:
+            print("No matches found. Using default data..")
             return self.__default_data
         else:
-            best_brand = [brand for brand, count in match_counts.items() if count == max_matches][0]
-            return matches[best_brand]
+            # first filter bratches that have a brand among the matches
+            brand_matches = [brand for brand, count in match_counts.items() if count == max_matches and brand is not None]
+            if len(brand_matches):
+                print(f"There has been a match and a branch match: {brand_matches[0]}")
+                return matches[brand_matches[0]]
+            else:
+                print("There has been a match, but no branch match. Using url extraction with the most matches..")
+                # get the brand with the most matches
+                best_brand = [brand for brand, count in match_counts.items() if count == max_matches][0]
+                return matches[best_brand]
                 
 
 
