@@ -37,12 +37,6 @@ class WishItem(db.Model):
 
 class User(db.Model, UserMixin):
 
-    # @staticmethod
-    # def get_default_report_start():
-    #     """ get beginning date and time of the current month """
-    #     today = datetime.datetime.now()
-    #     report_start = datetime.datetime(today.year, today.month, 1, 0, 0, 0) # 1st day of the month
-    #     return report_start
     
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True)
