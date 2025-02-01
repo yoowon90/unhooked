@@ -1,9 +1,15 @@
 import copy
 import json 
 
-BRANDS = ['Reformation', 'Rouje', 'Zara', 'Aamerican Vintage', 'Aritzia']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
+BRANDS = ['Reformation', 
+          'Rouje', 
+          'Zara', 
+          'Aamerican Vintage', 
+          'Aritzia', 
+          'A.P.C',
+          'Bloomingdales']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
 
-# to be added: A.P.C. , Tiffany & Co., Ralph Lauren, Vuori, Bloomingdales, ssense, Doen
+# to be added: Tiffany & Co., Ralph Lauren, Vuori, Bloomingdales, ssense, Doen
 
 class URLInfo:
     def __init__(self, soup):
@@ -69,6 +75,10 @@ class URLInfo:
             return self.extract_massimo_dutti()
         elif brand == 'Aritzia':
             return self.extract_aritzia()
+        elif brand == 'A.P.C':
+            return self.extract_apc()
+        elif brand == 'Bloomingdales':
+            return self.extract_bloomingdales()
         else:
             return self.__default_data
 
@@ -85,7 +95,8 @@ class URLInfo:
         # Reformation. e.g. https://www.thereformation.com/products/tam-knit-dress/1306570SLA0XS.html
         data_copy = copy.deepcopy(self.__default_data)
         try:
-            script_tag = self.soup.find('script', {'type': 'application/ld+json'})
+            soup = self.soup
+            script_tag = soup.find('script', {'type': 'application/ld+json'})
             json_data = json.loads(script_tag.string)
             data_copy['name'] = json_data.get('name')
             data_copy['price'] = json_data.get('offers', {}).get('price')
@@ -146,7 +157,8 @@ class URLInfo:
         # zara: https://www.zara.com/us/en/ribbed-dress-p00858815.html?v1=397019608&v2=2420896
         data_copy = copy.deepcopy(self.__default_data)
         try:
-            script_tag = self.soup.find('script', {'type': 'application/ld+json'})
+            soup = self.soup
+            script_tag = soup.find('script', {'type': 'application/ld+json'})
             json_data = json.loads(script_tag.string)[0]  # json.load returns a list
             data_copy['name'] = json_data.get('name')
             data_copy['price'] = json_data.get('offers', {}).get('price')
@@ -157,14 +169,31 @@ class URLInfo:
         finally:
             return data_copy
 
-    # def extract_apc(self):
-    #     # apc: https://www.apc-us.com/products/blouse-julienne-vialq-f13433_aac?variant=42911449219171&currency=USD&utm_source=social&utm_medium=cpc&utm_campaign=Vervaunt_Social+%2F+CPC_APC_US_Conversion_DPA&utm_term=Remarketing_All+Remarketing+-+%28Mixed+Genders%29&utm_content=Remarketing+DPA&fbadid=120209825233840351&fbclid=PAZXh0bgNhZW0BMABhZGlkAasUnIl9ZV8BpmzeIVNQRlHAMvvI9IZnoPv4szx-vIU1wOcCbGn01e40ocq1ncWS72OwPw_aem_rQ_UuHCVYzaA5g6u_VSKTA&campaign_id=120209825200840351&ad_id=120209825233840351
-    #     data_copy = copy.deepcopy(self.__default_data)
-    #     try:
-    #         script_tag = self.soup.find('script', {'type': 'application/ld+json'})
-    #         json_data = json.loads(script_tag.string)
-    #         data_copy['name'] = json_data.get('name')
-    #         data_copy['price'] = json_data.get('offers', {}).get('price')
-    #         data_copy['brand'] = json_data.get('brand', {}).get('name')
-    #         data_copy['currency'] = json_data.get('offers', {}).get('priceCurrency')
-    #         data_copy['description'] = json_data.get('description')
+    def extract_apc(self):
+        # apc: https://www.apc-us.com/products/blouse-julienne-vialq-f13433_aac?variant=42911449219171&currency=USD&utm_source=social&utm_medium=cpc&utm_campaign=Vervaunt_Social+%2F+CPC_APC_US_Conversion_DPA&utm_term=Remarketing_All+Remarketing+-+%28Mixed+Genders%29&utm_content=Remarketing+DPA&fbadid=120209825233840351&fbclid=PAZXh0bgNhZW0BMABhZGlkAasUnIl9ZV8BpmzeIVNQRlHAMvvI9IZnoPv4szx-vIU1wOcCbGn01e40ocq1ncWS72OwPw_aem_rQ_UuHCVYzaA5g6u_VSKTA&campaign_id=120209825200840351&ad_id=120209825233840351
+        data_copy = copy.deepcopy(self.__default_data)
+        try:
+            soup = self.soup
+            data_copy['name'] = soup.find('meta', {'property': 'og:title'}).get('content')
+            data_copy['brand'] = soup.find('meta', {'property': 'og:site_name'}).get('content')
+            data_copy['price'] = soup.find('meta', {'property': 'product:price:amount'}).get('content')
+            data_copy['currency'] = soup.find('meta', {'property': 'product:price:currency'}).get('content')
+            data_copy['description'] = soup.find('meta', {'property': 'og:description'}).get('content')
+        
+        finally:
+            return data_copy
+    
+    def extract_bloomingdales(self):
+        # apc: https://www.bloomingdales.com/shop/product/cinq-a-sept-naia-faux-shearling-jacket?ID=5274338&upc_ID=7969176&Quantity=1&seqNo=3&EXTRA_PARAMETER=BAG&pickInStore=false
+        data_copy = copy.deepcopy(self.__default_data)
+        try:
+            soup = self.soup
+            script_tag = soup.find('script', {'id': 'productMktData'})
+            json_data = json.loads(script_tag.string)
+            data_copy['brand'] = json_data.get('brand').get('name')
+            data_copy['name'] = json_data.get('name')
+            data_copy['price'] = json_data.get('offers')[0].get('price')
+            data_copy['currency'] = json_data.get('offers')[0].get('priceCurrency')
+            data_copy['description'] = soup.find('meta', {'property': 'og:title'}).get('content')
+        finally:
+            return data_copy
