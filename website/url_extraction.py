@@ -3,6 +3,8 @@ import json
 
 BRANDS = ['Reformation', 'Rouje', 'Zara', 'Aamerican Vintage', 'Aritzia']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
 
+# to be added: A.P.C. , Tiffany & Co., Ralph Lauren, Vuori
+
 class URLInfo:
     def __init__(self, soup):
         self.soup = soup  # BeautifulSoup(response.text, 'html.parser')
@@ -14,6 +16,7 @@ class URLInfo:
                      'brand': None}  # initialized with all Nones
 
     def extract_item_data(self):
+        matches = {brand: dict() for brand in BRANDS}
         for brand in BRANDS: 
             print(f"extraction started with {brand}")
             brand_extract_dict = self.extract_brand_from_soup(brand)
@@ -24,13 +27,27 @@ class URLInfo:
                                                          brand_extract_dict['currency'],
                                                          brand_extract_dict['brand'],
                                                          brand_extract_dict['category'])
-            if not (name is None and price is None and description is None
-                and currency is None and brand is None):
+            matches[brand] = dict(name=name, price=price, description=description, currency=currency, brand=brand, category=category)
+            if any([value is not None for value in brand_extract_dict.values()]):
                 print("Some valid data found")
-                return brand_extract_dict
+                # return brand_extract_dict  # later comment this out
                 # break
             else:
+                # matches[brand] = 0
                 print("No data found")
+        
+        # get the brand with the most matches. if multiple, pick one where brand_extract_dict['brand'] is equal to brand.
+        # if still multiple, pick the first one
+        match_counts = {brand: sum([1 for value in brand_dict.values() if value is not None]) for brand, brand_dict in matches.items()}
+        max_matches = max(match_counts.values())
+        if max_matches == 0:
+            return self.__default_data
+        else:
+            best_brand = [brand for brand, count in match_counts.items() if count == max_matches][0]
+            return matches[best_brand]
+                
+
+
 
     def extract_brand_from_soup(self, brand):
         if brand == 'Reformation' or brand == 'American Vintage':
@@ -130,3 +147,15 @@ class URLInfo:
 
         finally:
             return data_copy
+
+    # def extract_apc(self):
+    #     # apc: https://www.apc-us.com/products/blouse-julienne-vialq-f13433_aac?variant=42911449219171&currency=USD&utm_source=social&utm_medium=cpc&utm_campaign=Vervaunt_Social+%2F+CPC_APC_US_Conversion_DPA&utm_term=Remarketing_All+Remarketing+-+%28Mixed+Genders%29&utm_content=Remarketing+DPA&fbadid=120209825233840351&fbclid=PAZXh0bgNhZW0BMABhZGlkAasUnIl9ZV8BpmzeIVNQRlHAMvvI9IZnoPv4szx-vIU1wOcCbGn01e40ocq1ncWS72OwPw_aem_rQ_UuHCVYzaA5g6u_VSKTA&campaign_id=120209825200840351&ad_id=120209825233840351
+    #     data_copy = copy.deepcopy(self.__default_data)
+    #     try:
+    #         script_tag = self.soup.find('script', {'type': 'application/ld+json'})
+    #         json_data = json.loads(script_tag.string)
+    #         data_copy['name'] = json_data.get('name')
+    #         data_copy['price'] = json_data.get('offers', {}).get('price')
+    #         data_copy['brand'] = json_data.get('brand', {}).get('name')
+    #         data_copy['currency'] = json_data.get('offers', {}).get('priceCurrency')
+    #         data_copy['description'] = json_data.get('description')
