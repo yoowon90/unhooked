@@ -72,7 +72,11 @@ def wishlist():
         if raw_price.startswith('$'):
             raw_price = raw_price[1:].strip()
         raw_price = raw_price.replace(',', '.')  # replace comma with period
-        wish_item_price = float(raw_price) 
+        try:
+            wish_item_price = float(raw_price) 
+        except Exception as e:
+            flash('Price must be number!', category='error')
+            print(f'Error: {e}')
 
         # format name
         raw_name = request.form.get('name')
