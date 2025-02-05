@@ -195,5 +195,6 @@ class URLInfo:
             data_copy['price'] = json_data.get('offers')[0].get('price')
             data_copy['currency'] = json_data.get('offers')[0].get('priceCurrency')
             data_copy['description'] = soup.find('meta', {'property': 'og:title'}).get('content')
+        
         finally:
             return data_copy
