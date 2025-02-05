@@ -7,7 +7,8 @@ BRANDS = ['Reformation',
           'Aamerican Vintage', 
           'Aritzia', 
           'A.P.C',
-          'Bloomingdales']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
+          'Bloomingdales',
+          'DÔEN']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
 
 # to be added: Tiffany & Co., Ralph Lauren, Vuori, Bloomingdales, ssense, Doen
 
@@ -79,6 +80,8 @@ class URLInfo:
             return self.extract_apc()
         elif brand == 'Bloomingdales':
             return self.extract_bloomingdales()
+        elif brand == 'DÔEN':
+            return self.extract_doen()
         else:
             return self.__default_data
 
@@ -184,7 +187,7 @@ class URLInfo:
             return data_copy
     
     def extract_bloomingdales(self):
-        # apc: https://www.bloomingdales.com/shop/product/cinq-a-sept-naia-faux-shearling-jacket?ID=5274338&upc_ID=7969176&Quantity=1&seqNo=3&EXTRA_PARAMETER=BAG&pickInStore=false
+        # bloomingdales: https://www.bloomingdales.com/shop/product/cinq-a-sept-naia-faux-shearling-jacket?ID=5274338&upc_ID=7969176&Quantity=1&seqNo=3&EXTRA_PARAMETER=BAG&pickInStore=false
         data_copy = copy.deepcopy(self.__default_data)
         try:
             soup = self.soup
@@ -195,6 +198,21 @@ class URLInfo:
             data_copy['price'] = json_data.get('offers')[0].get('price')
             data_copy['currency'] = json_data.get('offers')[0].get('priceCurrency')
             data_copy['description'] = soup.find('meta', {'property': 'og:title'}).get('content')
+        
+        finally:
+            return data_copy
+    
+    
+    def extract_doen(self):
+        # doen: https://www.bloomingdales.com/shop/product/cinq-a-sept-naia-faux-shearling-jacket?ID=5274338&upc_ID=7969176&Quantity=1&seqNo=3&EXTRA_PARAMETER=BAG&pickInStore=false
+        data_copy = copy.deepcopy(self.__default_data)
+        try:
+            soup = self.soup
+            data_copy['brand'] = soup.find('meta', {'property': 'og:site_name'}).get('content')
+            data_copy['name'] = soup.find('meta', {'property': 'og:title'}).get('content')
+            data_copy['price'] = soup.find('meta', {'property': 'og:price:amount'}).get('content')
+            data_copy['currency'] = soup.find('meta', {'property': 'og:price:currency'}).get('content')
+            data_copy['description'] = soup.find('meta', {'property': 'og:description'}).get('content')
         
         finally:
             return data_copy
