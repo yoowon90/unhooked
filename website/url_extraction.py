@@ -1,16 +1,19 @@
 import copy
-import json 
+import json
 
-BRANDS = ['Reformation', 
+BRANDS = ['Reformation',
           'Rouje', 
           'Zara', 
           'Aamerican Vintage', 
           'Aritzia', 
           'A.P.C',
           'Bloomingdales',
-          'DÔEN']  # TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
+          'DÔEN',
+          'MANGO'
+        ]  
 
-# to be added: Tiffany & Co., Ralph Lauren, Vuori, Bloomingdales, ssense, Doen
+# TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
+# to be added: Tiffany & Co., Ralph Lauren, Vuori, ssense
 
 class URLInfo:
     def __init__(self, soup):
@@ -63,8 +66,6 @@ class URLInfo:
                 return matches[best_brand]
                 
 
-
-
     def extract_brand_from_soup(self, brand):
         if brand == 'Reformation' or brand == 'American Vintage':
             return self.extract_reformation()
@@ -82,6 +83,8 @@ class URLInfo:
             return self.extract_bloomingdales()
         elif brand == 'DÔEN':
             return self.extract_doen()
+        elif brand == 'MANGO':
+            return self.extract_mango()
         else:
             return self.__default_data
 
@@ -212,6 +215,20 @@ class URLInfo:
             data_copy['name'] = soup.find('meta', {'property': 'og:title'}).get('content')
             data_copy['price'] = soup.find('meta', {'property': 'og:price:amount'}).get('content')
             data_copy['currency'] = soup.find('meta', {'property': 'og:price:currency'}).get('content')
+            data_copy['description'] = soup.find('meta', {'property': 'og:description'}).get('content')
+        
+        finally:
+            return data_copy
+    
+    def extract_mango(self):
+        # mango: https://shop.mango.com/us/en/p/women/tops/party/lurex-top-with-openwork-details_87054063?c=OR
+        data_copy = copy.deepcopy(self.__default_data)
+        try:
+            soup = self.soup
+            data_copy['brand'] = soup.find('meta', {'property': 'og:site_name'}).get('content')
+            data_copy['name'] = soup.find('meta', {'property': 'og:title'}).get('content')
+            data_copy['price'] = soup.find('meta', {'itemprop': 'price'}).get('content')
+            data_copy['currency'] = soup.find('meta', {'itemprop': 'priceCurrency'}).get('content')
             data_copy['description'] = soup.find('meta', {'property': 'og:description'}).get('content')
         
         finally:
