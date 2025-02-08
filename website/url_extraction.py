@@ -235,6 +235,3 @@ class URLInfo:
         
         finally:
             return data_copy
-    
-     def extract_massimo_dutti(self):
-        # mango: https://shop.mango.com/us
