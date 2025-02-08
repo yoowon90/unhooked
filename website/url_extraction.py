@@ -9,11 +9,12 @@ BRANDS = ['Reformation',
           'A.P.C',
           'Bloomingdales',
           'DÔEN',
-          'MANGO'
+          'MANGO',
         ]  
 
-# TODO: Massimo Dutti, Mango, Sezane, Free People, & Other Stories, Aritzia
-# to be added: Tiffany & Co., Ralph Lauren, Vuori, ssense
+# TODO: Massimo Dutti, Free People, & Other Stories
+# to be added: Tiffany & Co., Vuori, ssense
+# Denied: Massimo Dutti, Ralph Lauren, Aritzia, Sezane
 
 class URLInfo:
     def __init__(self, soup):
@@ -233,3 +234,6 @@ class URLInfo:
         
         finally:
             return data_copy
+    
+     def extract_massimo_dutti(self):
+        # mango: https://shop.mango.com/us
