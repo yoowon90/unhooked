@@ -10,7 +10,7 @@ from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import current_user
 from .models import Note, WishItem
 from . import db
-from .url_extraction import URLInfo
+from .url_extraction import ItemDetails
 from pytz import timezone
 
 
@@ -287,18 +287,26 @@ def fetch_url_info():
         return jsonify({'success': False, 'error': 'No URL provided'})
 
     try:
-        response = requests.get(url, headers=header)  # maybe use header here
+        response = requests.get(url, headers=header, timeout=5)  # times out in 20 seconds
         response.raise_for_status()
+
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        item_data_dict = URLInfo(soup).extract_item_data()
+        item_data_dict = ItemDetails(soup).get_item_data()
         item_data_dict['success'] = True
-
+        
+        # If successful, add a succesful message
+        # flash('Loading item details via URL was successful!', category='success')
         return jsonify(item_data_dict)
     
     except Exception as e:
         # return jsonify({'success': False, 'error': str(e)})
         default_value = None
         print(f"error: {str(e)}")
+
+        # display exception to users
+        # flash('Couldn\'t load items using provided URL. Please input details manually.', category='error')
+        
+        # if error encountered, still treat as success but return None for all values
         return jsonify({'success': True, 'name': default_value, 'price': default_value, 'brand': default_value, 'description': default_value,
                  'currency': default_value}) 
