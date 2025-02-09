@@ -36,8 +36,6 @@ class WishItem(db.Model):
     unhooked_date = db.Column(db.DateTime(timezone=True), default=None)
 
 class User(db.Model, UserMixin):
-
-    
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True)
     password = db.Column(db.String(150))
@@ -49,3 +47,14 @@ class User(db.Model, UserMixin):
     # report_start = db.Column(db.DateTime(timezone=True), default=get_default_report_start())
     # report_end = db.Column(db.DateTime(timezone=True), default=datetime.datetime.now())
 
+    # TODO: BUG FIX; having an error changing wishtems into a json serializable list
+    # def to_dict(self):
+    #     return {
+    #         'id': self.id,
+    #         'email': self.email,
+    #         'first_name': self.first_name,
+    #         'zipcode': self.zipcode,
+    #         'price': self.price,
+    #         'wishitems': [item.to_dict() for item in self.wishitems],
+    #         'last_purchase_date': self.last_purchase_date.isoformat()  # Convert datetime to ISO format string
+    #     }
