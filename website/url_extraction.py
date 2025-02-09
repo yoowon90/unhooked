@@ -16,7 +16,7 @@ BRANDS = ['Reformation',
 # Reformation method worked with Vuori & ssense
 
 
-# TODO: Tiffany & Co.
+# TODO: Tiffany & Co., For Love and Lemons
 
 # TODO: Denied: Free People, Massimo Dutti, Ralph Lauren, Aritzia, Sezane,  & Other Stories
 

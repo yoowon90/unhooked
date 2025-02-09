@@ -155,7 +155,7 @@ def wishlist():
     tags = list(wishlist_tags)
 
     # render the template using name of template
-    # now when go to '/', render home.html
+    # now when go to '/', render unhooked.html
 
     return render_template("wishlist.html", 
                            user=current_user, 
@@ -241,7 +241,7 @@ def save_table():
 @views.route('/unhooked-list', methods=['GET', 'POST'])
 def unhooked_list():
     # render the template using name of template
-    # now when go to '/', render home.html
+    # now when go to '/', render unhooked.html
     # get all unique tags in wishlist
     unhooked_cats = set()
     for wishitem in current_user.wishitems:

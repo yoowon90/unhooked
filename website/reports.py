@@ -43,13 +43,18 @@ def home():
             yesterday = report_end - datetime.timedelta(days=1)
             report_start = datetime.datetime(yesterday.year, yesterday.month, 1, 0, 0, 0) # 1st day of yesterday's month
         
+        # type(current_user.wishitems) is <class 'sqlalchemy.orm.collections.InstrumentedList'>
+        # Convert InstrumentedList to a list of dictionaries
+        # json_serializable_wishitems = current_user.wishitems
+
         return render_template("home.html", 
                     user=current_user, 
                     current_time=current_time, 
                     ten_days=ten_days, 
                     last_purchase_date=last_purchase_date,
                     default_report_start=report_start,
-                    default_report_end=report_end
+                    default_report_end=report_end,
+                    json_serializable_wishitems=json_serializable_wishitems
                     )  # return html when we got root
 
 def create_figure(figure_type, figure_content):
