@@ -177,6 +177,7 @@ def toggle_wishitem():
             wishitem.unhooked = unhooked
             wishitem.purchased = purchased
             if unhooked and not purchased:
+                print("Unhooking.. new wishitem unhooked date is {}".format(datetime.datetime.now()))
                 wishitem.unhooked_date = datetime.datetime.now()
                 flash("Item unhooked!", category='success')
             elif not unhooked and purchased:

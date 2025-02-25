@@ -169,7 +169,9 @@
     </div>
     <script>
         $(document).ready(function() {
-            const wishitems = {{ json_serializable_wishitems|tojson|safe }};
+            const spenditure = {{ spenditure | tojson}};
+            const saves = {{ saves | tojson }};
+
             let clickCount = 0;
             let startDate, endDate;
 
@@ -220,7 +222,23 @@
                         colorGreyDates(startDate, endDate); // Color new grey dates
                     }
                     updateReportDates(); // Update report dates
-                }
+                },
+                events: Object.keys(spenditure).map(function(date) {
+                    return {
+                        title: '-' + spenditure[date], // total price purchased
+                        start: date, // Use the key as the start date
+                        color: 'lightcoral', // Light red background color
+                        textColor: 'red' // Red text color
+                    };
+                }).concat(Object.keys(saves).map(function(date) {
+                    return {
+                        title: '+' + saves[date], // total price unhooked
+                        start: date, // Use the key as the start date
+                        color: 'lightgreen', // Light green background color
+                        textColor: 'green' // Green text color
+                    };
+                }))
+                    
             });
 
             // Initial update
