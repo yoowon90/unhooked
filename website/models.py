@@ -35,6 +35,19 @@ class WishItem(db.Model):
     favorited = db.Column(db.Boolean, default=False)
     unhooked_date = db.Column(db.DateTime(timezone=True), default=None)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'brand': self.brand,
+            'category': self.category,
+            'price': self.price,
+            'purchase_date': self.purchase_date.isoformat() if self.purchase_date is not None else None,
+            # Convert datetime to ISO format string
+            'unhooked_date': self.unhooked_date.isoformat() if self.unhooked_date is not None else None
+
+        }
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True)
@@ -46,15 +59,3 @@ class User(db.Model, UserMixin):
     last_purchase_date = db.Column(db.DateTime(timezone=True), default=None)
     # report_start = db.Column(db.DateTime(timezone=True), default=get_default_report_start())
     # report_end = db.Column(db.DateTime(timezone=True), default=datetime.datetime.now())
-
-    # TODO: BUG FIX; having an error changing wishtems into a json serializable list
-    # def to_dict(self):
-    #     return {
-    #         'id': self.id,
-    #         'email': self.email,
-    #         'first_name': self.first_name,
-    #         'zipcode': self.zipcode,
-    #         'price': self.price,
-    #         'wishitems': [item.to_dict() for item in self.wishitems],
-    #         'last_purchase_date': self.last_purchase_date.isoformat()  # Convert datetime to ISO format string
-    #     }
