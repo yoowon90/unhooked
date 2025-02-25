@@ -1,9 +1,6 @@
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for, Response
 from flask_login import login_required, current_user
 from .models import WishItem
-from . import db
-import json
-import os
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
@@ -31,6 +28,26 @@ COLOR_SCHEME = [
 @reports.route('/', methods=['GET', 'POST'])  # url (homepage). run function when opening root.
 # @login_required
 def home():
+
+    def format_money(money):
+            def add_commas(money):
+                if len(money) <= 3:
+                    return money
+                return add_commas(money[:-3]) + ',' + money[-3:]
+            
+            money = str(money)
+            if "." in money:
+                dollars = money.split(".")[0]
+                cents = money.split(".")[1]
+                if len(cents) == 1:
+                    cents += "0"
+            else:
+                dollars = money
+                cents = "00"
+            
+            money = add_commas(dollars) + "." + cents
+            return money
+
     if request.method == 'POST' or request.method == 'GET': 
         # get current time
         current_time = datetime.datetime.now() # Get the current time
@@ -43,13 +60,43 @@ def home():
             yesterday = report_end - datetime.timedelta(days=1)
             report_start = datetime.datetime(yesterday.year, yesterday.month, 1, 0, 0, 0) # 1st day of yesterday's month
         
+        # type(current_user.wishitems) is <class 'sqlalchemy.orm.collections.InstrumentedList'>
+        # Convert InstrumentedList to a list of dictionaries
+        purchased_wishitems = [item.to_dict() for item in current_user.wishitems if item.purchased and item.purchase_date is not None]
+        spenditure = {}
+
+        for purchased_item in purchased_wishitems:
+            purchase_date = purchased_item['purchase_date'][:10]
+            if purchase_date in spenditure:
+                print(f"purchase_date: {purchase_date}, price: {purchased_item['price']}")
+                spenditure[purchase_date] += purchased_item['price']
+            else:
+                spenditure[purchase_date] = purchased_item['price']
+        spenditure = {date: format_money(spend) for date, spend in spenditure.items()}
+        
+        unhooked_wishitems = [item.to_dict() for item in current_user.wishitems if item.unhooked and item.unhooked_date is not None]
+        print(f"unhooked_wishitems : {unhooked_wishitems}")
+        saves = {}
+
+        for unhooked_item in unhooked_wishitems:
+            unhooked_date = unhooked_item['unhooked_date'][:10]
+            if unhooked_date in saves:
+                print(f"unhooked_date: {unhooked_date}, price: {unhooked_item['price']}")
+                saves[unhooked_date] += unhooked_item['price']
+            else:
+                saves[unhooked_date] = unhooked_item['price']
+        saves = {date: format_money(save) for date, save in saves.items()}
+
+
         return render_template("home.html", 
                     user=current_user, 
                     current_time=current_time, 
                     ten_days=ten_days, 
                     last_purchase_date=last_purchase_date,
                     default_report_start=report_start,
-                    default_report_end=report_end
+                    default_report_end=report_end,
+                    spenditure=spenditure,
+                    saves=saves
                     )  # return html when we got root
 
 def create_figure(figure_type, figure_content):
@@ -65,7 +112,6 @@ def create_figure(figure_type, figure_content):
     # Query the WishItem model to get the category breakdown for the current_user's wishlist, unhooked_list, or purchased_list
     unhooked = figure_types.get(figure_type).get('unhooked')
     purchased = figure_types.get(figure_type).get('purchased')
-    print(unhooked, purchased)
     wishitems = WishItem.query.filter_by(user_id=current_user.id, unhooked=unhooked, purchased=purchased).all()  # not unhooked and not purchased
     if figure_content == 'category':
         contents = [item.category for item in wishitems]
