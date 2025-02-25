@@ -169,62 +169,82 @@
     </div>
     <script>
         $(document).ready(function() {
-        let clickCount = 0;
-        let startDate, endDate;
+            const spenditure = {{ spenditure | tojson}};
+            const saves = {{ saves | tojson }};
 
-        function clearGreyDates() {
-            $('.fc-day').removeClass('grey-date');
-        }
+            let clickCount = 0;
+            let startDate, endDate;
 
-        function colorGreyDates(start, end) {
-            let current = start.clone();
-            while (current <= end) {
-                $('.fc-day[data-date="' + current.format('YYYY-MM-DD') + '"]').addClass('grey-date');
-                current.add(1, 'days');
+            function clearGreyDates() {
+                $('.fc-day').removeClass('grey-date');
             }
-        }
 
-        function updateReportDates() {
-            const startDate = $('#start_date').val();
-            const endDate = $('#end_date').val();
-            $('#report-dates').text(`Report is based on ${startDate || '?'} to ${endDate || '?'}:`);
-        }
+            function colorGreyDates(start, end) {
+                let current = start.clone();
+                while (current <= end) {
+                    $('.fc-day[data-date="' + current.format('YYYY-MM-DD') + '"]').addClass('grey-date');
+                    current.add(1, 'days');
+                }
+            }
 
-        // Add click event listener to the document
-        $(document).click(function(event) {
-              if (!$(event.target).closest('#calendar').length && !$(event.target).closest('.fc-button').length) {
-                // Click happened outside the calendar and not on the navigation buttons
-                $('#start_date').val('').prop('disabled', true);
-                $('#end_date').val('').prop('disabled', true);
-                startDate = null;
-                endDate = null;
-                clearGreyDates(); // Clear grey dates
-              }
+            function updateReportDates() {
+                const startDate = $('#start_date').val();
+                const endDate = $('#end_date').val();
+                $('#report-dates').text(`Report is based on ${startDate || '?'} to ${endDate || '?'}:`);
+            }
+
+            // Add click event listener to the document
+            $(document).click(function(event) {
+                if (!$(event.target).closest('#calendar').length && !$(event.target).closest('.fc-button').length) {
+                    // Click happened outside the calendar and not on the navigation buttons
+                    $('#start_date').val('').prop('disabled', true);
+                    $('#end_date').val('').prop('disabled', true);
+                    startDate = null;
+                    endDate = null;
+                    clearGreyDates(); // Clear grey dates
+                }
+                }
+            );
+
+            $('#calendar').fullCalendar({
+                selectable: true,
+                selectHelper: true,
+                select: function(start, end) {
+                    clickCount++;
+                    if (clickCount % 2 !== 0) {
+                        startDate = start;
+                        $('#start_date').val(start.format('YYYY-MM-DD')).prop('disabled', false);
+                        $('#end_date').val('').prop('disabled', true);
+                        clearGreyDates(); // Clear previous grey dates
+                    } else {
+                        endDate = start;
+                        $('#end_date').val(end.clone().subtract(1, 'days').format('YYYY-MM-DD')).prop('disabled', false);
+                        colorGreyDates(startDate, endDate); // Color new grey dates
+                    }
+                    updateReportDates(); // Update report dates
+                },
+                events: Object.keys(spenditure).map(function(date) {
+                    return {
+                        title: '-' + spenditure[date], // total price purchased
+                        start: date, // Use the key as the start date
+                        color: 'lightcoral', // Light red background color
+                        textColor: 'red' // Red text color
+                    };
+                }).concat(Object.keys(saves).map(function(date) {
+                    return {
+                        title: '+' + saves[date], // total price unhooked
+                        start: date, // Use the key as the start date
+                        color: 'lightgreen', // Light green background color
+                        textColor: 'green' // Green text color
+                    };
+                }))
+                    
             });
 
-        $('#calendar').fullCalendar({
-            selectable: true,
-            selectHelper: true,
-            select: function(start, end) {
-                clickCount++;
-                if (clickCount % 2 !== 0) {
-                    startDate = start;
-                    $('#start_date').val(start.format('YYYY-MM-DD')).prop('disabled', false);
-                    $('#end_date').val('').prop('disabled', true);
-                    clearGreyDates(); // Clear previous grey dates
-                } else {
-                    endDate = start;
-                    $('#end_date').val(end.clone().subtract(1, 'days').format('YYYY-MM-DD')).prop('disabled', false);
-                    colorGreyDates(startDate, endDate); // Color new grey dates
-                }
-                updateReportDates(); // Update report dates
-            }
-        });
+            // Initial update
+            updateReportDates();
 
-        // Initial update
-        updateReportDates();
-
-        // Add the script to update calendar cells with wishitem prices
+            // Add the script to update calendar cells with purchased items' prices
 
     });
 
