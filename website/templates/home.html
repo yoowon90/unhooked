@@ -225,14 +225,14 @@
                 },
                 events: Object.keys(spenditure).map(function(date) {
                     return {
-                        title: '-' + spenditure[date], // total price purchased
+                        title: '💸 ' + '-' + spenditure[date], // total price purchased
                         start: date, // Use the key as the start date
                         color: 'lightpink', // Light red background color
                         textColor: 'red' // Red text color
                     };
                 }).concat(Object.keys(saves).map(function(date) {
                     return {
-                        title: '+' + saves[date], // total price unhooked
+                        title: '💰 ' + '+' + saves[date], // total price unhooked
                         start: date, // Use the key as the start date
                         color: 'lightgreen', // Light green background color
                         textColor: 'green' // Green text color
