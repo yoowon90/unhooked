@@ -50,12 +50,19 @@
         <tr>
           <th scope="col">#</th>
           <th scope="col">Time</th>
-          <th scope="col">Brand</th>
+          <th scope="col">Brand
+          <select id="brandFilter" onchange="filterTable()">
+            <option value="">All brands</option>
+            {% for brand in brands %}
+            <option value="{{ brand }}">{{ brand }}</option>
+            {% endfor %}
+          </select>
+          </th>
           <th scope="col">Category
             <select id="tagFilter" onchange="filterTable()">
-              <option value="">All tags</option>
-              {% for tag in tags %}
-              <option value="{{ tag }}">{{ tag }}</option>
+              <option value="">All categories</option>
+              {% for category in categories %}
+              <option value="{{ category }}">{{ category }}</option>
               {% endfor %}
             </select>
           </th>
@@ -71,7 +78,7 @@
       {% for wishitem in user.wishitems %}
       {% if not wishitem.unhooked and not wishitem.purchased %}
       {% set count.value = count.value + 1 %}
-        <tr data-wishitem-id="{{ wishitem.id }}", data-wishitem-tag="{{ wishitem.tag }}">
+        <tr data-wishitem-id="{{ wishitem.id }}" data-wishitem-category="{{ wishitem.category }}" data-wishitem-brand="{{ wishitem.brand }}">
           <th scope="row">{{count.value}}</th>
           <td> {{wishitem.date | format_datetime}} </td>
           <td contenteditable="true" oninput="autoSave(this)"> {{wishitem.brand}} </td>
@@ -260,18 +267,24 @@
         }
       // Function to filter table based on category
       function filterTable() {
-            var filter = document.getElementById("tagFilter").value.toLowerCase();
-            var rows = document.querySelectorAll("#wishlist-table tbody tr");
+        var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
+        console.log('categoryFilter:', categoryFilter); // Print categoryFilter
+        var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
+        console.log('brandFilter:', brandFilter); // Print categoryFilter
+        var rows = document.querySelectorAll("#wishlist-table tbody tr");
 
-            rows.forEach(row => {
-                var tag = row.getAttribute("data-wishitem-tag").toLowerCase();
-                if (filter === "" || tag === filter) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
-            });
-        }
+        rows.forEach(row => {
+          var tdCategory = row.getAttribute("data-wishitem-category").toLowerCase();
+          console.log('tdCategory:', tdCategory); // Print tdCategory
+          var tdBrand = row.getAttribute("data-wishitem-brand").toLowerCase();
+          if ((categoryFilter === "" || tdCategory.includes(categoryFilter)) &&
+              (brandFilter === "" || tdBrand.includes(brandFilter))) {
+            row.style.display = "";
+          } else {
+            row.style.display = "none";
+          }
+        });
+      }
       </script>
    <br />
    <div align="center">
@@ -282,20 +295,7 @@
     // Save scroll position before form submission
     document.querySelector('form').addEventListener('submit', function() {
       localStorage.setItem('scrollPosition', window.scrollY);
-    });// Function to filter table based on tag
-      function filterTable() {
-            var filter = document.getElementById("tagFilter").value.toLowerCase();
-            var rows = document.querySelectorAll("#wishlist-table tbody tr");
-
-            rows.forEach(row => {
-                var tag = row.getAttribute("data-wishitem-tag").toLowerCase();
-                if (filter === "" || tag === filter) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
-            });
-        }
+    });
 
     // Restore scroll position after page reload
     window.addEventListener('load', function() {

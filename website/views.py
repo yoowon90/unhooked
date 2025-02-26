@@ -154,6 +154,22 @@ def wishlist():
                 wishlist_tags.add(wishitem.tag)
     tags = list(wishlist_tags)
 
+    # get all unique categories in wishlist
+    wishlist_cats = set()
+    for wishitem in current_user.wishitems:
+        if not wishitem.purchased and not wishitem.unhooked:
+            if not wishitem.category == "" and wishitem.category is not None:  # if not category unknown
+                wishlist_cats.add(wishitem.category)
+    categories = list(wishlist_cats)
+
+    # get all unique brands in wishlist
+    wishlist_brands = set()
+    for wishitem in current_user.wishitems:
+        if not wishitem.purchased and not wishitem.unhooked:
+            if not wishitem.brand == "" and wishitem.brand is not None:  # if not category unknown
+                wishlist_brands.add(wishitem.brand)
+    brands = list(wishlist_brands)
+
     # render the template using name of template
     # now when go to '/', render unhooked.html
 
@@ -161,7 +177,9 @@ def wishlist():
                            user=current_user, 
                            last_updated=dir_last_updated(r'./website/static'), 
                            current_time=current_time,
-                           tags=tags)  # return html when we got root
+                           tags=tags,
+                           categories=categories,
+                           brands=brands)  # return html when we got root
 
 
 # wishlist
