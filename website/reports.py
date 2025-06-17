@@ -75,13 +75,11 @@ def home():
         spenditure = {date: format_money(spend) for date, spend in spenditure.items()}
         
         unhooked_wishitems = [item.to_dict() for item in current_user.wishitems if item.unhooked and item.unhooked_date is not None]
-        print(f"unhooked_wishitems : {unhooked_wishitems}")
         saves = {}
 
         for unhooked_item in unhooked_wishitems:
             unhooked_date = unhooked_item['unhooked_date'][:10]
             if unhooked_date in saves:
-                print(f"unhooked_date: {unhooked_date}, price: {unhooked_item['price']}")
                 saves[unhooked_date] += unhooked_item['price']
             else:
                 saves[unhooked_date] = unhooked_item['price']
@@ -99,7 +97,8 @@ def home():
                     saves=saves
                     )  # return html when we got root
 
-def create_figure(figure_type, figure_content):
+def create_figure(figure_type, figure_content, start_date=None, end_date=None):
+
     fig = Figure()
     axis = fig.add_subplot(1, 1, 1)
 
@@ -107,12 +106,35 @@ def create_figure(figure_type, figure_content):
                     'unhooked_list': {'unhooked': True, 'purchased': False},
                     'purchased_list': {'unhooked': False, 'purchased': True}
                     }
-    
-    # if figure_content == 'category':
+
     # Query the WishItem model to get the category breakdown for the current_user's wishlist, unhooked_list, or purchased_list
     unhooked = figure_types.get(figure_type).get('unhooked')
     purchased = figure_types.get(figure_type).get('purchased')
     wishitems = WishItem.query.filter_by(user_id=current_user.id, unhooked=unhooked, purchased=purchased).all()  # not unhooked and not purchased
+    
+    # Filter wishitems by date range if provided
+    filtered_wishitems = []
+    if start_date and end_date:
+        for item in wishitems:
+            date = item.date
+            purchase_date = item.purchase_date
+            unhooked_date = item.unhooked_date
+            
+            # get max and min of date, purchase_date, unhooked_date
+            dates = [date, purchase_date, unhooked_date]
+            dates = [date for date in dates if date is not None]
+            if not dates:
+                continue  # skip and don't include
+
+            min_date = min(dates)
+            max_date = max(dates)
+
+            if (start_date <= min_date <= end_date) or (start_date <= max_date <= end_date):
+                filtered_wishitems.append(item)
+    
+    if filtered_wishitems:
+        wishitems = filtered_wishitems
+    
     if figure_content == 'category':
         contents = [item.category for item in wishitems]
     elif figure_content == 'brand':
