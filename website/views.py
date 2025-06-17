@@ -25,8 +25,6 @@ NYC = ['10001', '10011', '11019', '10023', '10128',
                 '10451', '10452', '10463', '10467', '10469',
                 '10301', '10304', '10306', '10314']
 
-BRANDS = ['Reformation', 'Rouje', 'Zara']
-
 
 @views.route('/delete-item', methods=['POST'])
 def delete_item():  
@@ -137,11 +135,6 @@ def wishlist():
             else:
                 data[brand] = 1
         
-        labels = list(data.keys())
-        values = list(data.values())
-        # pie = plt.pie(values, labels=labels)
-        #  plt.show()
-        # pie.savefig('./website/img/brand-pie.png')
     
     # get current time
     current_time = datetime.datetime.now() # Get the current time
@@ -161,6 +154,7 @@ def wishlist():
             if not wishitem.category == "" and wishitem.category is not None:  # if not category unknown
                 wishlist_cats.add(wishitem.category)
     categories = list(wishlist_cats)
+    categories.sort()
 
     # get all unique brands in wishlist
     wishlist_brands = set()
@@ -169,6 +163,7 @@ def wishlist():
             if not wishitem.brand == "" and wishitem.brand is not None:  # if not category unknown
                 wishlist_brands.add(wishitem.brand)
     brands = list(wishlist_brands)
+    brands.sort()
 
     # render the template using name of template
     # now when go to '/', render unhooked.html
@@ -228,7 +223,6 @@ def toggle_favorite_wishitem():
         if wishitem.user_id == current_user.id:
             wishitem.favorited = not wishitem.favorited
             db.session.commit()
-    print(f"jsonify: {jsonify({})}")
     return jsonify({})
 
 @views.route('/save-table', methods=['POST'])
@@ -253,8 +247,6 @@ def save_table():
             db.session.commit()
     print(f"jsonify: {jsonify({})}")
     return jsonify({})
-
-    return jsonify({'status': 'success', 'data': data})
 
 # unhooked-list
 @views.route('/unhooked-list', methods=['GET', 'POST'])
