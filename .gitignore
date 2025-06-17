@@ -3,3 +3,10 @@
 .vscode
 .ipynb_checkpoints
 .DS_Store
+**/__pycache__
+
+# Do not track prod database as may contain sensitive data. Only track dev db.
+instance/database_prod.db
+
+# Do not track test scripts made for dev purposes.
+BeautifulSoup_test.ipynb
