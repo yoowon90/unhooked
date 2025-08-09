@@ -3,15 +3,15 @@ import json
 import inspect
 
 BRANDS = ['Reformation',
-          'Rouje', 
-          'Zara', 
-          'Aamerican Vintage', 
-          'Aritzia', 
+          'Rouje',
+          'Zara',
+          'American Vintage',
+          'Aritzia',
           'A.P.C',
           'Bloomingdales',
           'DÔEN',
           'MANGO',
-        ]  
+        ]
 
 # Reformation method worked with Vuori & ssense
 
@@ -28,62 +28,17 @@ class ItemDetails:
                                'description': None,
                                'currency': None,
                                'category': None,
-                               'brand': None}
+                               'brand': None,
+                               'image_url': None}
         self.soup = soup  # BeautifulSoup(response.text, 'html.parser')
         self.brands = BRANDS
-    
+
     def get_extract_methods(self):
         """Get all methods that start with 'extract_'."""
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
         extract_methods = {name: method for name, method in methods if name.startswith('extract_')}
         return extract_methods
 
-    def get_item_data(self):
-        """
-        Get item data by trying extraction methods of all brand in BRANDS.
-        Chooses the brand with the most matches of all fields, by first choosing
-        the extraction that detected a not None brand.
-        """
-        # get all extract methods
-        extract_methods = self.get_extract_methods()
-
-        # intialize dict to count # of matches for each brand
-        matches = {brand: dict() for brand in self.brands}
-
-        for brand in self.brands: 
-            print(f"Extraction started with {brand}...")
-            method_name = f'extract_{brand.lower().replace(" ", "_")}'
-            print(f"Method name for {brand} is {method_name}")
-            if method_name in extract_methods:
-                brand_extract_dict = extract_methods[method_name]()
-                print(f"brand extract dict: {brand_extract_dict}")
-                name, price, description, currency, brand, category = (brand_extract_dict['name'],
-                                                         brand_extract_dict['price'],
-                                                         brand_extract_dict['description'],
-                                                         brand_extract_dict['currency'],
-                                                         brand_extract_dict['brand'],
-                                                         brand_extract_dict['category'])
-                matches[brand] = dict(name=name, price=price, description=description, currency=currency, brand=brand, category=category)
-
-        # get the brand with the most matches. if multiple, pick one where brand_extract_dict['brand'] is equal to brand.
-        # if still multiple, pick the first one
-        match_counts = {brand: sum([1 for value in brand_dict.values() if value is not None]) for brand, brand_dict in matches.items()}
-        max_matches = max(match_counts.values())
-        if max_matches == 0:
-            print("No matches found. Using default data..")
-            return self.__default_data
-        else:
-            # first filter bratches that have a brand among the matches
-            brand_detections = [brand for brand, count in match_counts.items() if count == max_matches and brand is not None]
-            if len(brand_detections):
-                print(f"There has been a match and a branch detection: {brand_detections[0]}")
-                return matches[brand_detections[0]]
-            else:
-                print("There has been a match, but no branch match. Using url extraction with the most matches..")
-                # get the brand with the most matches
-                best_brand = [brand for brand, count in match_counts.items() if count == max_matches][0]
-                return matches[best_brand]
-    
     def extract_reformation(self):
         """ Extracts data from Reformation website """
         # Reformation. e.g. https://www.thereformation.com/products/tam-knit-dress/1306570SLA0XS.html
@@ -100,7 +55,7 @@ class ItemDetails:
 
         finally:
             return data_copy
-    
+
     def extract_aritzia(self):
         """ Extracts data from Artizia website """
         #  TODO: Aritzia has blocked the scraping. Need to find a way to bypass it.
@@ -165,10 +120,10 @@ class ItemDetails:
             data_copy['price'] = soup.find('meta', {'property': 'product:price:amount'}).get('content')
             data_copy['currency'] = soup.find('meta', {'property': 'product:price:currency'}).get('content')
             data_copy['description'] = soup.find('meta', {'property': 'og:description'}).get('content')
-        
+
         finally:
             return data_copy
-    
+
     def extract_bloomingdales(self):
         """ Extracts data from Bloomingdales website """
         # bloomingdales: https://www.bloomingdales.com/shop/product/cinq-a-sept-naia-faux-shearling-jacket?ID=5274338&upc_ID=7969176&Quantity=1&seqNo=3&EXTRA_PARAMETER=BAG&pickInStore=false
@@ -182,11 +137,11 @@ class ItemDetails:
             data_copy['price'] = json_data.get('offers')[0].get('price')
             data_copy['currency'] = json_data.get('offers')[0].get('priceCurrency')
             data_copy['description'] = soup.find('meta', {'property': 'og:title'}).get('content')
-        
+
         finally:
             return data_copy
-    
-    
+
+
     def extract_doen(self):
         """ Extracts data from DÔEN website """
         # doen: https://www.bloomingdales.com/shop/product/cinq-a-sept-naia-faux-shearling-jacket?ID=5274338&upc_ID=7969176&Quantity=1&seqNo=3&EXTRA_PARAMETER=BAG&pickInStore=false
@@ -198,10 +153,10 @@ class ItemDetails:
             data_copy['price'] = soup.find('meta', {'property': 'og:price:amount'}).get('content')
             data_copy['currency'] = soup.find('meta', {'property': 'og:price:currency'}).get('content')
             data_copy['description'] = soup.find('meta', {'property': 'og:description'}).get('content')
-        
+
         finally:
             return data_copy
-    
+
     def extract_mango(self):
         """ Extracts data from Mango website """
         # mango: https://shop.mango.com/us/en/p/women/tops/party/lurex-top-with-openwork-details_87054063?c=OR
@@ -213,6 +168,90 @@ class ItemDetails:
             data_copy['price'] = soup.find('meta', {'itemprop': 'price'}).get('content')
             data_copy['currency'] = soup.find('meta', {'itemprop': 'priceCurrency'}).get('content')
             data_copy['description'] = soup.find('meta', {'property': 'og:description'}).get('content')
-        
+
         finally:
             return data_copy
+
+    def extract_image_url(self):
+        """Extract the main product image URL from the page"""
+        try:
+            soup = self.soup
+
+            # Try multiple common image selectors
+            image_selectors = [
+                'meta[property="og:image"]',
+                'meta[name="twitter:image"]',
+                'meta[property="product:image"]',
+                'meta[itemprop="image"]',
+                'link[rel="image_src"]'
+            ]
+
+            for selector in image_selectors:
+                img_meta = soup.select_one(selector)
+                if img_meta:
+                    image_url = img_meta.get('content') or img_meta.get('href')
+                    if image_url:
+                        return image_url
+
+            # Fallback: look for the first large image in the page
+            images = soup.find_all('img')
+            for img in images:
+                src = img.get('src')
+                if src and any(keyword in src.lower() for keyword in ['product', 'main', 'hero', 'featured']):
+                    return src
+
+            return None
+
+        except Exception as e:
+            print(f"Error extracting image: {e}")
+            return None
+
+    def get_item_data(self):
+        """
+        Get item data by trying extraction methods of all brand in BRANDS.
+        Chooses the brand with the most matches of all fields, by first choosing
+        the extraction that detected a not None brand.
+        """
+        # get all extract methods
+        extract_methods = self.get_extract_methods()
+
+        # intialize dict to count # of matches for each brand
+        matches = {brand: dict() for brand in self.brands}
+
+        for brand in self.brands:
+            print(f"Extraction started with {brand}...")
+            method_name = f'extract_{brand.lower().replace(" ", "_")}'
+            print(f"Method name for {brand} is {method_name}")
+            if method_name in extract_methods:
+                brand_extract_dict = extract_methods[method_name]()
+                print(f"brand extract dict: {brand_extract_dict}")
+                name, price, description, currency, brand, category = (brand_extract_dict['name'],
+                                                         brand_extract_dict['price'],
+                                                         brand_extract_dict['description'],
+                                                         brand_extract_dict['currency'],
+                                                         brand_extract_dict['brand'],
+                                                         brand_extract_dict['category'])
+                matches[brand] = dict(name=name, price=price, description=description, currency=currency, brand=brand, category=category)
+
+        # get the brand with the most matches. if multiple, pick one where brand_extract_dict['brand'] is equal to brand.
+        # if still multiple, pick the first one
+        match_counts = {brand: sum([1 for value in brand_dict.values() if value is not None]) for brand, brand_dict in matches.items()}
+        max_matches = max(match_counts.values())
+        if max_matches == 0:
+            print("No matches found. Using default data..")
+            result = self.__default_data
+        else:
+            # first filter bratches that have a brand among the matches
+            brand_detections = [brand for brand, count in match_counts.items() if count == max_matches and brand is not None]
+            if len(brand_detections):
+                print(f"There has been a match and a branch detection: {brand_detections[0]}")
+                result = matches[brand_detections[0]]
+            else:
+                print("There has been a match, but no branch match. Using url extraction with the most matches..")
+                # get the brand with the most matches
+                best_brand = [brand for brand, count in match_counts.items() if count == max_matches][0]
+                result = matches[best_brand]
+
+        # Add image URL to the result
+        result['image_url'] = self.extract_image_url()
+        return result

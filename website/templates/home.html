@@ -21,60 +21,64 @@
         text-align: center;
         margin-bottom: 20px; /* Add some space below the title */
       }
-      .calendar-form-container {
+      .calendar-dropdown-container {
         display: flex;
-        align-items: flex-start; /* Align items to the top */
+        align-items: flex-start;
+        gap: 30px;
+        margin: 20px 0;
       }
       #calendar {
-        max-width: 600px; /* Set the maximum width of the calendar */
-        /* margin: 0 auto; Center the calendar horizontally */
-        transform: scale(0.8); /* Scale down to 50% */
-        transform-origin: top left; /* Adjust the origin as needed */
+        max-width: 600px;
+        transform: scale(0.8);
+        transform-origin: top left;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+      }
+      .date-selection-container {
+        flex: 1;
+        text-align: center;
+      }
+      .dropdown-container {
+        margin-bottom: 20px;
+      }
+      .dropdown-container label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+      .dropdown-container select {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px;
+        min-width: 200px;
+      }
+      .custom-date-container {
+        margin-top: 20px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #f9f9f9;
       }
 
-      .grey-date {
-      background-color: rgba(239, 237, 237, 0.916);
-      color: white;
-      }
-      
-      .light-red-date {
-            background-color: #ffcccc;
-      }
-      .light-blue-date {
-          background-color: #cce5ff;
-      }
-      .red-text {
-          color: red;
-      }
-      .blue-text {
-          color: blue;
-      }
-
-      .form-cogntainer {
-          margin-left: 20px; /* Add some space between the calendar and the form */
-      }
-
-      .form-container label,
-      .form-container input {
-          display: block; /* Ensure each label and input is on a separate line */
-          margin-bottom: 10px; /* Add some space between form elements */
-      }
-      .date-fields {
+            .date-fields {
           display: flex; /* Use flexbox to align items side by side */
           gap: 10px; /* Add some space between the fields */
         }
-      
+
       .report-headline {
           text-align: center;
           font-weight: bold;
           font-size: 1.5em; /* Adjust the size as needed */
       }
-      
+
       .button-container {
           display: flex;
           justify-content: center;
       }
-      
+
       .pie-chart-container {
           display: flex; /* Use flexbox to align items side by side */
           justify-content: space-around; /* Distribute space around the items */
@@ -85,6 +89,11 @@
           flex: 1; /* Allow items to grow and fill the container */
           text-align: center; /* Center the text within each item */
           margin: 0 10px; /* Add some horizontal space between items */
+      }
+
+      .pie-chart-container img {
+          max-width: 100%;
+          height: auto;
       }
     </style>
 </head>
@@ -113,142 +122,240 @@
         {% endif %}
         {% endfor %}
         {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
-        <p> ⭐️ Your total purchase amount is <b> ${{ totalpurchasedprice.value | format_money }} </b> </p>
+        <p> ⭐️ Your total purchase amount is <b> $<span id="total-purchase-amount">{{ totalpurchasedprice.value | format_money }}</span> </b> <span id="date-range-text">.</span> </p>
         <br>
-        <div class="calendar-form-container">
-      <div id='calendar'></div>
-      <div class="form-container">
-        <form>
-          <div class="date-fields">
-              <div>
-                  <label for="start_date">Start Date:</label>
-                  <input type="text" id="start_date" name="start_date" value="{{ report_start if report_start is defined else '' }}" readonly>
+                <div class="calendar-dropdown-container">
+          <div id='calendar'></div>
+          <div class="date-selection-container">
+            <div class="dropdown-container">
+              <label for="dateRangeDropdown">Select Date Range:</label>
+              <select id="dateRangeDropdown" class="form-control">
+                <option value="">Choose a date range...</option>
+                <option value="last7days">Last 7 days</option>
+                <option value="last14days">Last 14 days</option>
+                <option value="last30days">Last 30 days</option>
+                <option value="thisYear">This Year</option>
+                <option value="last365days">Last 365 days</option>
+                <option value="specifyDate">Specify Date</option>
+              </select>
+            </div>
+
+            <div id="customDateContainer" class="custom-date-container" style="display: none;">
+              <div class="date-fields">
+                <div>
+                  <label for="start_date">Start Date (YYYY-MM-DD):</label>
+                  <input type="text" id="start_date" name="start_date" placeholder="YYYY-MM-DD">
+                </div>
+                <div>
+                  <label for="end_date">End Date (YYYY-MM-DD):</label>
+                  <input type="text" id="end_date" name="end_date" placeholder="YYYY-MM-DD">
+                </div>
               </div>
-              <div>
-                  <label for="end_date">End Date:</label>
-                  <input type="text" id="end_date" name="end_date" value="{{ report_end if report_end is defined else '' }}" readonly>
-              </div>
-              <div>
-                <label>&nbsp;</label> <!-- Empty label for alignment -->
-              </div>
+            </div>
           </div>
-        </form>
-        <br>
-        <div class="button-container">
-          <button type="submit" class="btn btn-primary" id="createReportBtn">Create Report</button>
         </div>
-      </div>
-      </div>
-      
-      <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const today = new Date();
-            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-            const formatDate = (date) => {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
+            <script>
+        $(document).ready(function() {
+            const spenditure = {{ spenditure | tojson}};
+            const saves = {{ saves | tojson }};
 
-            document.getElementById('start_date').value = formatDate(startOfMonth);
-            document.getElementById('end_date').value = formatDate(today);
+            // Function to calculate date ranges
+            function getDateRange(option) {
+                const today = new Date();
+                const endDate = new Date(today);
+                let startDate = new Date(today);
+
+                switch(option) {
+                    case 'last7days':
+                        startDate.setDate(today.getDate() - 7);
+                        break;
+                    case 'last14days':
+                        startDate.setDate(today.getDate() - 14);
+                        break;
+                    case 'last30days':
+                        startDate.setDate(today.getDate() - 30);
+                        break;
+                    case 'thisYear':
+                        startDate = new Date(today.getFullYear(), 0, 1);
+                        break;
+                    case 'last365days':
+                        startDate.setDate(today.getDate() - 365);
+                        break;
+                    default:
+                        return null;
+                }
+
+                return {
+                    start: startDate.toISOString().split('T')[0],
+                    end: endDate.toISOString().split('T')[0]
+                };
+            }
+
+            // Function to generate report
+            function generateReport(startDate, endDate) {
+                $.ajax({
+                    url: '/generate-report',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        start_date: startDate,
+                        end_date: endDate
+                    }),
+                    success: function(response) {
+                        // Update total purchase amount
+                        $('#total-purchase-amount').text(response.total_purchase_amount.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }));
+
+                        // Update date range text
+                        $('#date-range-text').text('from ' + response.start_date + ' to ' + response.end_date + '.');
+
+                        // Update pie charts
+                        $('#category-chart').attr('src', 'data:image/png;base64,' + response.category_chart);
+                        $('#brand-chart').attr('src', 'data:image/png;base64,' + response.brand_chart);
+                        $('#purchased-category-chart').attr('src', 'data:image/png;base64,' + response.purchased_category_chart);
+                        $('#purchased-brand-chart').attr('src', 'data:image/png;base64,' + response.purchased_brand_chart);
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        alert('Error generating report: ' + (response ? response.error : 'Unknown error'));
+                    }
+                });
+            }
+
+                        // Handle dropdown change
+            $('#dateRangeDropdown').change(function() {
+                const selectedOption = $(this).val();
+
+                if (selectedOption === 'specifyDate') {
+                    // Show custom date inputs
+                    $('#customDateContainer').show();
+                    $('#start_date').val('').focus();
+                    $('#end_date').val('');
+                    // Reset to show all purchases
+                    resetToAllPurchases();
+                } else if (selectedOption) {
+                    // Hide custom date inputs
+                    $('#customDateContainer').hide();
+
+                    // Get date range and generate report
+                    const dateRange = getDateRange(selectedOption);
+                    if (dateRange) {
+                        generateReport(dateRange.start, dateRange.end);
+                    }
+                } else {
+                    // Reset everything
+                    $('#customDateContainer').hide();
+                    resetToAllPurchases();
+                }
+            });
+
+                                                // Function to reset to show all purchases
+            function resetToAllPurchases() {
+                // Calculate total of all purchases
+                let totalAllPurchases = 0;
+                Object.values(spenditure).forEach(function(amount) {
+                    // Remove commas and convert to number
+                    const cleanAmount = parseFloat(amount.replace(/,/g, ''));
+                    totalAllPurchases += cleanAmount;
+                });
+
+                // Update total purchase amount
+                $('#total-purchase-amount').text(totalAllPurchases.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }));
+
+                // Clear date range text and add period
+                $('#date-range-text').text('.');
+
+                // Reset pie charts to show all wishlist items (no date filtering)
+                $('#category-chart').attr('src', '/wishlist_category.png');
+                $('#brand-chart').attr('src', '/wishlist_brand.png');
+                $('#purchased-category-chart').attr('src', '/purchased_category.png');
+                $('#purchased-brand-chart').attr('src', '/purchased_brand.png');
+            }
+
+            // Handle custom date input
+            $('#end_date').on('input', function() {
+                const startDate = $('#start_date').val();
+                const endDate = $(this).val();
+
+                // Check if both dates are filled and in correct format
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
+                    generateReport(startDate, endDate);
+                } else if (!startDate || !endDate) {
+                    // If dates are cleared, reset to all purchases
+                    resetToAllPurchases();
+                }
+            });
+
+            // Also handle start date input
+            $('#start_date').on('input', function() {
+                const startDate = $(this).val();
+                const endDate = $('#end_date').val();
+
+                if (!startDate || !endDate) {
+                    // If either date is cleared, reset to all purchases
+                    resetToAllPurchases();
+                }
+            });
+
+            // Initialize calendar (read-only, no click functionality)
+            console.log('Spenditure data:', spenditure);
+            console.log('Saves data:', saves);
+
+            const calendarEvents = Object.keys(spenditure).map(function(date) {
+                return {
+                    title: '💸 ' + '-' + spenditure[date], // total price purchased
+                    start: date, // Use the key as the start date
+                    color: 'lightpink', // Light red background color
+                    textColor: 'red' // Red text color
+                };
+            }).concat(Object.keys(saves).map(function(date) {
+                return {
+                    title: '💰 ' + '+' + saves[date], // total price unhooked
+                    start: date, // Use the key as the start date
+                    color: 'lightgreen', // Light green background color
+                    textColor: 'green' // Green text color
+                };
+            }));
+
+            console.log('Calendar events:', calendarEvents);
+
+            $('#calendar').fullCalendar({
+                selectable: false, // Disable date selection
+                selectHelper: false,
+                events: calendarEvents
+            });
+
         });
     </script>
 
     <div class="pie-chart-container">
         <div class="item">
             <h5>Wish List Category</h5>
-            <img src="/wishlist_category.png" alt="Wish List Category Plot">
+            <img id="category-chart" src="/wishlist_category.png" alt="Wish List Category Plot">
         </div>
         <div class="item">
             <h5>Wish List Brand</h5>
-            <img src="/wishlist_brand.png" alt="Wish List Brand Plot">
+            <img id="brand-chart" src="/wishlist_brand.png" alt="Wish List Brand Plot">
         </div>
     </div>
-    <script>
-        $(document).ready(function() {
-            const spenditure = {{ spenditure | tojson}};
-            const saves = {{ saves | tojson }};
 
-            let clickCount = 0;
-            let startDate, endDate;
-
-            function clearGreyDates() {
-                $('.fc-day').removeClass('grey-date');
-            }
-
-            function colorGreyDates(start, end) {
-                let current = start.clone();
-                while (current <= end) {
-                    $('.fc-day[data-date="' + current.format('YYYY-MM-DD') + '"]').addClass('grey-date');
-                    current.add(1, 'days');
-                }
-            }
-
-            function updateReportDates() {
-                const startDate = $('#start_date').val();
-                const endDate = $('#end_date').val();
-                $('#report-dates').text(`Report is based on ${startDate || '?'} to ${endDate || '?'}:`);
-            }
-
-            // Add click event listener to the document
-            $(document).click(function(event) {
-                if (!$(event.target).closest('#calendar').length && !$(event.target).closest('.fc-button').length) {
-                    // Click happened outside the calendar and not on the navigation buttons
-                    $('#start_date').val('').prop('disabled', true);
-                    $('#end_date').val('').prop('disabled', true);
-                    startDate = null;
-                    endDate = null;
-                    clearGreyDates(); // Clear grey dates
-                }
-                }
-            );
-
-            $('#calendar').fullCalendar({
-                selectable: true,
-                selectHelper: true,
-                select: function(start, end) {
-                    clickCount++;
-                    if (clickCount % 2 !== 0) {
-                        startDate = start;
-                        $('#start_date').val(start.format('YYYY-MM-DD')).prop('disabled', false);
-                        $('#end_date').val('').prop('disabled', true);
-                        clearGreyDates(); // Clear previous grey dates
-                    } else {
-                        endDate = start;
-                        $('#end_date').val(end.clone().subtract(1, 'days').format('YYYY-MM-DD')).prop('disabled', false);
-                        colorGreyDates(startDate, endDate); // Color new grey dates
-                    }
-                    updateReportDates(); // Update report dates
-                },
-                events: Object.keys(spenditure).map(function(date) {
-                    return {
-                        title: '💸 ' + '-' + spenditure[date], // total price purchased
-                        start: date, // Use the key as the start date
-                        color: 'lightpink', // Light red background color
-                        textColor: 'red' // Red text color
-                    };
-                }).concat(Object.keys(saves).map(function(date) {
-                    return {
-                        title: '💰 ' + '+' + saves[date], // total price unhooked
-                        start: date, // Use the key as the start date
-                        color: 'lightgreen', // Light green background color
-                        textColor: 'green' // Green text color
-                    };
-                }))
-                    
-            });
-
-            // Initial update
-            updateReportDates();
-
-            // Add the script to update calendar cells with purchased items' prices
-
-    });
-
-    </script>
+    <div class="pie-chart-container">
+        <div class="item">
+            <h5>Purchased Category</h5>
+            <img id="purchased-category-chart" src="/purchased_category.png" alt="Purchased Category Plot">
+        </div>
+        <div class="item">
+            <h5>Purchased Brand</h5>
+            <img id="purchased-brand-chart" src="/purchased_brand.png" alt="Purchased Brand Plot">
+        </div>
+    </div>
 </body>
 </html>
 {% endblock %}

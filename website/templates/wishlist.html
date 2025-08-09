@@ -37,10 +37,10 @@
   {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
   {% set totalfavoriteprice.value =  totalfavoriteprice.value|round(2) %}
   <div style="display: flex; justify-content: space-between;">
-    <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value | format_money }} 
+    <p> <b> &#128722; Total value of items: <font color="blue">${{ totalprice.value | format_money }}
     </b></font>&nbsp; &#128150;<b> Total favorited: <font color="gold"> ${{ totalfavoriteprice.value | format_money }}
     <br>
-    </b></font>&#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }} 
+    </b></font>&#128717; <b>Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }}
     </b></font></p>
   </div>
 
@@ -67,7 +67,6 @@
             </select>
           </th>
           <th scope="col">Name</th>
-          <!-- <th scope="col">Photo</th> -->
           <th scope="col">💖</th>
           <th scope="col">Price (+tax)</th>
           <th scope="col">Added</th>
@@ -91,6 +90,11 @@
           </td>
           <td contenteditable="true" oninput="autoSave(this)">
             <span style="color: blue; text-decoration: underline; font-size:11pt" onClick="window.open('{{ wishitem.link }}', '_blank')"> {{wishitem.name}} </span> <br>
+            {% if wishitem.image_url %}
+              <a href="{{ wishitem.link }}" target="_blank">
+                <img src="{{ wishitem.image_url }}" alt="{{ wishitem.name }}" style="max-width: 80px; max-height: 80px; object-fit: cover; margin: 5px 0;">
+              </a>
+            {% endif %}
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ wishitem.description | format_description }}
             </span>
@@ -108,7 +112,7 @@
             </button>
           </td>
           <td> {{ (wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2) ) | format_money}} </td>
-          <td> 
+          <td>
             {% if wishitem.wish_period %}
               {{ wishitem.wish_period | format_time }}
               {% else %}
@@ -237,7 +241,7 @@
        </tr>
      </tbody>
    </table>
-   
+
     <!-- Add the JavaScript code here -->
     <script>
       document.getElementById('link').addEventListener('blur', function() {
@@ -257,6 +261,17 @@
                       document.getElementById('price').value = data.price;
                       document.getElementById('brand').value = data.brand;
                       document.getElementById('description').value = data.description;
+                      // Store image_url in a hidden field
+                      if (data.image_url) {
+                          if (!document.getElementById('image_url')) {
+                              const hiddenField = document.createElement('input');
+                              hiddenField.type = 'hidden';
+                              hiddenField.id = 'image_url';
+                              hiddenField.name = 'image_url';
+                              document.querySelector('form').appendChild(hiddenField);
+                          }
+                          document.getElementById('image_url').value = data.image_url;
+                      }
                   } else {
                       alert('Failed to fetch URL information');
                   }
@@ -327,5 +342,4 @@
     });
   </script>
  </form>
- {% endblock %} 
-  
+ {% endblock %}
