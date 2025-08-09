@@ -33,6 +33,7 @@ class WishItem(db.Model):
     tag = db.Column(db.String(10000), nullable=True)
     favorited = db.Column(db.Boolean, default=False)
     unhooked_date = db.Column(db.DateTime(timezone=True), default=None)
+    image_url = db.Column(db.String(10000), nullable=True)
 
     def to_dict(self):
         return {

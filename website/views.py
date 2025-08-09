@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 from sqlalchemy.sql import func
 from flask import Blueprint, render_template, request, flash, jsonify
-from flask_login import current_user
+from flask_login import current_user, login_required
 from .models import Note, WishItem
 from . import db
 from .url_extraction import ItemDetails
@@ -21,14 +21,15 @@ TAX = {'11217': 0.0875}
 # manhattan, brooklyn, queens, bronx, staten island
 NYC = ['10001', '10011', '11019', '10023', '10128',
                 '11201', '11211', '11217', '11231', '11238',
-                '11101', '11354', '11375', '11432', '11691', 
+                '11101', '11354', '11375', '11432', '11691',
                 '10451', '10452', '10463', '10467', '10469',
                 '10301', '10304', '10306', '10314']
 
 
 @views.route('/delete-item', methods=['POST'])
-def delete_item():  
-    wishitem = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
+@login_required
+def delete_item():
+    wishitem = json.loads(request.data) # this function expects a JSON from the INDEX.js file
     wishitemId = wishitem['wishItemId']
     print(f"wishitemId: {wishitemId}")
     wishitem = WishItem.query.get(wishitemId)
@@ -42,8 +43,9 @@ def delete_item():
 
 # notes
 @views.route('/delete-note', methods=['POST'])
-def delete_note():  
-    note = json.loads(request.data) # this function expects a JSON from the INDEX.js file 
+@login_required
+def delete_note():
+    note = json.loads(request.data) # this function expects a JSON from the INDEX.js file
     noteId = note['noteId']
     print(f"noteId: {noteId}")
     note = Note.query.get(noteId)
@@ -63,15 +65,16 @@ def dir_last_updated(folder):
 
 # wishlist
 @views.route('/my-wishlist', methods=['GET', 'POST'])
+@login_required
 def wishlist():
-    if request.method == 'POST':         
+    if request.method == 'POST':
         # allow flexibility with price
         raw_price = request.form.get('price')
         if raw_price.startswith('$'):
             raw_price = raw_price[1:].strip()
         raw_price = raw_price.replace(',', '.')  # replace comma with period
         try:
-            wish_item_price = float(raw_price) 
+            wish_item_price = float(raw_price)
         except Exception as e:
             flash('Price must be number!', category='error')
             print(f'Error: {e}')
@@ -88,6 +91,7 @@ def wishlist():
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
         wish_item_description = request.form.get('description').replace("<br>", ". ").replace("<br/>", ". ")
+        wish_item_image_url = request.form.get('image_url', None)  # Get image_url from form
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
         elif wish_item_delivery_fee is not None and wish_item_delivery_fee < 0:
@@ -101,7 +105,7 @@ def wishlist():
             flash('Specify a brand!', category='error')
         elif (len(wish_item_link) < 5):
             flash('Invalid link!', category='error')
-        
+
         else:
             # print(f"delivery_fee: {wish_item_delivery_fee}")
             # extra tax rules for nyc
@@ -112,21 +116,22 @@ def wishlist():
                                 category=wish_item_category,
                                 tag=wish_item_tag,
                                 brand=wish_item_brand,
-                                name=wish_item_name, 
+                                name=wish_item_name,
                                 price=wish_item_price,
                                 taxed_price=taxed_price,
                                 delivery_fee=wish_item_delivery_fee,
                                 total_price=taxed_price + wish_item_delivery_fee,  # taxed price plus delivery fee
                                 link=wish_item_link,
                                 description=wish_item_description,
+                                image_url=wish_item_image_url,
                                 wish_period=datetime.timedelta(seconds=0),
                                 date=datetime.datetime.now())  # providing the schema for the note
-            db.session.add(new_item) #adding the note to the database 
+            db.session.add(new_item) #adding the note to the database
             db.session.commit()
             flash('Item added to Wish List!', category='success')
 
     # create pie chart for brand
-    elif request.method == 'GET': 
+    elif request.method == 'GET':
         data = dict()  # brand data
         for wishitem in current_user.wishitems:
             brand = wishitem.brand
@@ -134,8 +139,8 @@ def wishlist():
                 data[brand] += 1
             else:
                 data[brand] = 1
-        
-    
+
+
     # get current time
     current_time = datetime.datetime.now() # Get the current time
 
@@ -168,9 +173,9 @@ def wishlist():
     # render the template using name of template
     # now when go to '/', render unhooked.html
 
-    return render_template("wishlist.html", 
-                           user=current_user, 
-                           last_updated=dir_last_updated(r'./website/static'), 
+    return render_template("wishlist.html",
+                           user=current_user,
+                           last_updated=dir_last_updated(r'./website/static'),
                            current_time=current_time,
                            tags=tags,
                            categories=categories,
@@ -179,6 +184,7 @@ def wishlist():
 
 # wishlist
 @views.route('/toggle-wishitem', methods=['POST'])
+@login_required
 def toggle_wishitem():
     # sample data: {'wishItemId': 2, 'unhooked': False, 'purchased': False}
     wishItemId = json.loads(request.data)['wishItemId']
@@ -204,6 +210,7 @@ def toggle_wishitem():
     return jsonify({})
 
 @views.route('/add-wishitem-period', methods=['POST'])
+@login_required
 def add_wishitem_period():
     wishItemId = json.loads(request.data)['wishItemId']
     wishitem = WishItem.query.get(wishItemId)
@@ -215,6 +222,7 @@ def add_wishitem_period():
     return jsonify({})
 
 @views.route('/toggle-favorite-wishitem', methods=['POST'])
+@login_required
 def toggle_favorite_wishitem():
     print("wishitem click detected and now toggling")
     wishItemId = json.loads(request.data)['wishItemId']
@@ -226,6 +234,7 @@ def toggle_favorite_wishitem():
     return jsonify({})
 
 @views.route('/save-table', methods=['POST'])
+@login_required
 def save_table():
     wishItemId = json.loads(request.data)['wishItemId']
     # Process the data (e.g., save to the database)
@@ -238,7 +247,7 @@ def save_table():
             tag = category_and_tag.split('#')[1].strip() if '#' in category_and_tag else None
             name_and_desc = json.loads(request.data)['Name_Description']
             name = name_and_desc.split('\n')[0].strip()
-            desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None            
+            desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None
             wishitem.brand = brand
             wishitem.category = category
             wishitem.tag = tag
@@ -250,6 +259,7 @@ def save_table():
 
 # unhooked-list
 @views.route('/unhooked-list', methods=['GET', 'POST'])
+@login_required
 def unhooked_list():
     # render the template using name of template
     # now when go to '/', render unhooked.html
@@ -264,12 +274,13 @@ def unhooked_list():
 
     # sort user's wishitems by unhooked date
     unhooked_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=True, purchased=False).order_by(WishItem.unhooked_date.asc()).all()
-    
+
     return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
                            unhooked_cats=unhooked_cats, unhooked_items=unhooked_items)  # return html when we got root
 
 # purchased-list
 @views.route('/purchased-list', methods=['GET', 'POST'])
+@login_required
 def purchased_list():
     # define wish_to_purchase_period
     purchased_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=False, purchased=True).order_by(WishItem.purchase_date.asc()).all()
@@ -280,6 +291,7 @@ def purchased_list():
 
 
 @views.route('/fetch-url-info', methods=['POST'])
+@login_required
 def fetch_url_info():
     header = {
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
@@ -305,11 +317,11 @@ def fetch_url_info():
 
         item_data_dict = ItemDetails(soup).get_item_data()
         item_data_dict['success'] = True
-        
+
         # If successful, add a succesful message
         # flash('Loading item details via URL was successful!', category='success')
         return jsonify(item_data_dict)
-    
+
     except Exception as e:
         # return jsonify({'success': False, 'error': str(e)})
         default_value = None
@@ -317,7 +329,7 @@ def fetch_url_info():
 
         # display exception to users
         # flash('Couldn\'t load items using provided URL. Please input details manually.', category='error')
-        
+
         # if error encountered, still treat as success but return None for all values
         return jsonify({'success': True, 'name': default_value, 'price': default_value, 'brand': default_value, 'description': default_value,
-                 'currency': default_value}) 
+                 'currency': default_value, 'image_url': default_value})
