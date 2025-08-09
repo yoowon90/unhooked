@@ -91,9 +91,8 @@
           <td contenteditable="true" oninput="autoSave(this)">
             <span style="color: blue; text-decoration: underline; font-size:11pt" onClick="window.open('{{ wishitem.link }}', '_blank')"> {{wishitem.name}} </span> <br>
             {% if wishitem.image_url %}
-              <a href="{{ wishitem.link }}" target="_blank">
-                <img src="{{ wishitem.image_url }}" alt="{{ wishitem.name }}" style="max-width: 80px; max-height: 80px; object-fit: cover; margin: 5px 0;">
-              </a>
+              <img src="{{ wishitem.image_url }}" alt="{{ wishitem.name }}" style="max-width: 80px; max-height: 80px; object-fit: cover; margin: 5px 0; cursor: pointer;" onclick="openImageModal('{{ wishitem.image_url }}', '{{ wishitem.name }}')">
+              <br>
             {% endif %}
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ wishitem.description | format_description }}
@@ -340,6 +339,39 @@
         localStorage.removeItem('scrollPosition'); // Clean up
       }
     });
+
+    // Image modal functionality
+    function openImageModal(imageUrl, imageName) {
+      const modal = document.getElementById('imageModal');
+      const modalImg = document.getElementById('modalImage');
+      const modalCaption = document.getElementById('modalCaption');
+
+      modalImg.src = imageUrl;
+      modalCaption.textContent = imageName;
+      modal.style.display = 'block';
+    }
+
+    function closeImageModal() {
+      const modal = document.getElementById('imageModal');
+      modal.style.display = 'none';
+    }
+
+    // Close modal when clicking outside the image
+    window.onclick = function(event) {
+      const modal = document.getElementById('imageModal');
+      if (event.target === modal) {
+        closeImageModal();
+      }
+    }
   </script>
  </form>
+
+ <!-- Image Modal -->
+ <div id="imageModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.9);">
+   <div style="position: relative; margin: auto; padding: 20px; width: 80%; max-width: 800px; text-align: center;">
+     <span class="close" onclick="closeImageModal()" style="position: absolute; top: 10px; right: 25px; color: #f1f1f1; font-size: 35px; font-weight: bold; cursor: pointer;">&times;</span>
+     <img id="modalImage" style="max-width: 100%; max-height: 80vh; object-fit: contain;">
+     <div id="modalCaption" style="margin: auto; display: block; width: 80%; max-width: 700px; text-align: center; color: #ccc; padding: 10px 0; height: 150px;"></div>
+   </div>
+ </div>
  {% endblock %}
