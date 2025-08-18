@@ -236,24 +236,55 @@ def toggle_favorite_wishitem():
 @views.route('/save-table', methods=['POST'])
 @login_required
 def save_table():
-    wishItemId = json.loads(request.data)['wishItemId']
+    data = json.loads(request.data)
+    wishItemId = data['wishItemId']
+
     # Process the data (e.g., save to the database)
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
         if wishitem.user_id == current_user.id:
-            brand = json.loads(request.data)['Brand'].split('\n')[0].strip()
-            category_and_tag = json.loads(request.data)['Category_Tag']
-            category = category_and_tag.split('#')[0].strip()
-            tag = category_and_tag.split('#')[1].strip() if '#' in category_and_tag else None
-            name_and_desc = json.loads(request.data)['Name_Description']
-            name = name_and_desc.split('\n')[0].strip()
-            desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None
-            wishitem.brand = brand
-            wishitem.category = category
-            wishitem.tag = tag
-            wishitem.name = name
-            wishitem.description = desc
-            db.session.commit()
+                        # Check if this is a price update
+            if 'field' in data and data['field'] == 'price':
+                try:
+                    new_price = float(data['value'])
+                    if new_price < 0:
+                        return jsonify({'error': 'Price cannot be negative'}), 400
+
+                                        # Update the pre-tax price field (this is what the user actually entered)
+                    wishitem.price = new_price
+
+                    # Calculate and update the taxed price (assuming 8.75% tax rate for NYC)
+                    # Always calculate tax from the user's input, never from an already-taxed value
+                    tax_rate = 0.0875
+                    wishitem.taxed_price = new_price * (1 + tax_rate)
+
+                    # Update total price (including delivery fee if any)
+                    if wishitem.delivery_fee:
+                        wishitem.total_price = wishitem.taxed_price + wishitem.delivery_fee
+                    else:
+                        wishitem.total_price = wishitem.taxed_price
+
+                    db.session.commit()
+                    print(f"Price updated for wishitem {wishItemId}: pre-tax={new_price}, taxed={wishitem.taxed_price}")
+                    return jsonify({'success': True, 'message': 'Price updated successfully'})
+                except (ValueError, TypeError):
+                    return jsonify({'error': 'Invalid price value'}), 400
+            else:
+                # Handle other field updates (existing logic)
+                brand = data['Brand'].split('\n')[0].strip()
+                category_and_tag = data['Category_Tag']
+                category = category_and_tag.split('#')[0].strip()
+                tag = category_and_tag.split('#')[1].strip() if '#' in category_and_tag else None
+                name_and_desc = data['Name_Description']
+                name = name_and_desc.split('\n')[0].strip()
+                desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None
+                wishitem.brand = brand
+                wishitem.category = category
+                wishitem.tag = tag
+                wishitem.name = name
+                wishitem.description = desc
+                db.session.commit()
+
     print(f"jsonify: {jsonify({})}")
     return jsonify({})
 

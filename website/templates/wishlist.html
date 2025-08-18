@@ -10,6 +10,35 @@
       color: red;
     }
 
+    /* Price field editing styles */
+    td[data-field="price"] {
+      cursor: pointer;
+      transition: background-color 0.2s;
+      position: relative;
+    }
+
+    td[data-field="price"]:hover {
+      background-color: #f8f9fa;
+    }
+
+    td[data-field="price"]:focus {
+      background-color: #e9ecef;
+      outline: 2px solid #007bff;
+      outline-offset: -2px;
+    }
+
+    /* Price validation styles */
+    .price-error {
+      background-color: #f8d7da !important;
+      border: 1px solid #f5c6cb !important;
+    }
+
+    /* Price editing state */
+    .price-editing {
+      background-color: #fff3cd !important;
+      border: 1px solid #ffeaa7 !important;
+    }
+
    </style>
   <!-- this is the same as base.html and overwrite any blocks -->
   <br>
@@ -68,7 +97,7 @@
           </th>
           <th scope="col">Name</th>
           <th scope="col">💖</th>
-          <th scope="col">Price (+tax)</th>
+          <th scope="col">Price (inc.tax)</th>
           <th scope="col">Added</th>
 
         </tr>
@@ -110,7 +139,9 @@
               </span>
             </button>
           </td>
-          <td> {{ (wishitem.total_price|round(2) if wishitem.total_price != None else wishitem.taxed_price|round(2) ) | format_money}} </td>
+          <td contenteditable="true" oninput="autoSave(this)" onblur="finishPriceEdit(this)" onkeydown="handlePriceKeyDown(event, this)" data-field="price" data-wishitem-id="{{ wishitem.id }}" data-tax-rate="0.0875" data-pretax-price="{{ wishitem.price if wishitem.price else 0 }}" data-displayed-price="{{ (wishitem.taxed_price|round(2) if wishitem.taxed_price != None else 0 ) | format_money }}">
+            {{ (wishitem.taxed_price|round(2) if wishitem.taxed_price != None else 0 ) | format_money }}
+          </td>
           <td>
             {% if wishitem.wish_period %}
               {{ wishitem.wish_period | format_time }}
@@ -281,23 +312,32 @@
 
       function autoSave(cell) {
             const row = cell.parentNode;
-            const wishitemId = row.getAttribute('data-wishitem-id');
-            const cells = row.querySelectorAll('td[contenteditable="true"]');
-            const data = Array.from(cells).map(cell => cell.innerText);
+            const wishitemId = cell.getAttribute('data-wishitem-id') || row.getAttribute('data-wishitem-id');
+            const field = cell.getAttribute('data-field');
 
-            // print/log the data to the console
-            console.log(data); // print data array to browser console (F12 -> Console tab)
+                                    if (field === 'price') {
+              // Don't process price updates while user is still typing
+              // This will be handled when the user finishes editing (onblur)
+              return;
+            } else {
+              // Handle other editable fields (existing logic)
+              const cells = row.querySelectorAll('td[contenteditable="true"]:not([data-field="price"])');
+              const data = Array.from(cells).map(cell => cell.innerText);
 
-            // TODO: Send the data to the server using fetch or XMLHttpRequest
-            fetch('/save-table', {
+              // print/log the data to the console
+              console.log(data); // print data array to browser console (F12 -> Console tab)
+
+              // Send the data to the server using fetch or XMLHttpRequest
+              fetch('/save-table', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                  'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ wishItemId: wishitemId, Brand: data[0], Category_Tag: data[1], Name_Description: data[2] })
-            }).then(response => response.json())
-            .then(data => console.log(data))
-            .catch(error => console.error('Error:', error));
+              }).then(response => response.json())
+              .then(data => console.log(data))
+              .catch(error => console.error('Error:', error));
+            }
         }
       // Function to filter table based on category
       function filterTable() {
@@ -338,6 +378,82 @@
         window.scrollTo(0, scrollPosition);
         localStorage.removeItem('scrollPosition'); // Clean up
       }
+
+            // Initialize price fields with original values for validation
+      const priceFields = document.querySelectorAll('td[data-field="price"]');
+      priceFields.forEach(field => {
+        const currentValue = field.innerText.trim();
+
+        // Ensure the displayed value always has $ symbol
+        if (!currentValue.startsWith('$')) {
+          field.innerText = '$' + currentValue;
+        }
+
+        field.setAttribute('data-original-value', field.innerText);
+
+                                // Initialize the pre-tax price properly
+        // The data-pretax-price attribute should contain the actual pre-tax price from the database
+        let storedPreTaxPrice = field.getAttribute('data-pretax-price');
+
+        // Debug logging to see what's happening
+        console.log('Price field initialized:', {
+          displayed: currentValue,
+          storedPreTax: storedPreTaxPrice,
+          taxRate: field.getAttribute('data-tax-rate'),
+          rawAttribute: field.outerHTML
+        });
+
+        // If no pre-tax price is stored or it's 0, we need to calculate it from the displayed taxed price
+        if (!storedPreTaxPrice || storedPreTaxPrice === '0') {
+          const displayedPrice = currentValue.replace(/[$,]/g, '');
+          const taxRate = parseFloat(field.getAttribute('data-tax-rate') || '0.0875');
+          const calculatedPreTaxPrice = parseFloat(displayedPrice) / (1 + taxRate);
+          field.setAttribute('data-pretax-price', calculatedPreTaxPrice.toString());
+          storedPreTaxPrice = calculatedPreTaxPrice.toString();
+          console.log('Calculated pre-tax price from displayed:', calculatedPreTaxPrice);
+        }
+
+                // Add focus and blur event listeners for smooth editing
+        field.addEventListener('focus', function() {
+          this.classList.add('price-editing');
+
+          // Always show the stored pre-tax price when editing starts
+          const preTaxPrice = this.getAttribute('data-pretax-price');
+          console.log('Focus event - stored pre-tax price:', preTaxPrice);
+          console.log('Current displayed value:', this.innerText);
+
+          if (preTaxPrice && preTaxPrice !== '0') {
+            // Show pre-tax price WITHOUT $ symbol for clean editing
+            const displayPrice = parseFloat(preTaxPrice).toFixed(2);
+            this.innerText = displayPrice;
+            console.log('Showing pre-tax price for editing:', displayPrice);
+            console.log('User will now edit the pre-tax price (no $ symbol):', displayPrice);
+          } else {
+            // This should never happen if initialization worked properly
+            console.error('No pre-tax price found! This indicates an initialization problem.');
+            // Fallback: calculate from displayed value but this is not ideal
+            const currentDisplayedPrice = this.innerText.replace(/[$,]/g, '');
+            const taxRate = parseFloat(this.getAttribute('data-tax-rate') || '0.0875');
+            const reversePreTaxPrice = parseFloat(currentDisplayedPrice) / (1 + taxRate);
+            this.innerText = reversePreTaxPrice.toFixed(2);
+            this.setAttribute('data-pretax-price', reversePreTaxPrice.toString());
+            console.log('Fallback: calculated pre-tax price from displayed:', reversePreTaxPrice);
+          }
+
+          // Set cursor to end of text
+          this.focus();
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.selectNodeContents(this);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        });
+
+        field.addEventListener('blur', function() {
+          this.classList.remove('price-editing');
+        });
+      });
     });
 
     // Image modal functionality
@@ -362,6 +478,142 @@
       if (event.target === modal) {
         closeImageModal();
       }
+    }
+
+    // Function to handle key presses in price field
+    function handlePriceKeyDown(event, cell) {
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent default Enter behavior
+        finishPriceEdit(cell);
+        // Remove focus from the cell to complete editing
+        cell.blur();
+      }
+    }
+
+    // Test function to verify tax calculations
+    function testTaxCalculation() {
+      const testPrice = 124.00;
+      const taxRate = 0.0875;
+      const expectedTaxed = testPrice * (1 + taxRate);
+      const reverseCalculated = expectedTaxed / (1 + taxRate);
+
+      console.log('Tax calculation test:', {
+        original: testPrice,
+        taxRate: taxRate,
+        expectedTaxed: expectedTaxed,
+        reverseCalculated: reverseCalculated,
+        difference: testPrice - reverseCalculated
+      });
+    }
+
+    // Run the test when page loads
+    testTaxCalculation();
+
+    // Test the HTML attributes
+    console.log('=== HTML ATTRIBUTE TEST ===');
+    const testPriceField = document.querySelector('td[data-field="price"]');
+    if (testPriceField) {
+      console.log('Test price field HTML:', testPriceField.outerHTML);
+      console.log('data-pretax-price attribute:', testPriceField.getAttribute('data-pretax-price'));
+      console.log('data-tax-rate attribute:', testPriceField.getAttribute('data-tax-rate'));
+    }
+
+        // Function to handle price editing completion
+    // IMPORTANT: This function assumes the user is entering the PRE-TAX price
+    // When editing starts, the user sees the pre-tax price from the database
+    // When they finish editing, their input is treated as the new pre-tax price
+    // Tax is then calculated and the taxed price is displayed
+    function finishPriceEdit(cell) {
+      const wishitemId = cell.getAttribute('data-wishitem-id');
+      const taxRate = parseFloat(cell.getAttribute('data-tax-rate') || '0.0875');
+      let priceValue = cell.innerText.trim();
+
+      console.log('=== PRICE EDITING COMPLETION ===');
+      console.log('User finished editing price field');
+      console.log('Raw input from user:', priceValue);
+
+      // Remove currency symbols and commas, convert to number
+      priceValue = priceValue.replace(/[$,]/g, '');
+      console.log('Cleaned input value:', priceValue);
+
+      // Validate price
+      if (isNaN(priceValue) || parseFloat(priceValue) < 0) {
+        alert('Please enter a valid price (positive number)');
+        // Reset to original value (ensure it has $ symbol)
+        const originalValue = cell.getAttribute('data-original-value') || '$0.00';
+        cell.innerText = originalValue;
+        cell.classList.add('price-error');
+        setTimeout(() => cell.classList.remove('price-error'), 2000);
+        return;
+      }
+
+      const preTaxPrice = parseFloat(priceValue);
+      const taxAmount = preTaxPrice * taxRate;
+      const totalPrice = preTaxPrice + taxAmount;
+
+      // Format the total price (including tax) for display
+      const formattedTotalPrice = totalPrice.toFixed(2);
+
+      // Debug logging
+      console.log('Price calculation:', {
+        userInput: priceValue,
+        preTaxPrice: preTaxPrice,
+        taxRate: taxRate,
+        taxAmount: taxAmount,
+        totalPrice: totalPrice,
+        formattedTotal: formattedTotalPrice
+      });
+
+      console.log('IMPORTANT: User entered', priceValue, 'which is being treated as PRE-TAX price');
+      console.log('Tax calculation:', preTaxPrice, '×', (1 + taxRate), '=', totalPrice);
+
+      // Show the total price (including tax) to the user WITH $ symbol
+      cell.innerText = '$' + formattedTotalPrice;
+
+            // Store the TRUE pre-tax price that the user entered for future editing
+      // This prevents tax compounding on subsequent edits
+      cell.setAttribute('data-pretax-price', preTaxPrice.toString());
+
+      console.log('Stored pre-tax price:', preTaxPrice);
+      console.log('Updated data-pretax-price attribute to:', preTaxPrice.toString());
+
+      // Send price update to server (store pre-tax price)
+      fetch('/save-table', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          wishItemId: wishitemId,
+          field: 'price',
+          value: preTaxPrice
+        })
+      }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          console.log('Price updated:', data.message);
+          // Store the new formatted value as original for future reference
+          cell.setAttribute('data-original-value', '$' + formattedTotalPrice);
+          // Show success feedback
+          cell.style.backgroundColor = '#d4edda';
+          setTimeout(() => cell.style.backgroundColor = '', 1000);
+        } else {
+          console.error('Price update failed:', data.error);
+          // Reset to original value on error (ensure it has $ symbol)
+          const originalValue = cell.getAttribute('data-original-value') || '$0.00';
+          cell.innerText = originalValue;
+          cell.classList.add('price-error');
+          setTimeout(() => cell.classList.remove('price-error'), 2000);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        // Reset to original value on error (ensure it has $ symbol)
+        const originalValue = cell.getAttribute('data-original-value') || '$0.00';
+        cell.innerText = originalValue;
+        cell.classList.add('price-error');
+        setTimeout(() => cell.classList.remove('price-error'), 2000);
+      });
     }
   </script>
  </form>
