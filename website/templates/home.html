@@ -133,7 +133,8 @@
                 <option value="">Choose a date range...</option>
                 <option value="last7days">Last 7 days</option>
                 <option value="last14days">Last 14 days</option>
-                <option value="last30days">Last 30 days</option>
+                <option value="last30days" selected>Last 30 days</option>
+                <option value="thisMonth">This Month</option>
                 <option value="thisYear">This Year</option>
                 <option value="last365days">Last 365 days</option>
                 <option value="specifyDate">Specify Date</option>
@@ -176,6 +177,10 @@
                     case 'last30days':
                         startDate.setDate(today.getDate() - 30);
                         break;
+                    case 'thisMonth':
+                        // Set to 1st day of current month
+                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        break;
                     case 'thisYear':
                         startDate = new Date(today.getFullYear(), 0, 1);
                         break;
@@ -193,6 +198,8 @@
             }
 
             // Function to generate report
+            // This function updates ALL pie charts (wishlist and purchased) to reflect the selected time range
+            // The purchased pie charts will only show items purchased within the specified date range
             function generateReport(startDate, endDate) {
                 $.ajax({
                     url: '/generate-report',
@@ -236,6 +243,8 @@
                     $('#end_date').val('');
                     // Reset to show all purchases
                     resetToAllPurchases();
+                    // Save selection to localStorage
+                    localStorage.setItem('selectedTimeRange', selectedOption);
                 } else if (selectedOption) {
                     // Hide custom date inputs
                     $('#customDateContainer').hide();
@@ -245,14 +254,20 @@
                     if (dateRange) {
                         generateReport(dateRange.start, dateRange.end);
                     }
+                    // Save selection to localStorage
+                    localStorage.setItem('selectedTimeRange', selectedOption);
                 } else {
-                    // Reset everything
+                    // Reset everything - show all data when no date range is selected
                     $('#customDateContainer').hide();
                     resetToAllPurchases();
+                    // Save selection to localStorage (empty string for "all data")
+                    localStorage.setItem('selectedTimeRange', '');
                 }
             });
 
-                                                // Function to reset to show all purchases
+            // Function to reset to show all purchases
+            // This function is called when no date range is selected (empty option)
+            // It shows ALL data without any time filtering
             function resetToAllPurchases() {
                 // Calculate total of all purchases
                 let totalAllPurchases = 0;
@@ -287,9 +302,16 @@
                 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
                 if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
                     generateReport(startDate, endDate);
+                    // Save custom date selection to localStorage
+                    localStorage.setItem('selectedTimeRange', 'specifyDate');
+                    localStorage.setItem('customStartDate', startDate);
+                    localStorage.setItem('customEndDate', endDate);
                 } else if (!startDate || !endDate) {
                     // If dates are cleared, reset to all purchases
                     resetToAllPurchases();
+                    // Clear custom date storage
+                    localStorage.removeItem('customStartDate');
+                    localStorage.removeItem('customEndDate');
                 }
             });
 
@@ -301,12 +323,64 @@
                 if (!startDate || !endDate) {
                     // If either date is cleared, reset to all purchases
                     resetToAllPurchases();
+                    // Clear custom date storage
+                    localStorage.removeItem('customStartDate');
+                    localStorage.removeItem('customEndDate');
                 }
             });
 
             // Initialize calendar (read-only, no click functionality)
             console.log('Spenditure data:', spenditure);
             console.log('Saves data:', saves);
+
+                        // Check if user has a previously selected time range, otherwise default to last 30 days
+            const savedTimeRange = localStorage.getItem('selectedTimeRange');
+            let selectedOption = 'last30days'; // Default fallback
+
+            if (savedTimeRange) {
+                // User has a previously selected time range
+                selectedOption = savedTimeRange;
+                $('#dateRangeDropdown').val(selectedOption);
+                console.log('Restored user selection:', selectedOption);
+
+                // Handle custom date case
+                if (selectedOption === 'specifyDate') {
+                    const savedStartDate = localStorage.getItem('customStartDate');
+                    const savedEndDate = localStorage.getItem('customEndDate');
+                    if (savedStartDate && savedEndDate) {
+                        // Show custom date container and restore dates
+                        $('#customDateContainer').show();
+                        $('#start_date').val(savedStartDate);
+                        $('#end_date').val(savedEndDate);
+                        // Generate report with custom dates
+                        generateReport(savedStartDate, savedEndDate);
+                    } else {
+                        // Custom dates not found, fall back to default
+                        selectedOption = 'last30days';
+                        $('#dateRangeDropdown').val(selectedOption);
+                        const dateRange = getDateRange(selectedOption);
+                        if (dateRange) {
+                            generateReport(dateRange.start, dateRange.end);
+                        }
+                    }
+                } else {
+                    // Generate report for the selected time range
+                    const dateRange = getDateRange(selectedOption);
+                    if (dateRange) {
+                        generateReport(dateRange.start, dateRange.end);
+                    }
+                }
+            } else {
+                // First time user, set default to last 30 days
+                $('#dateRangeDropdown').val('last30days');
+                console.log('Using default selection: last30days');
+
+                // Generate report for the default time range
+                const dateRange = getDateRange(selectedOption);
+                if (dateRange) {
+                    generateReport(dateRange.start, dateRange.end);
+                }
+            }
 
             const calendarEvents = Object.keys(spenditure).map(function(date) {
                 return {
