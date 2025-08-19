@@ -116,13 +116,21 @@ def create_figure(figure_type, figure_content, start_date=None, end_date=None):
     filtered_wishitems = []
     if start_date and end_date:
         for item in wishitems:
-            # For wishlist items, use the date when item was added to wishlist
-            wishlist_date = item.date
+            # Use appropriate date field based on item type
+            if figure_type == 'purchased_list':
+                # For purchased items, use the purchase date
+                item_date = item.purchase_date
+            elif figure_type == 'unhooked_list':
+                # For unhooked items, use the unhooked date
+                item_date = item.unhooked_date
+            else:
+                # For wishlist items, use the date when item was added to wishlist
+                item_date = item.date
 
-            if wishlist_date and start_date <= wishlist_date <= end_date:
+            if item_date and start_date <= item_date <= end_date:
                 filtered_wishitems.append(item)
     else:
-        # If no date range provided, include all wishlist items
+        # If no date range provided, include all items
         filtered_wishitems = wishitems
 
     if filtered_wishitems:
