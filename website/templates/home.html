@@ -13,6 +13,8 @@
     <!-- FullCalendar JS -->
     <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'></script>
     <script src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js'></script>
+    <!-- Chart.js for line graph -->
+    <script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
     <style>
       .item {
         text-align: center;
@@ -161,41 +163,561 @@
             const spenditure = {{ spenditure | tojson}};
             const saves = {{ saves | tojson }};
 
-            // Function to calculate date ranges
-            function getDateRange(option) {
-                const today = new Date();
-                const endDate = new Date(today);
-                let startDate = new Date(today);
+            // Spending line chart variables
+            let spendingChart = null;
+            let currentTooltip = null; // Global tooltip reference
+            let wishlistChart = null;
 
-                switch(option) {
-                    case 'last7days':
-                        startDate.setDate(today.getDate() - 7);
-                        break;
-                    case 'last14days':
-                        startDate.setDate(today.getDate() - 14);
-                        break;
-                    case 'last30days':
-                        startDate.setDate(today.getDate() - 30);
-                        break;
-                    case 'thisMonth':
-                        // Set to 1st day of current month
-                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                        break;
-                    case 'thisYear':
-                        startDate = new Date(today.getFullYear(), 0, 1);
-                        break;
-                    case 'last365days':
-                        startDate.setDate(today.getDate() - 365);
-                        break;
-                    default:
-                        return null;
+            // Custom tooltip functions - defined globally so they can be accessed by onHover
+            function showCustomTooltip(event, dataIndex, spendingData, chartData, mouseX, mouseY, rect) {
+                console.log('showCustomTooltip called:', { event, dataIndex, spendingData, chartData });
+
+                // If there's already a tooltip, remove it first
+                if (currentTooltip) {
+                    currentTooltip.remove();
+                    currentTooltip = null;
+                    console.log('Removed existing tooltip');
                 }
 
-                return {
-                    start: startDate.toISOString().split('T')[0],
-                    end: endDate.toISOString().split('T')[0]
-                };
+                // Also remove any other tooltip-like elements that might exist
+                const allTooltips = document.querySelectorAll('[id*="tooltip"], [class*="tooltip"]');
+                allTooltips.forEach(tooltip => {
+                    if (tooltip !== currentTooltip) {
+                        tooltip.remove();
+                        console.log('Removed additional tooltip:', tooltip);
+                    }
+                });
+
+                const value = spendingData[dataIndex];
+                const date = chartData.labels[dataIndex];
+                console.log('Tooltip data:', { value, date });
+
+                if (value > 0) {
+                    // Get items for this date
+                    const itemsOnDate = chartData.items.filter(item => item.date === date);
+                    console.log('Items on date:', itemsOnDate);
+
+                    // Build tooltip content without an inner styled container to avoid double tooltip visuals
+                    let tooltipContent = '';
+                    tooltipContent += '<strong style="color: #e74c3c; font-size: 14px;">Date: ' + date + '</strong><br>';
+
+                    if (itemsOnDate.length === 1) {
+                        // Single item
+                        const item = itemsOnDate[0];
+                        tooltipContent += 'Total: $' + value.toFixed(2) + '<br>';
+                        tooltipContent += 'Item: ' + item.name + '<br>';
+                        tooltipContent += 'Brand: ' + item.brand + '<br>';
+                        tooltipContent += 'Category: ' + item.category + '<br>';
+                        tooltipContent += 'Price: $' + item.price.toFixed(2);
+                    } else if (itemsOnDate.length > 1) {
+                        // Multiple items
+                        tooltipContent += 'Total: $' + value.toFixed(2) + '<br>';
+                        tooltipContent += 'Items:<br>';
+                        itemsOnDate.forEach((item, index) => {
+                            tooltipContent += '  ' + (index + 1) + '. ' + item.name + ' - $' + item.price.toFixed(2) + '<br>';
+                        });
+                    }
+
+                    console.log('Tooltip content created:', tooltipContent);
+
+                    // Create new tooltip and store reference
+                    currentTooltip = document.createElement('div');
+                    currentTooltip.id = 'custom-tooltip';
+                    currentTooltip.style.position = 'fixed';
+                    currentTooltip.style.pointerEvents = 'none';
+                    currentTooltip.style.zIndex = '9999';
+                    currentTooltip.style.backgroundColor = 'rgba(255, 228, 225, 0.95)'; // Pastel pink/blush
+                    currentTooltip.style.border = '1px solid #ffb6c1'; // Light pink border
+                    currentTooltip.style.borderRadius = '5px';
+                    currentTooltip.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+                    currentTooltip.style.fontFamily = 'Arial, sans-serif';
+                    currentTooltip.style.fontSize = '12px';
+                    currentTooltip.style.color = '#333';
+                    currentTooltip.style.minWidth = '200px';
+                    currentTooltip.style.padding = '10px';
+                    document.body.appendChild(currentTooltip);
+                    console.log('New tooltip element created with ID:', currentTooltip.id);
+
+                    currentTooltip.innerHTML = tooltipContent;
+
+                    // Better positioning using canvas-relative coordinates
+                    const tooltipWidth = 200; // Smaller width
+                    const tooltipHeight = 120; // Smaller height
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+
+                    // Convert canvas coordinates to viewport coordinates
+                    let left = rect.left + mouseX + 15;
+                    let top = rect.top + mouseY - 15;
+
+                    console.log('Calculated viewport position:', { left, top, rectLeft: rect.left, rectTop: rect.top });
+
+                    // Adjust if tooltip would go off-screen to the right
+                    if (left + tooltipWidth > viewportWidth) {
+                        left = rect.left + mouseX - tooltipWidth - 15;
+                    }
+
+                    // Adjust if tooltip would go off-screen to the bottom
+                    if (top + tooltipHeight > viewportHeight) {
+                        top = rect.top + mouseY - tooltipHeight - 15;
+                    }
+
+                    // Ensure tooltip doesn't go off-screen to the left or top
+                    if (left < 0) left = 15;
+                    if (top < 0) top = 15;
+
+                    currentTooltip.style.left = left + 'px';
+                    currentTooltip.style.top = top + 'px';
+                    currentTooltip.style.display = 'block';
+                    currentTooltip.style.visibility = 'visible';
+                    currentTooltip.style.opacity = '1';
+
+                    console.log('Tooltip positioned and displayed at:', { left, top });
+                    console.log('Final tooltip element:', currentTooltip);
+                    console.log('Total tooltips in DOM after creation:', document.querySelectorAll('#custom-tooltip').length);
+                }
             }
+
+            function hideCustomTooltip() {
+                console.log('hideCustomTooltip called');
+                if (currentTooltip) {
+                    currentTooltip.remove();
+                    currentTooltip = null;
+                    console.log('Current tooltip removed');
+                }
+
+                // Also remove any other tooltip-like elements
+                const allTooltips = document.querySelectorAll('[id*="tooltip"], [class*="tooltip"]');
+                allTooltips.forEach(tooltip => {
+                    tooltip.remove();
+                    console.log('Removed additional tooltip:', tooltip);
+                });
+            }
+
+            // Function to get all purchased items with their purchase dates and prices
+            function getPurchasedItemsData() {
+                const purchasedItems = [];
+                {% for wishitem in user.wishitems %}
+                    {% if wishitem.purchased and wishitem.purchase_date %}
+                        purchasedItems.push({
+                            date: '{{ wishitem.purchase_date.strftime("%Y-%m-%d") }}',
+                            price: {{ wishitem.price }},
+                            name: '{{ wishitem.name }}',
+                            brand: '{{ wishitem.brand }}',
+                            category: '{{ wishitem.category }}',
+                            description: '{{ wishitem.description }}'
+                        });
+                    {% endif %}
+                {% endfor %}
+                return purchasedItems;
+            }
+
+            // Function to get all unhooked items with their unhooked dates and prices
+            function getUnhookedItemsData() {
+                const unhookedItems = [];
+                {% for wishitem in user.wishitems %}
+                    {% if wishitem.unhooked and wishitem.unhooked_date %}
+                        unhookedItems.push({
+                            date: '{{ wishitem.unhooked_date.strftime("%Y-%m-%d") }}',
+                            price: {{ wishitem.price }},
+                            name: '{{ wishitem.name }}',
+                            brand: '{{ wishitem.brand }}',
+                            category: '{{ wishitem.category }}',
+                            description: '{{ wishitem.description }}'
+                        });
+                    {% endif %}
+                {% endfor %}
+                return unhookedItems;
+            }
+
+            // Function to get all wishlist items with their added dates (creation date)
+            function getWishlistItemsData() {
+                const wishlistItems = [];
+                {% for wishitem in user.wishitems %}
+                    {% if wishitem.date %}
+                        wishlistItems.push({
+                            date: '{{ wishitem.date.strftime("%Y-%m-%d") }}',
+                            price: {{ wishitem.price if wishitem.price else 0 }},
+                            name: '{{ wishitem.name }}',
+                            brand: '{{ wishitem.brand }}',
+                            category: '{{ wishitem.category }}',
+                            description: '{{ wishitem.description }}'
+                        });
+                    {% endif %}
+                {% endfor %}
+                return wishlistItems;
+            }
+
+            // Wishlist custom tooltip
+            function showWishlistTooltip(event, dataIndex, countData, chartData, mouseX, mouseY, rect) {
+                if (currentTooltip) {
+                    currentTooltip.remove();
+                    currentTooltip = null;
+                }
+                const allTooltips = document.querySelectorAll('[id*="tooltip"], [class*="tooltip"]');
+                allTooltips.forEach(tooltip => tooltip.remove());
+
+                const value = countData[dataIndex];
+                const date = chartData.labels[dataIndex];
+                if (value > 0) {
+                    const itemsOnDate = chartData.items.filter(item => item.date === date);
+                    let tooltipContent = '';
+                    tooltipContent += '<strong style="color: #1f78b4; font-size: 14px;">Date: ' + date + '</strong><br>';
+                    tooltipContent += 'Added: ' + value + ' item' + (value > 1 ? 's' : '') + '<br>';
+                    if (itemsOnDate.length > 0) {
+                        // Sum total price for the day
+                        const totalForDay = itemsOnDate.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                        tooltipContent += 'Total: $' + totalForDay.toFixed(2) + '<br>';
+                        tooltipContent += 'Items:<br>';
+                        itemsOnDate.forEach((item, index) => {
+                            const itemPrice = (Number(item.price) || 0).toFixed(2);
+                            tooltipContent += '  ' + (index + 1) + '. ' + item.name + ' - $' + itemPrice + '<br>';
+                        });
+                    }
+
+                    currentTooltip = document.createElement('div');
+                    currentTooltip.id = 'custom-tooltip';
+                    currentTooltip.style.position = 'fixed';
+                    currentTooltip.style.pointerEvents = 'none';
+                    currentTooltip.style.zIndex = '9999';
+                    currentTooltip.style.backgroundColor = 'rgba(213, 240, 247, 0.95)'; // Pastel blue
+                    currentTooltip.style.border = '1px solid #b3e5fc';
+                    currentTooltip.style.borderRadius = '5px';
+                    currentTooltip.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+                    currentTooltip.style.fontFamily = 'Arial, sans-serif';
+                    currentTooltip.style.fontSize = '12px';
+                    currentTooltip.style.color = '#333';
+                    currentTooltip.style.minWidth = '200px';
+                    currentTooltip.style.padding = '10px';
+                    document.body.appendChild(currentTooltip);
+                    currentTooltip.innerHTML = tooltipContent;
+
+                    const tooltipWidth = 200;
+                    const tooltipHeight = 120;
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+                    let left = rect.left + mouseX + 15;
+                    let top = rect.top + mouseY - 15;
+                    if (left + tooltipWidth > viewportWidth) {
+                        left = rect.left + mouseX - tooltipWidth - 15;
+                    }
+                    if (top + tooltipHeight > viewportHeight) {
+                        top = rect.top + mouseY - tooltipHeight - 15;
+                    }
+                    if (left < 0) left = 15;
+                    if (top < 0) top = 15;
+                    currentTooltip.style.left = left + 'px';
+                    currentTooltip.style.top = top + 'px';
+                    currentTooltip.style.display = 'block';
+                    currentTooltip.style.visibility = 'visible';
+                    currentTooltip.style.opacity = '1';
+                }
+            }
+
+            // Create or update the wishlist additions line chart
+            function updateWishlistChart(startDate, endDate) {
+                if (typeof Chart === 'undefined') {
+                    console.error('Chart.js is not loaded!');
+                    return;
+                }
+                const canvas = document.getElementById('wishlistChart');
+                if (!canvas) {
+                    console.error('Canvas element #wishlistChart not found!');
+                    return;
+                }
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                const today = new Date();
+                const extendedEnd = new Date(Math.max(end, today));
+
+                const allWishlistItems = getWishlistItemsData();
+                const filteredItems = allWishlistItems.filter(item => {
+                    const itemDate = new Date(item.date);
+                    return itemDate >= start && itemDate <= end;
+                });
+                filteredItems.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                const extendedLabels = [];
+                const currentDate = new Date(start);
+                while (currentDate <= extendedEnd) {
+                    extendedLabels.push(currentDate.toISOString().split('T')[0]);
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                const countData = extendedLabels.map(date => {
+                    const itemsOnDate = filteredItems.filter(item => item.date === date);
+                    return itemsOnDate.length;
+                });
+
+                const pointRadius = countData.map(value => value > 0 ? 4 : 0);
+                const pointHoverRadius = countData.map(value => value > 0 ? 6 : 0);
+
+                const daysDiff = Math.ceil((extendedEnd - start) / (1000 * 60 * 60 * 24));
+                let maxTicksLimit = 10;
+                if (daysDiff > 365) {
+                    maxTicksLimit = 12;
+                } else if (daysDiff > 90) {
+                    maxTicksLimit = 20;
+                } else if (daysDiff > 30) {
+                    maxTicksLimit = 15;
+                }
+
+                if (wishlistChart) {
+                    wishlistChart.destroy();
+                }
+
+                const ctx = document.getElementById('wishlistChart').getContext('2d');
+                const chartData = { labels: extendedLabels, items: filteredItems };
+                wishlistChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: extendedLabels,
+                        datasets: [{
+                            label: 'Wishlist Items Added',
+                            data: countData,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: pointRadius,
+                            pointHoverRadius: pointHoverRadius,
+                            pointBackgroundColor: 'rgb(54, 162, 235)',
+                            pointBorderColor: 'rgb(54, 162, 235)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { intersect: true, mode: 'nearest' },
+                        plugins: {
+                            legend: { display: true, position: 'top' },
+                            tooltip: { enabled: false }
+                        },
+                        onHover: function(event, elements) {
+                            const canvas = event.native.target;
+                            if (elements.length > 0) {
+                                const dataIndex = elements[0].index;
+                                const value = countData[dataIndex];
+                                if (value > 0) {
+                                    canvas.style.cursor = 'pointer';
+                                    const rect = canvas.getBoundingClientRect();
+                                    const mouseX = event.native.clientX - rect.left;
+                                    const mouseY = event.native.clientY - rect.top;
+                                    showWishlistTooltip(event, dataIndex, countData, chartData, mouseX, mouseY, rect);
+                                } else {
+                                    canvas.style.cursor = 'default';
+                                    hideCustomTooltip();
+                                }
+                            } else {
+                                event.native.target.style.cursor = 'default';
+                                hideCustomTooltip();
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Date Added' },
+                                ticks: { maxTicksLimit: maxTicksLimit, maxRotation: 45 }
+                            },
+                            y: {
+                                title: { display: true, text: 'Items Added' },
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0,
+                                    callback: function(value) { return value; }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Function to create or update the spending line chart
+            function updateSpendingChart(startDate, endDate) {
+                console.log('updateSpendingChart called with:', startDate, endDate);
+
+                // Check if Chart.js is loaded
+                if (typeof Chart === 'undefined') {
+                    console.error('Chart.js is not loaded!');
+                    return;
+                }
+
+                // Check if the canvas element exists
+                const canvas = document.getElementById('spendingChart');
+                if (!canvas) {
+                    console.error('Canvas element #spendingChart not found!');
+                    return;
+                }
+
+                console.log('Canvas found:', canvas);
+
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+
+                // Extend the end date to include today for better visualization
+                const today = new Date();
+                const extendedEnd = new Date(Math.max(end, today));
+
+                // Get all purchased items data
+                const allPurchasedItems = getPurchasedItemsData();
+
+                // Filter items within the selected time range
+                const filteredItems = allPurchasedItems.filter(item => {
+                    const itemDate = new Date(item.date);
+                    return itemDate >= start && itemDate <= end;
+                });
+
+                // Sort by date
+                filteredItems.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                // Create extended x-axis labels from start date to today
+                const extendedLabels = [];
+                const currentDate = new Date(start);
+
+                while (currentDate <= extendedEnd) {
+                    extendedLabels.push(currentDate.toISOString().split('T')[0]);
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                // Aggregate spending data by date (sum multiple purchases on same day)
+                const spendingData = extendedLabels.map(date => {
+                    const itemsOnDate = filteredItems.filter(item => item.date === date);
+                    if (itemsOnDate.length === 0) {
+                        return 0; // No purchases on this date
+                    }
+                    // Sum all purchases on this date
+                    return itemsOnDate.reduce((total, item) => total + item.price, 0);
+                });
+
+                // Create point radius array - only show points for actual purchases
+                const pointRadius = spendingData.map(value => value > 0 ? 4 : 0);
+                const pointHoverRadius = spendingData.map(value => value > 0 ? 6 : 0);
+
+                // Create hover radius array - only enable hover for purchase days
+                const hoverRadius = spendingData.map(value => value > 0 ? 6 : 0);
+
+                // Calculate x-axis label spacing to prevent overlap
+                const daysDiff = Math.ceil((extendedEnd - start) / (1000 * 60 * 60 * 24));
+                let maxTicksLimit = 10; // Default
+                if (daysDiff > 365) {
+                    maxTicksLimit = 12; // Monthly labels for > 1 year
+                } else if (daysDiff > 90) {
+                    maxTicksLimit = 20; // Weekly labels for > 3 months
+                } else if (daysDiff > 30) {
+                    maxTicksLimit = 15; // Every few days for > 1 month
+                }
+
+                if (spendingChart) {
+                    spendingChart.destroy();
+                }
+
+                const ctx = document.getElementById('spendingChart').getContext('2d');
+                console.log('Creating chart with data:', { extendedLabels, spendingData, filteredItems });
+
+                // Store data in the chart instance so tooltip callbacks can access it
+                const chartData = {
+                    labels: extendedLabels,
+                    items: filteredItems
+                };
+
+                spendingChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: extendedLabels,
+                        datasets: [{
+                            label: 'Total Daily Spending',
+                            data: spendingData,
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: pointRadius,
+                            pointHoverRadius: hoverRadius,
+                            pointBackgroundColor: 'rgb(255, 99, 132)',
+                            pointBorderColor: 'rgb(255, 99, 132)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: true,
+                            mode: 'nearest'
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                enabled: false
+                            }
+                        },
+                        onHover: function(event, elements) {
+                            console.log('onHover triggered:', { event, elements });
+
+                            // Only show pointer cursor for purchase days
+                            const canvas = event.native.target;
+                            if (elements.length > 0) {
+                                const dataIndex = elements[0].index;
+                                const value = spendingData[dataIndex];
+                                console.log('Hovering over data point:', { dataIndex, value, spendingData });
+
+                                if (value > 0) {
+                                    canvas.style.cursor = 'pointer';
+                                    console.log('Showing tooltip for purchase day');
+
+                                    // Get accurate mouse coordinates from the canvas
+                                    const rect = canvas.getBoundingClientRect();
+                                    const mouseX = event.native.clientX - rect.left;
+                                    const mouseY = event.native.clientY - rect.top;
+
+                                    console.log('Canvas coordinates:', { mouseX, mouseY, rect });
+
+                                    // Show custom tooltip for purchase days with accurate coordinates
+                                    showCustomTooltip(event, dataIndex, spendingData, chartData, mouseX, mouseY, rect);
+                                } else {
+                                    canvas.style.cursor = 'default';
+                                    console.log('Hiding tooltip for non-purchase day');
+                                    hideCustomTooltip();
+                                }
+                            } else {
+                                canvas.style.cursor = 'default';
+                                console.log('Hiding tooltip - no elements');
+                                hideCustomTooltip();
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Purchase Date'
+                                },
+                                ticks: {
+                                    maxTicksLimit: maxTicksLimit,
+                                    maxRotation: 45
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Total Daily Spending ($)'
+                                },
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                console.log('Chart created successfully:', spendingChart);
+
+            } // Close updateSpendingChart function
 
             // Function to generate report
             // This function updates ALL pie charts (wishlist and purchased) to reflect the selected time range
@@ -224,6 +746,11 @@
                         $('#brand-chart').attr('src', 'data:image/png;base64,' + response.brand_chart);
                         $('#purchased-category-chart').attr('src', 'data:image/png;base64,' + response.purchased_category_chart);
                         $('#purchased-brand-chart').attr('src', 'data:image/png;base64,' + response.purchased_brand_chart);
+
+                        // Update spending line chart
+                        updateSpendingChart(response.start_date, response.end_date);
+                        // Update wishlist additions line chart
+                        updateWishlistChart(response.start_date, response.end_date);
                     },
                     error: function(xhr) {
                         const response = xhr.responseJSON;
@@ -253,6 +780,8 @@
                     const dateRange = getDateRange(selectedOption);
                     if (dateRange) {
                         generateReport(dateRange.start, dateRange.end);
+                        updateSpendingChart(dateRange.start, dateRange.end);
+                        updateWishlistChart(dateRange.start, dateRange.end);
                     }
                     // Save selection to localStorage
                     localStorage.setItem('selectedTimeRange', selectedOption);
@@ -291,6 +820,20 @@
                 $('#brand-chart').attr('src', '/wishlist_brand.png');
                 $('#purchased-category-chart').attr('src', '/purchased_category.png');
                 $('#purchased-brand-chart').attr('src', '/purchased_brand.png');
+
+                // Reset spending line chart to show all purchases
+                updateSpendingChart('{{ user.last_purchase_date.strftime("%Y-%m-%d") }}', '{{ current_time.strftime("%Y-%m-%d") }}');
+                // Reset wishlist additions chart to show all wishlist items from earliest to today
+                (function() {
+                    const allWishlistItems = getWishlistItemsData();
+                    if (allWishlistItems.length > 0) {
+                        const dates = allWishlistItems.map(i => new Date(i.date));
+                        dates.sort((a, b) => a - b);
+                        const earliest = dates[0].toISOString().split('T')[0];
+                        const today = new Date().toISOString().split('T')[0];
+                        updateWishlistChart(earliest, today);
+                    }
+                })();
             }
 
             // Handle custom date input
@@ -302,6 +845,8 @@
                 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
                 if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
                     generateReport(startDate, endDate);
+                    updateSpendingChart(startDate, endDate);
+                    updateWishlistChart(startDate, endDate);
                     // Save custom date selection to localStorage
                     localStorage.setItem('selectedTimeRange', 'specifyDate');
                     localStorage.setItem('customStartDate', startDate);
@@ -329,9 +874,52 @@
                 }
             });
 
+            // Function to calculate date ranges
+            function getDateRange(option) {
+                const today = new Date();
+                const endDate = new Date(today);
+                let startDate = new Date(today);
+
+                switch(option) {
+                    case 'last7days':
+                        startDate.setDate(today.getDate() - 7);
+                        break;
+                    case 'last14days':
+                        startDate.setDate(today.getDate() - 14);
+                        break;
+                    case 'last30days':
+                        startDate.setDate(today.getDate() - 30);
+                        break;
+                    case 'thisMonth':
+                        // Set to 1st day of current month
+                        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        break;
+                    case 'thisYear':
+                        startDate = new Date(today.getFullYear(), 0, 1);
+                        break;
+                    case 'last365days':
+                        startDate.setDate(today.getDate() - 365);
+                        break;
+                    default:
+                        return null;
+                }
+
+                return {
+                    start: startDate.toISOString().split('T')[0],
+                    end: endDate.toISOString().split('T')[0]
+                };
+            }
+
             // Initialize calendar (read-only, no click functionality)
             console.log('Spenditure data:', spenditure);
             console.log('Saves data:', saves);
+
+            // Initialize spending chart with default time range
+            const defaultDateRange = getDateRange('last30days');
+            if (defaultDateRange) {
+                updateSpendingChart(defaultDateRange.start, defaultDateRange.end);
+                updateWishlistChart(defaultDateRange.start, defaultDateRange.end);
+            }
 
                         // Check if user has a previously selected time range, otherwise default to last 30 days
             const savedTimeRange = localStorage.getItem('selectedTimeRange');
@@ -399,6 +987,8 @@
             }));
 
             console.log('Calendar events:', calendarEvents);
+            console.log('Calendar container exists:', $('#calendar').length > 0);
+            console.log('FullCalendar library loaded:', typeof $.fullCalendar !== 'undefined');
 
             $('#calendar').fullCalendar({
                 selectable: false, // Disable date selection
@@ -406,8 +996,26 @@
                 events: calendarEvents
             });
 
+            console.log('Calendar initialized');
+
         });
     </script>
+
+    <!-- Spending Line Graph -->
+    <div class="spending-graph-container">
+        <h5 style="text-align: center; margin: 20px 0;">Purchased Items Over Time</h5>
+        <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
+            <canvas id="spendingChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Wishlist Additions Line Graph -->
+    <div class="wishlist-graph-container">
+        <h5 style="text-align: center; margin: 20px 0;">Wishlist Additions Over Time</h5>
+        <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
+            <canvas id="wishlistChart"></canvas>
+        </div>
+    </div>
 
     <div class="pie-chart-container">
         <div class="item">
