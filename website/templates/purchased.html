@@ -6,25 +6,27 @@
       font-style: italic;
     }
 
-    .unhook-button {
-      color: red;
-    }
+    /* Pastel row background across all cells */
+    #purchasedlist-table tr.table-danger > * { background-color: #fee4eb !important; }
+    #purchasedlist-table tr.table-warning > * { background-color: #fbf5e6 !important; }
+    #purchasedlist-table tr.table-success > * { background-color: #d5f0f7 !important; }
 
-
+    /* Always keep borders grey regardless of row background */
+    #purchasedlist-table { --bs-table-border-color: #dee2e6 !important; }
+    #purchasedlist-table th,
+    #purchasedlist-table td { border-color: #dee2e6 !important; }
    </style>
 
   <!-- this is the same as base.html and overwrite any blocks -->
   <br>
   <h2 align="center">&#129534; Purchase List &#129534;</h2>
-    <button type="button" class="btn btn-warning" style="float: right;" onclick="window.location.href='{{ url_for( 'views.wishlist' ) }}'">Go to my Wish List</button>
+    <a class="btn btn-warning" style="float: right;" href="{{ url_for('views.wishlist') }}">Go to my Wish List</a>
     <br>
     <br>
-    <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}'">Go to my Unhooked List</button>
+    <a class="btn btn-primary" style="float: right;" href="{{ url_for('views.unhooked_list') }}">Go to my Unhooked List</a>
   <br>
   {% set totalpurchasedprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
-  {% if not wishitem.unhooked and wishitem.purchased %}
-  {% endif %}
   {% if not wishitem.unhooked and wishitem.purchased %}
   {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.taxed_price %}
   {% endif %}
@@ -34,23 +36,49 @@
     <p> <b> &#128717; Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }} </b></font></p>
   </div>
   <ul class="list-group list-group-flush" id="wishItems">
-    <table class="table table-sm">
+    <table class="table table-sm" id="purchasedlist-table">
       <thead>
         <tr>
           <th scope="col">#</th>
           <th scope="col">Purchase Date</th>
-          <th scope="col">Brand</th>
-          <th scope="col">Category</th>
+          <th scope="col">Brand
+          <select id="brandFilter" onchange="filterTable()">
+            <option value="">All brands</option>
+            {% for brand in purchased_brands %}
+            <option value="{{ brand }}">{{ brand }}</option>
+            {% endfor %}
+          </select>
+          </th>
+          <th scope="col">Category
+          <select id="tagFilter" onchange="filterTable()">
+            <option value="">All categories</option>
+            {% for purchased_cat in purchased_cats %}
+            <option value="{{ purchased_cat }}">{{ purchased_cat }}</option>
+            {% endfor %}
+          </select>
+          </th>
           <th scope="col">Name</th>
           <th scope="col">Price (+tax)</th>
           <th scope="col">Wish Period</th>
         </tr>
       </thead>
-      <li class="list-group-item">
+      <tbody>
       {% set count = namespace(value=0) %}
       {% for purchased_item in purchased_items %}
       {% set count.value = count.value + 1 %}
-        <tr>
+        {% set wish_period_seconds = purchased_item.wish_period.total_seconds() if purchased_item.wish_period is not none else 0 %}
+        {% set wish_period_days = wish_period_seconds / 86400 %}
+        {% set row_class = "" %}
+        {% if wish_period_days > 0 %}
+          {% if wish_period_days < 7 %}
+            {% set row_class = "table-danger" %}
+          {% elif wish_period_days < 28 %}
+            {% set row_class = "table-warning" %}
+          {% else %}
+            {% set row_class = "table-success" %}
+          {% endif %}
+        {% endif %}
+        <tr class="{{ row_class }}" data-wishitem-category="{{ purchased_item.category }}" data-wishitem-brand="{{ purchased_item.brand }}">
           <th scope="row">{{count.value}}</th>
           <td>
             {% if purchased_item.purchase_date is not none %}
@@ -61,29 +89,78 @@
           </td>
           <td> {{purchased_item.brand}} </td>
           <td> {{purchased_item.category}} </td>
-          <td onClick="window.open('{{ purchased_item.link }}', '_blank')">
-            <span style="color: blue; text-decoration: underline; font-size:11pt"> {{purchased_item.name}} </span> <br>
+          <td>
+            <a href="{{ purchased_item.link }}" target="_blank" style="color: blue; text-decoration: underline; font-size:11pt">{{purchased_item.name}}</a> <br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ purchased_item.description | format_description }}
             </span>
           </td>
           <td> {{ (purchased_item.taxed_price|round(2)) | format_money }} </td>
-          <td> {{(purchased_item.wish_period | format_time).replace("ago", "") }} </td>
           <td>
-            <button type="button" class="close" onClick="toggleWishItem({{ purchased_item.id }}, true, false, '/purchased-list')">
-            <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> return &#128230</span>
+            {{(purchased_item.wish_period | format_time).replace("ago", "") }}
+            {% if wish_period_days >= 100 %}
+            <br>✨🏆✨
+            {% endif %}
+          </td>
+          <td>
+            <button type="button" class="close js-return" data-id="{{ purchased_item.id }}">
+            <span style="color: blue; font-size: 11pt;" aria-hidden="true"> return &#128230</span>
             </button>
           </td>
           <td>
-          <button type="button" class="close" onClick="deleteItem({{ purchased_item.id }}, '/purchased-list')">
+          <button type="button" class="close js-delete" data-id="{{ purchased_item.id }}">
             <span aria-hidden="true">&times;</span>
-          </td>
           </button>
+          </td>
         </tr>
-      </li>
       {% endfor %}
+      </tbody>
       </table>
     </ul>
+
+    <!-- Add the JavaScript code here -->
+    <script>
+      // Function to filter table based on category and brand
+      function filterTable() {
+            var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
+            console.log('categoryFilter:', categoryFilter); // Print categoryFilter
+            var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
+            console.log('brandFilter:', brandFilter); // Print brandFilter
+            var rows = document.querySelectorAll("#purchasedlist-table tbody tr");
+
+            rows.forEach(row => {
+                var tdCategory = row.getAttribute("data-wishitem-category").toLowerCase();
+                console.log('tdCategory:', tdCategory); // Print tdCategory
+                var tdBrand = row.getAttribute("data-wishitem-brand").toLowerCase();
+                if ((categoryFilter === "" || tdCategory.includes(categoryFilter)) &&
+                    (brandFilter === "" || tdBrand.includes(brandFilter))) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
+      // Attach click handlers for return/delete without inline JS
+      document.addEventListener('click', function(event) {
+        var returnBtn = event.target.closest('.js-return');
+        if (returnBtn) {
+          var id = Number(returnBtn.getAttribute('data-id'));
+          if (!isNaN(id) && typeof toggleWishItem === 'function') {
+            toggleWishItem(id, true, false, '/purchased-list');
+          }
+          return;
+        }
+        var deleteBtn = event.target.closest('.js-delete');
+        if (deleteBtn) {
+          var id = Number(deleteBtn.getAttribute('data-id'));
+          if (!isNaN(id) && typeof deleteItem === 'function') {
+            deleteItem(id, '/purchased-list');
+          }
+          return;
+        }
+      });
+    </script>
+
   <br>
- {% endblock %} 
-  
+ {% endblock %}

@@ -294,31 +294,53 @@ def save_table():
 def unhooked_list():
     # render the template using name of template
     # now when go to '/', render unhooked.html
-    # get all unique tags in wishlist
+    # get all unique categories in unhooked list
     unhooked_cats = set()
+    # get all unique brands in unhooked list
+    unhooked_brands = set()
     for wishitem in current_user.wishitems:
         if not wishitem.purchased and wishitem.unhooked:
-            if not wishitem.category == "" and wishitem.category is not None:  # if not tag unknown
+            if not wishitem.category == "" and wishitem.category is not None:  # if not category unknown
                 unhooked_cats.add(wishitem.category)
+            if not wishitem.brand == "" and wishitem.brand is not None:  # if not brand unknown
+                unhooked_brands.add(wishitem.brand)
 
     unhooked_cats = list(unhooked_cats)
+    unhooked_brands = list(unhooked_brands)
+    unhooked_cats.sort()
+    unhooked_brands.sort()
 
     # sort user's wishitems by unhooked date
     unhooked_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=True, purchased=False).order_by(WishItem.unhooked_date.asc()).all()
 
     return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
-                           unhooked_cats=unhooked_cats, unhooked_items=unhooked_items)  # return html when we got root
+                           unhooked_cats=unhooked_cats, unhooked_brands=unhooked_brands, unhooked_items=unhooked_items)  # return html when we got root
 
 # purchased-list
 @views.route('/purchased-list', methods=['GET', 'POST'])
 @login_required
 def purchased_list():
+    # get all unique categories in purchased list
+    purchased_cats = set()
+    # get all unique brands in purchased list
+    purchased_brands = set()
+    for wishitem in current_user.wishitems:
+        if not wishitem.unhooked and wishitem.purchased:
+            if not wishitem.category == "" and wishitem.category is not None:  # if not category unknown
+                purchased_cats.add(wishitem.category)
+            if not wishitem.brand == "" and wishitem.brand is not None:  # if not brand unknown
+                purchased_brands.add(wishitem.brand)
+
+    purchased_cats = list(purchased_cats)
+    purchased_brands = list(purchased_brands)
+    purchased_cats.sort()
+    purchased_brands.sort()
+
     # define wish_to_purchase_period
     purchased_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=False, purchased=True).order_by(WishItem.purchase_date.asc()).all()
 
-
     return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
-                           purchased_items=purchased_items)  # return html when we got root
+                           purchased_cats=purchased_cats, purchased_brands=purchased_brands, purchased_items=purchased_items)  # return html when we got root
 
 
 @views.route('/fetch-url-info', methods=['POST'])

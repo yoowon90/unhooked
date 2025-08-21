@@ -12,6 +12,25 @@ from pytz import timezone
 
 reports = Blueprint('reports', __name__)  # define blueprint
 
+def format_money(money):
+        def add_commas(money):
+            if len(money) <= 3:
+                return money
+            return add_commas(money[:-3]) + ',' + money[-3:]
+
+        money = str(money)
+        if "." in money:
+            dollars = money.split(".")[0]
+            cents = money.split(".")[1]
+            if len(cents) == 1:
+                cents += "0"
+        else:
+            dollars = money
+            cents = "00"
+
+        money = add_commas(dollars) + "." + cents
+        return money
+
 COLOR_SCHEME = [
         "#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9", "#BAE1FF",
         "#FFB3B3", "#FFCCB3", "#FFFFB3", "#B3FFB3", "#B3FFFF",
@@ -29,25 +48,6 @@ COLOR_SCHEME = [
 @login_required
 def home():
 
-    def format_money(money):
-            def add_commas(money):
-                if len(money) <= 3:
-                    return money
-                return add_commas(money[:-3]) + ',' + money[-3:]
-
-            money = str(money)
-            if "." in money:
-                dollars = money.split(".")[0]
-                cents = money.split(".")[1]
-                if len(cents) == 1:
-                    cents += "0"
-            else:
-                dollars = money
-                cents = "00"
-
-            money = add_commas(dollars) + "." + cents
-            return money
-
     if request.method == 'POST' or request.method == 'GET':
         # get current time
         current_time = datetime.datetime.now() # Get the current time
@@ -61,41 +61,40 @@ def home():
             report_start = datetime.datetime(yesterday.year, yesterday.month, 1, 0, 0, 0) # 1st day of yesterday's month
 
         # type(current_user.wishitems) is <class 'sqlalchemy.orm.collections.InstrumentedList'>
-        # Convert InstrumentedList to a list of dictionaries
-        purchased_wishitems = [item.to_dict() for item in current_user.wishitems if item.purchased and item.purchase_date is not None]
-        spenditure = {}
+    # Convert InstrumentedList to a list of dictionaries
+    purchased_wishitems = [item.to_dict() for item in current_user.wishitems if item.purchased and item.purchase_date is not None]
+    spenditure = {}
 
-        for purchased_item in purchased_wishitems:
-            purchase_date = purchased_item['purchase_date'][:10]
-            if purchase_date in spenditure:
-                print(f"purchase_date: {purchase_date}, price: {purchased_item['price']}")
-                spenditure[purchase_date] += purchased_item['price']
-            else:
-                spenditure[purchase_date] = purchased_item['price']
-        spenditure = {date: format_money(spend) for date, spend in spenditure.items()}
+    for purchased_item in purchased_wishitems:
+        purchase_date = purchased_item['purchase_date'][:10]
+        if purchase_date in spenditure:
+            spenditure[purchase_date] += purchased_item['price']
+        else:
+            spenditure[purchase_date] = purchased_item['price']
+    spenditure = {date: format_money(spend) for date, spend in spenditure.items()}
 
-        unhooked_wishitems = [item.to_dict() for item in current_user.wishitems if item.unhooked and item.unhooked_date is not None]
-        saves = {}
+    unhooked_wishitems = [item.to_dict() for item in current_user.wishitems if item.unhooked and item.unhooked_date is not None]
+    saves = {}
 
-        for unhooked_item in unhooked_wishitems:
-            unhooked_date = unhooked_item['unhooked_date'][:10]
-            if unhooked_date in saves:
-                saves[unhooked_date] += unhooked_item['price']
-            else:
-                saves[unhooked_date] = unhooked_item['price']
-        saves = {date: format_money(save) for date, save in saves.items()}
+    for unhooked_item in unhooked_wishitems:
+        unhooked_date = unhooked_item['unhooked_date'][:10]
+        if unhooked_date in saves:
+            saves[unhooked_date] += unhooked_item['price']
+        else:
+            saves[unhooked_date] = unhooked_item['price']
+    saves = {date: format_money(save) for date, save in saves.items()}
 
 
-        return render_template("home.html",
-                    user=current_user,
-                    current_time=current_time,
-                    ten_days=ten_days,
-                    last_purchase_date=last_purchase_date,
-                    default_report_start=report_start,
-                    default_report_end=report_end,
-                    spenditure=spenditure,
-                    saves=saves
-                    )  # return html when we got root
+    return render_template("home.html",
+                user=current_user,
+                current_time=current_time,
+                ten_days=ten_days,
+                last_purchase_date=last_purchase_date,
+                default_report_start=report_start,
+                default_report_end=report_end,
+                spenditure=spenditure,
+                saves=saves
+                )  # return html when we got root
 
 def create_figure(figure_type, figure_content, start_date=None, end_date=None):
 
@@ -151,12 +150,23 @@ def create_figure(figure_type, figure_content, start_date=None, end_date=None):
         else:
             contents_counts[content] = 1
 
-    # Prepare data for the pie chart
-    labels = contents_counts.keys()
-    sizes = contents_counts.values()
+    # Sort by count (descending) and limit to top 10
+    sorted_contents = sorted(contents_counts.items(), key=lambda x: x[1], reverse=True)
+
+    if len(sorted_contents) > 10:
+        # Take top 10 and group the rest into "Others"
+        top_10 = sorted_contents[:10]
+        others_count = sum(count for _, count in sorted_contents[10:])
+
+        # Prepare data for the pie chart with top 10 + Others
+        labels = [item[0] for item in top_10] + ['Others']
+        sizes = [item[1] for item in top_10] + [others_count]
+    else:
+        # If 10 or fewer, use all
+        labels = [item[0] for item in sorted_contents]
+        sizes = [item[1] for item in sorted_contents]
 
     # Define a default pastel color scheme
-
     colors = random.sample(COLOR_SCHEME, len(labels))
 
     # Generate the pie chart
@@ -252,6 +262,6 @@ def generate_report():
         'purchased_category_chart': purchased_category_chart,
         'purchased_brand_chart': purchased_brand_chart,
         'start_date': start_date_str,
-        'end_date': end_date_str
+        'end_date': end_date_str,
     })
 

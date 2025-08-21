@@ -31,7 +31,14 @@
         <tr>
           <th scope="col">#</th>
           <th scope="col" id="unhooked-date-header" style="cursor: pointer;">Unhooked Date</th>
-          <th scope="col">Brand</th>
+          <th scope="col">Brand
+          <select id="brandFilter" onchange="filterTable()">
+            <option value="">All brands</option>
+            {% for brand in unhooked_brands %}
+            <option value="{{ brand }}">{{ brand }}</option>
+            {% endfor %}
+          </select>
+          </th>
           <th scope="col">Category
           <select id="tagFilter" onchange="filterTable()">
             <option value="">All categories</option>
@@ -45,11 +52,11 @@
           <th scope="col" id="wish-period-header" style="cursor: pointer;">Wish Period</th>
         </tr>
       </thead>
-      <li class="list-group-item">
+      <tbody>
       {% set count = namespace(value=0) %}
       {% for unhooked_item in unhooked_items %}
       {% set count.value = count.value + 1 %}
-      <tr data-wish-period="{{ unhooked_item.wish_period.total_seconds() if unhooked_item.wish_period is not none else 0 }}" data-unhooked-date="{{ unhooked_item.unhooked_date.timestamp() if unhooked_item.unhooked_date is not none else 0 }}" data-wishitem-category="{{ unhooked_item.category }}">
+      <tr data-wish-period="{{ unhooked_item.wish_period.total_seconds() if unhooked_item.wish_period is not none else 0 }}" data-unhooked-date="{{ unhooked_item.unhooked_date.timestamp() if unhooked_item.unhooked_date is not none else 0 }}" data-wishitem-category="{{ unhooked_item.category }}" data-wishitem-brand="{{ unhooked_item.brand }}">
         <th scope="row">{{count.value}}</th>
           <td> {{ (unhooked_item.unhooked_date if unhooked_item.unhooked_date is not none else unhooked_item.date) | format_datetime}} </td>
           <td> {{unhooked_item.brand}} </td>
@@ -71,21 +78,27 @@
             <button type="button" class="close" onClick="deleteItem({{ unhooked_item.id }}, '/unhooked-list')">
               <span aria-hidden="true">&times;</span>
             </button>
-            </td>
+          </td>
         </tr>
-      </li>
       {% endfor %}
+      </tbody>
       </table>
     <!-- Add the JavaScript code here -->
     <script>
-      // Function to filter table based on category
+      // Function to filter table based on category and brand
       function filterTable() {
-            var filter = document.getElementById("tagFilter").value.toLowerCase();
+            var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
+            console.log('categoryFilter:', categoryFilter); // Print categoryFilter
+            var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
+            console.log('brandFilter:', brandFilter); // Print brandFilter
             var rows = document.querySelectorAll("#unhookedlist-table tbody tr");
 
             rows.forEach(row => {
-                var tag = row.getAttribute("data-wishitem-category").toLowerCase();
-                if (filter === "" || tag === filter || filter === NaN) {
+                var tdCategory = row.getAttribute("data-wishitem-category").toLowerCase();
+                console.log('tdCategory:', tdCategory); // Print tdCategory
+                var tdBrand = row.getAttribute("data-wishitem-brand").toLowerCase();
+                if ((categoryFilter === "" || tdCategory.includes(categoryFilter)) &&
+                    (brandFilter === "" || tdBrand.includes(brandFilter))) {
                     row.style.display = "";
                 } else {
                     row.style.display = "none";

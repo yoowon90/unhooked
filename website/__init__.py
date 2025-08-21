@@ -3,7 +3,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
-from config import ProductionConfig, DevelopmentConfig
+from config import Config, ProductionConfig, DevelopmentConfig
 import datetime
 
 db = SQLAlchemy()  # not sure if this is right if want to use migrate
@@ -11,7 +11,8 @@ db = SQLAlchemy()  # not sure if this is right if want to use migrate
 def create_app():
     # initialize the Flask app
     app = Flask(__name__)
-    app.config.from_object('config')  # from config.py
+    # Load base configuration first
+    app.config.from_object(Config)
 
     # Load configuration based on FLASK_ENV
     flask_env = os.getenv('FLASK_ENV')
@@ -20,8 +21,8 @@ def create_app():
         app.config.from_object(ProductionConfig)
     elif flask_env == 'development':
         app.config.from_object(DevelopmentConfig)
-        
-    
+
+
     db.init_app(app)
     migrate = Migrate(app, db)  # Initialize Flask-Migrate
 
@@ -36,7 +37,7 @@ def create_app():
     # TODO: ADD MORE
 
     from .models import User, Note, WishItem
-    
+
     with app.app_context():
         db.create_all()
 
@@ -74,10 +75,10 @@ class Format:
                 if timedelta.days > 0:
                     leftover_seconds = timedelta - datetime.timedelta(days=timedelta.days)
                     return f"{timedelta.days} day ago" if timedelta.days == 1 else f"{timedelta.days}d ago"
-                
+
                 elif timedelta.seconds > 3600:  # 1 hour
                     return f"{timedelta.seconds // 3600} hrs ago"
-                
+
                 elif timedelta.seconds > 60:
                     return f"{timedelta.seconds // 60} mins ago"
 
@@ -92,13 +93,13 @@ class Format:
             return ""
         else:
             return "#" + tag
-        
+
     def format_money(self, money):
         def add_commas(money):
             if len(money) <= 3:
                 return money
             return add_commas(money[:-3]) + ',' + money[-3:]
-        
+
         money = str(money)
         if "." in money:
             dollars = money.split(".")[0]
@@ -108,25 +109,25 @@ class Format:
         else:
             dollars = money
             cents = "00"
-    
-        
+
+
         money = add_commas(dollars) + "." + cents
         return money
-            
-    
+
+
     def format_description(self, description):
         if description is None or description.strip() == "":
             return ""
         else:
             return "\n" + description
-    
+
     def format_last_purchase_date(self, last_purchase_date):
         # last_purchase_date is defined using datetime.datetime.now()
         if last_purchase_date is None:
             # grab last purchase date from purchase list
             return ""
         return last_purchase_date.strftime("%Y-%m-%d %H:%M:%S")
-    
+
     def format_report_date(self, report_date):
         return report_date.strftime("%Y-%m-%d")
 
