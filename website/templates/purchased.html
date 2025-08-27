@@ -68,7 +68,18 @@
       <thead>
         <tr>
           <th scope="col">#</th>
-          <th scope="col">Purchase Date</th>
+          <th scope="col" style="position: relative;">
+            <span style="cursor: pointer;" onclick="togglePurchaseDateFilterPopup()">Purchase Date</span>
+            <div id="purchaseDateFilterPopup" style="display: none; position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #ccc; padding: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 100;">
+              <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                <label for="purchaseStartDate" style="margin: 0;">Start</label>
+                <input type="date" id="purchaseStartDate" onchange="handlePurchaseDateChange()">
+                <label for="purchaseEndDate" style="margin: 0;">End</label>
+                <input type="date" id="purchaseEndDate" onchange="handlePurchaseDateChange()">
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="resetPurchaseDateFilter()">Show All</button>
+            </div>
+          </th>
           <th scope="col">Brand
           <select id="brandFilter" onchange="filterTable()">
             <option value="">All brands</option>
@@ -106,7 +117,7 @@
             {% set row_class = "table-success" %}
           {% endif %}
         {% endif %}
-        <tr class="{{ row_class }}" data-wishitem-category="{{ purchased_item.category }}" data-wishitem-brand="{{ purchased_item.brand }}">
+        <tr class="{{ row_class }}" data-wishitem-category="{{ purchased_item.category }}" data-wishitem-brand="{{ purchased_item.brand }}" data-purchase-date="{{ purchased_item.purchase_date.isoformat() if purchased_item.purchase_date is not none else (purchased_item.date.isoformat() if purchased_item.date is not none else '') }}">
           <th scope="row">{{count.value}}</th>
           <td>
             {% if purchased_item.purchase_date is not none %}
@@ -148,25 +159,88 @@
 
     <!-- Add the JavaScript code here -->
     <script>
-      // Function to filter table based on category and brand
+      // Function to filter table based on category, brand, and purchase date range
       function filterTable() {
             var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
-            console.log('categoryFilter:', categoryFilter); // Print categoryFilter
+            console.log('categoryFilter:', categoryFilter);
             var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
-            console.log('brandFilter:', brandFilter); // Print brandFilter
+            console.log('brandFilter:', brandFilter);
+
+            var startInput = document.getElementById("purchaseStartDate");
+            var endInput = document.getElementById("purchaseEndDate");
+            var startDate = (startInput && startInput.value) ? new Date(startInput.value) : null;
+            var endDate = (endInput && endInput.value) ? new Date(endInput.value) : null;
+            if (endDate) { endDate.setHours(23,59,59,999); }
+
             var rows = document.querySelectorAll("#purchasedlist-table tbody tr");
 
             rows.forEach(row => {
-                var tdCategory = row.getAttribute("data-wishitem-category").toLowerCase();
-                console.log('tdCategory:', tdCategory); // Print tdCategory
-                var tdBrand = row.getAttribute("data-wishitem-brand").toLowerCase();
-                if ((categoryFilter === "" || tdCategory.includes(categoryFilter)) &&
-                    (brandFilter === "" || tdBrand.includes(brandFilter))) {
+                var tdCategory = (row.getAttribute("data-wishitem-category") || "").toLowerCase();
+                console.log('tdCategory:', tdCategory);
+                var tdBrand = (row.getAttribute("data-wishitem-brand") || "").toLowerCase();
+
+                var dateAttr = row.getAttribute("data-purchase-date") || '';
+                var rowDate = dateAttr ? new Date(dateAttr) : null;
+
+                var categoryMatch = (categoryFilter === "" || tdCategory.includes(categoryFilter));
+                var brandMatch = (brandFilter === "" || tdBrand.includes(brandFilter));
+                var dateMatch = true;
+
+                if (startDate || endDate) {
+                  if (rowDate) {
+                    if (startDate && endDate) {
+                      dateMatch = rowDate >= startDate && rowDate <= endDate;
+                    } else if (startDate) {
+                      dateMatch = rowDate >= startDate;
+                    } else if (endDate) {
+                      dateMatch = rowDate <= endDate;
+                    }
+                  } else {
+                    dateMatch = false;
+                  }
+                }
+
+                if (categoryMatch && brandMatch && dateMatch) {
                     row.style.display = "";
                 } else {
                     row.style.display = "none";
                 }
             });
+        }
+
+        function togglePurchaseDateFilterPopup(forceState) {
+          var popup = document.getElementById('purchaseDateFilterPopup');
+          if (!popup) return;
+          if (typeof forceState === 'boolean') {
+            popup.style.display = forceState ? 'block' : 'none';
+            return;
+          }
+          popup.style.display = (popup.style.display === 'none' || popup.style.display === '') ? 'block' : 'none';
+        }
+
+        function handlePurchaseDateChange() {
+          var startInput = document.getElementById('purchaseStartDate');
+          var endInput = document.getElementById('purchaseEndDate');
+          if (!startInput || !endInput) return;
+          if (startInput.value && endInput.value) {
+            filterTable();
+            togglePurchaseDateFilterPopup(false);
+          }
+        }
+
+        function resetPurchaseDateFilter() {
+          var startInput = document.getElementById('purchaseStartDate');
+          var endInput = document.getElementById('purchaseEndDate');
+          if (startInput) startInput.value = '';
+          if (endInput) endInput.value = '';
+
+          var brandFilterEl = document.getElementById('brandFilter');
+          var tagFilterEl = document.getElementById('tagFilter');
+          if (brandFilterEl) brandFilterEl.value = '';
+          if (tagFilterEl) tagFilterEl.value = '';
+
+          filterTable();
+          togglePurchaseDateFilterPopup(false);
         }
 
       // Attach click handlers for return/delete without inline JS
