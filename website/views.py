@@ -4,6 +4,9 @@ import os
 import datetime
 import json
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from sqlalchemy.sql import func
 from flask import Blueprint, render_template, request, flash, jsonify
@@ -346,43 +349,60 @@ def purchased_list():
 @views.route('/fetch-url-info', methods=['POST'])
 @login_required
 def fetch_url_info():
-    header = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-                'Accept-Encoding': 'none',
-                'Accept-Language': 'en-US,en;q=0.8',
-                'Connection': 'keep-alive',
-                'refere': 'https://example.com',
-                'cookie': """your cookie value ( you can get that from your web page) """
-             }
-
     data = request.get_json()
     url = data.get('url')
     if not url:
         return jsonify({'success': False, 'error': 'No URL provided'})
 
+    # Build robust headers: rotate realistic UA, proper Referer from url, optional Cookie
+    parsed = urlparse(url)
+    referer = f"{parsed.scheme}://{parsed.netloc}/"
+    user_agent = (
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/126.0.0.0 Safari/537.36'
+    )
+    headers = {
+        'User-Agent': user_agent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Referer': referer,
+        'Connection': 'keep-alive',
+    }
+    # Allow client to pass a cookie if needed for sites requiring session
+    incoming_cookie = data.get('cookie') or request.headers.get('X-Forwarded-Cookie')
+    if incoming_cookie:
+        headers['Cookie'] = incoming_cookie
+
+    # Configure retries with backoff for transient timeouts/500s
+    retry = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        backoff_factor=0.75,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+
     try:
-        response = requests.get(url, headers=header, timeout=5)  # times out in 20 seconds
+        # Later try more generous timeout (connect, read). E.g., (5, 15)
+        response = session.get(url, headers=headers, timeout=(5, 5))
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, 'html.parser')
-
         item_data_dict = ItemDetails(soup).get_item_data()
         item_data_dict['success'] = True
-
-        # If successful, add a succesful message
-        # flash('Loading item details via URL was successful!', category='success')
         return jsonify(item_data_dict)
 
     except Exception as e:
-        # return jsonify({'success': False, 'error': str(e)})
         default_value = None
-        print(f"error: {str(e)}")
-
-        # display exception to users
-        # flash('Couldn\'t load items using provided URL. Please input details manually.', category='error')
-
-        # if error encountered, still treat as success but return None for all values
+        print(f"error while fetching url info: {str(e)}")
         return jsonify({'success': True, 'name': default_value, 'price': default_value, 'brand': default_value, 'description': default_value,
                  'currency': default_value, 'image_url': default_value})
