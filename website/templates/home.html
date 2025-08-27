@@ -1,27 +1,12 @@
 {% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
   %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
-    <!-- FullCalendar CSS -->
-    <link href='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css' rel='stylesheet' />
-    <!-- jQuery -->
-    <script src='https://code.jquery.com/jquery-3.5.1.min.js'></script>
-    <!-- FullCalendar JS -->
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js'></script>
-    <!-- Chart.js for line graph -->
-    <script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
     <style>
       .item {
         text-align: center;
       }
       .title {
         text-align: center;
-        margin-bottom: 20px; /* Add some space below the title */
+        margin-bottom: 20px;
       }
       .calendar-dropdown-container {
         display: flex;
@@ -64,67 +49,80 @@
         border-radius: 8px;
         background-color: #f9f9f9;
       }
-
             .date-fields {
-          display: flex; /* Use flexbox to align items side by side */
-          gap: 10px; /* Add some space between the fields */
+        display: flex;
+        gap: 10px;
         }
-
       .report-headline {
           text-align: center;
           font-weight: bold;
-          font-size: 1.5em; /* Adjust the size as needed */
+        font-size: 1.5em;
       }
-
       .button-container {
           display: flex;
           justify-content: center;
       }
-
       .pie-chart-container {
-          display: flex; /* Use flexbox to align items side by side */
-          justify-content: space-around; /* Distribute space around the items */
-          margin-top: 20px; /* Add some space above the pie chart container */
+        display: flex;
+        justify-content: space-around;
+        margin-top: 20px;
       }
-
       .pie-chart-container .item {
-          flex: 1; /* Allow items to grow and fill the container */
-          text-align: center; /* Center the text within each item */
-          margin: 0 10px; /* Add some horizontal space between items */
+        flex: 1;
+        text-align: center;
+        margin: 0 10px;
       }
-
       .pie-chart-container img {
           max-width: 100%;
           height: auto;
       }
+
+      /* Home page background pattern */
+      body.home-bg {
+        /* image from https://www.ebay.com/itm/332202522910 */
+        background-image: url('/static/home-pattern.png'); /* place the image at website/static/home-pattern.png */
+        background-repeat: repeat;
+        background-size: 320px auto; /* keep small to avoid pixelation; adjust as desired */
+        background-position: top left;
+        background-attachment: scroll;
+      }
+
+      /* Translucent content overlay */
+      .home-content-card {
+        background-color: rgba(255, 255, 255, 0.86);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 12px;
+        padding: 24px;
+        margin: 24px auto; /* top/bottom margin and side breathing room */
+        max-width: 1100px; /* keep readable width */
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      }
     </style>
-</head>
-<body>
+
+  <div class="home-content-card">
     <div class="title">
         <br>
         <h1>Hello {{ user.first_name }} !</h1>
     </div>
     <div>
-        <p>  <b> Welcome back to Unhooked. Here is your report. </b> </p>
+    <p><b> Welcome back to Unhooked. Here is your report. </b></p>
         <br>
         {{ (current_time) | debug }}
         {{ (user.last_purchase_date) | debug }}
         {% set time_difference = current_time - user.last_purchase_date %}
         ⭐️ Your last online purchase date is {{ user.last_purchase_date | format_last_purchase_date }} which is
         <span style="color: {% if time_difference >= ten_days %}blue{% else %}red{% endif %};">
-          <b> {{ (time_difference) | format_time}}</b>
+      <b>{{ (time_difference) | format_time }}</b>
         </span>
         .
         {% set totalpurchasedprice = namespace(value=0.00) %}
         {% for wishitem in user.wishitems %}
         {% if not wishitem.unhooked and wishitem.purchased %}
-        {% endif %}
-        {% if not wishitem.unhooked and wishitem.purchased %}
         {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.taxed_price %}
         {% endif %}
         {% endfor %}
-        {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
-        <p> ⭐️ Your total purchase amount is <b> $<span id="total-purchase-amount">{{ totalpurchasedprice.value | format_money }}</span> </b> <span id="date-range-text">.</span> </p>
+    {% set totalpurchasedprice.value = totalpurchasedprice.value|round(2) %}
+    <p> ⭐️ Your total purchase amount is <b>$<span id="total-purchase-amount">{{ totalpurchasedprice.value | format_money }}</span></b> <span id="date-range-text">.</span></p>
         <br>
                 <div class="calendar-dropdown-container">
           <div id='calendar'></div>
@@ -142,7 +140,6 @@
                 <option value="specifyDate">Specify Date</option>
               </select>
             </div>
-
             <div id="customDateContainer" class="custom-date-container" style="display: none;">
               <div class="date-fields">
                 <div>
@@ -158,51 +155,78 @@
           </div>
         </div>
 
+    <!-- Spending Line Graph -->
+    <div class="spending-graph-container">
+      <h5 style="text-align: center; margin: 20px 0;">Purchased Items Over Time</h5>
+      <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
+        <canvas id="spendingChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Wishlist Additions Line Graph -->
+    <div class="wishlist-graph-container">
+      <h5 style="text-align: center; margin: 20px 0;">Wishlist Additions Over Time</h5>
+      <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
+        <canvas id="wishlistChart"></canvas>
+      </div>
+    </div>
+
+    <div class="pie-chart-container">
+      <div class="item">
+        <h5>Wish List Category</h5>
+        <img id="category-chart" src="/wishlist_category.png" alt="Wish List Category Plot">
+      </div>
+      <div class="item">
+        <h5>Wish List Brand</h5>
+        <img id="brand-chart" src="/wishlist_brand.png" alt="Wish List Brand Plot">
+      </div>
+    </div>
+
+    <div class="pie-chart-container">
+      <div class="item">
+        <h5>Purchased Category</h5>
+        <img id="purchased-category-chart" src="/purchased_category.png" alt="Purchased Category Plot">
+      </div>
+      <div class="item">
+        <h5>Purchased Brand</h5>
+        <img id="purchased-brand-chart" src="/purchased_brand.png" alt="Purchased Brand Plot">
+      </div>
+    </div>
+  </div>
+  </div>
+{% endblock %}
+
+{% block javascript %}
+{{ super() }}
+<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
             <script>
         $(document).ready(function() {
+    // Enable home background pattern
+    $('body').addClass('home-bg');
+
             const spenditure = {{ spenditure | tojson}};
             const saves = {{ saves | tojson }};
 
-            // Spending line chart variables
+    // Charts and tooltips
             let spendingChart = null;
-            let currentTooltip = null; // Global tooltip reference
-            let wishlistChart = null;
+    let currentTooltip = null;
+    let wishlistChart = null;
 
-            // Custom tooltip functions - defined globally so they can be accessed by onHover
             function showCustomTooltip(event, dataIndex, spendingData, chartData, mouseX, mouseY, rect) {
-                console.log('showCustomTooltip called:', { event, dataIndex, spendingData, chartData });
-
-                // If there's already a tooltip, remove it first
                 if (currentTooltip) {
                     currentTooltip.remove();
                     currentTooltip = null;
-                    console.log('Removed existing tooltip');
                 }
-
-                // Also remove any other tooltip-like elements that might exist
                 const allTooltips = document.querySelectorAll('[id*="tooltip"], [class*="tooltip"]');
-                allTooltips.forEach(tooltip => {
-                    if (tooltip !== currentTooltip) {
-                        tooltip.remove();
-                        console.log('Removed additional tooltip:', tooltip);
-                    }
-                });
+      allTooltips.forEach(tooltip => tooltip.remove());
 
                 const value = spendingData[dataIndex];
                 const date = chartData.labels[dataIndex];
-                console.log('Tooltip data:', { value, date });
-
                 if (value > 0) {
-                    // Get items for this date
                     const itemsOnDate = chartData.items.filter(item => item.date === date);
-                    console.log('Items on date:', itemsOnDate);
-
-                    // Build tooltip content without an inner styled container to avoid double tooltip visuals
                     let tooltipContent = '';
                     tooltipContent += '<strong style="color: #e74c3c; font-size: 14px;">Date: ' + date + '</strong><br>';
-
                     if (itemsOnDate.length === 1) {
-                        // Single item
                         const item = itemsOnDate[0];
                         tooltipContent += 'Total: $' + value.toFixed(2) + '<br>';
                         tooltipContent += 'Item: ' + item.name + '<br>';
@@ -210,24 +234,19 @@
                         tooltipContent += 'Category: ' + item.category + '<br>';
                         tooltipContent += 'Price: $' + item.price.toFixed(2);
                     } else if (itemsOnDate.length > 1) {
-                        // Multiple items
                         tooltipContent += 'Total: $' + value.toFixed(2) + '<br>';
                         tooltipContent += 'Items:<br>';
                         itemsOnDate.forEach((item, index) => {
                             tooltipContent += '  ' + (index + 1) + '. ' + item.name + ' - $' + item.price.toFixed(2) + '<br>';
                         });
                     }
-
-                    console.log('Tooltip content created:', tooltipContent);
-
-                    // Create new tooltip and store reference
                     currentTooltip = document.createElement('div');
                     currentTooltip.id = 'custom-tooltip';
                     currentTooltip.style.position = 'fixed';
                     currentTooltip.style.pointerEvents = 'none';
                     currentTooltip.style.zIndex = '9999';
-                    currentTooltip.style.backgroundColor = 'rgba(255, 228, 225, 0.95)'; // Pastel pink/blush
-                    currentTooltip.style.border = '1px solid #ffb6c1'; // Light pink border
+        currentTooltip.style.backgroundColor = 'rgba(255, 228, 225, 0.95)';
+        currentTooltip.style.border = '1px solid #ffb6c1';
                     currentTooltip.style.borderRadius = '5px';
                     currentTooltip.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
                     currentTooltip.style.fontFamily = 'Arial, sans-serif';
@@ -236,65 +255,39 @@
                     currentTooltip.style.minWidth = '200px';
                     currentTooltip.style.padding = '10px';
                     document.body.appendChild(currentTooltip);
-                    console.log('New tooltip element created with ID:', currentTooltip.id);
-
                     currentTooltip.innerHTML = tooltipContent;
 
-                    // Better positioning using canvas-relative coordinates
-                    const tooltipWidth = 200; // Smaller width
-                    const tooltipHeight = 120; // Smaller height
+        const tooltipWidth = 200;
+        const tooltipHeight = 120;
                     const viewportWidth = window.innerWidth;
                     const viewportHeight = window.innerHeight;
-
-                    // Convert canvas coordinates to viewport coordinates
                     let left = rect.left + mouseX + 15;
                     let top = rect.top + mouseY - 15;
-
-                    console.log('Calculated viewport position:', { left, top, rectLeft: rect.left, rectTop: rect.top });
-
-                    // Adjust if tooltip would go off-screen to the right
                     if (left + tooltipWidth > viewportWidth) {
                         left = rect.left + mouseX - tooltipWidth - 15;
                     }
-
-                    // Adjust if tooltip would go off-screen to the bottom
                     if (top + tooltipHeight > viewportHeight) {
                         top = rect.top + mouseY - tooltipHeight - 15;
                     }
-
-                    // Ensure tooltip doesn't go off-screen to the left or top
                     if (left < 0) left = 15;
                     if (top < 0) top = 15;
-
                     currentTooltip.style.left = left + 'px';
                     currentTooltip.style.top = top + 'px';
                     currentTooltip.style.display = 'block';
                     currentTooltip.style.visibility = 'visible';
                     currentTooltip.style.opacity = '1';
-
-                    console.log('Tooltip positioned and displayed at:', { left, top });
-                    console.log('Final tooltip element:', currentTooltip);
-                    console.log('Total tooltips in DOM after creation:', document.querySelectorAll('#custom-tooltip').length);
                 }
             }
 
             function hideCustomTooltip() {
-                console.log('hideCustomTooltip called');
                 if (currentTooltip) {
                     currentTooltip.remove();
                     currentTooltip = null;
-                    console.log('Current tooltip removed');
                 }
-
-                // Also remove any other tooltip-like elements
                 const allTooltips = document.querySelectorAll('[id*="tooltip"], [class*="tooltip"]');
-                allTooltips.forEach(tooltip => {
-                    tooltip.remove();
-                    console.log('Removed additional tooltip:', tooltip);
-                });
+      allTooltips.forEach(tooltip => tooltip.remove());
             }
 
-            // Function to get all purchased items with their purchase dates and prices
             function getPurchasedItemsData() {
                 const purchasedItems = [];
                 {% for wishitem in user.wishitems %}
@@ -312,7 +305,6 @@
                 return purchasedItems;
             }
 
-            // Function to get all unhooked items with their unhooked dates and prices
             function getUnhookedItemsData() {
                 const unhookedItems = [];
                 {% for wishitem in user.wishitems %}
@@ -330,281 +322,272 @@
                 return unhookedItems;
             }
 
-            // Function to get all wishlist items with their added dates (creation date)
-            function getWishlistItemsData() {
-                const wishlistItems = [];
-                {% for wishitem in user.wishitems %}
-                    {% if wishitem.date %}
-                        wishlistItems.push({
-                            date: '{{ wishitem.date.strftime("%Y-%m-%d") }}',
-                            price: {{ wishitem.price if wishitem.price else 0 }},
-                            name: '{{ wishitem.name }}',
-                            brand: '{{ wishitem.brand }}',
-                            category: '{{ wishitem.category }}',
-                            description: '{{ wishitem.description }}'
-                        });
-                    {% endif %}
-                {% endfor %}
-                return wishlistItems;
+    function getWishlistItemsData() {
+      const wishlistItems = [];
+      {% for wishitem in user.wishitems %}
+        {% if wishitem.date %}
+          wishlistItems.push({
+            date: '{{ wishitem.date.strftime("%Y-%m-%d") }}',
+            price: {{ wishitem.price if wishitem.price else 0 }},
+            name: '{{ wishitem.name }}',
+            brand: '{{ wishitem.brand }}',
+            category: '{{ wishitem.category }}',
+            description: '{{ wishitem.description }}'
+          });
+        {% endif %}
+      {% endfor %}
+      return wishlistItems;
+    }
+
+    function showWishlistTooltip(event, dataIndex, datasetIndex, countAdded, countUnhooked, chartData, mouseX, mouseY, rect) {
+      if (currentTooltip) {
+        currentTooltip.remove();
+        currentTooltip = null;
+      }
+      const allTooltips = document.querySelectorAll('[id*="tooltip"], [class*="tooltip"]');
+      allTooltips.forEach(tooltip => tooltip.remove());
+
+      const date = chartData.labels[dataIndex];
+      const isAdded = datasetIndex === 0;
+      const value = isAdded ? countAdded[dataIndex] : countUnhooked[dataIndex];
+      if (value > 0) {
+        const itemsOnDate = (isAdded ? chartData.itemsAdded : chartData.itemsUnhooked).filter(item => item.date === date);
+        let tooltipContent = '';
+        const headerColor = isAdded ? '#6c757d' : '#28a745';
+        tooltipContent += '<strong style="color: ' + headerColor + '; font-size: 14px;">Date: ' + date + '</strong><br>';
+        tooltipContent += (isAdded ? 'Added: ' : 'Unhooked: ') + value + ' item' + (value > 1 ? 's' : '') + '<br>';
+        if (itemsOnDate.length > 0) {
+          const totalForDay = itemsOnDate.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+          tooltipContent += 'Total: $' + totalForDay.toFixed(2) + '<br>';
+          tooltipContent += 'Items:<br>';
+          itemsOnDate.forEach((item, index) => {
+            const itemPrice = (Number(item.price) || 0).toFixed(2);
+            tooltipContent += '  ' + (index + 1) + '. ' + item.name + ' - $' + itemPrice + '<br>';
+          });
+        }
+        currentTooltip = document.createElement('div');
+        currentTooltip.id = 'custom-tooltip';
+        currentTooltip.style.position = 'fixed';
+        currentTooltip.style.pointerEvents = 'none';
+        currentTooltip.style.zIndex = '9999';
+        currentTooltip.style.backgroundColor = isAdded ? 'rgba(233, 236, 239, 0.95)' : 'rgba(212, 237, 218, 0.95)';
+        currentTooltip.style.border = '1px solid ' + (isAdded ? '#ced4da' : '#c3e6cb');
+        currentTooltip.style.borderRadius = '5px';
+        currentTooltip.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+        currentTooltip.style.fontFamily = 'Arial, sans-serif';
+        currentTooltip.style.fontSize = '12px';
+        currentTooltip.style.color = '#333';
+        currentTooltip.style.minWidth = '200px';
+        currentTooltip.style.padding = '10px';
+        document.body.appendChild(currentTooltip);
+        currentTooltip.innerHTML = tooltipContent;
+
+        const tooltipWidth = 200;
+        const tooltipHeight = 120;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        let left = rect.left + mouseX + 15;
+        let top = rect.top + mouseY - 15;
+        if (left + tooltipWidth > viewportWidth) {
+          left = rect.left + mouseX - tooltipWidth - 15;
+        }
+        if (top + tooltipHeight > viewportHeight) {
+          top = rect.top + mouseY - tooltipHeight - 15;
+        }
+        if (left < 0) left = 15;
+        if (top < 0) top = 15;
+        currentTooltip.style.left = left + 'px';
+        currentTooltip.style.top = top + 'px';
+        currentTooltip.style.display = 'block';
+        currentTooltip.style.visibility = 'visible';
+        currentTooltip.style.opacity = '1';
+      }
+    }
+
+    function updateWishlistChart(startDate, endDate) {
+      if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded!');
+        return;
+      }
+      const canvas = document.getElementById('wishlistChart');
+      if (!canvas) {
+        console.error('Canvas element #wishlistChart not found!');
+        return;
+      }
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const today = new Date();
+      const extendedEnd = new Date(Math.max(end, today));
+
+      const allWishlistItems = getWishlistItemsData();
+      const allUnhookedItems = getUnhookedItemsData();
+      const filteredAdded = allWishlistItems.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= start && itemDate <= end;
+      });
+      const filteredUnhooked = allUnhookedItems.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= start && itemDate <= end;
+      });
+      filteredAdded.sort((a, b) => new Date(a.date) - new Date(b.date));
+      filteredUnhooked.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      const extendedLabels = [];
+      const currentDate = new Date(start);
+      while (currentDate <= extendedEnd) {
+        extendedLabels.push(currentDate.toISOString().split('T')[0]);
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      const countAdded = extendedLabels.map(date => filteredAdded.filter(item => item.date === date).length);
+      const countUnhooked = extendedLabels.map(date => filteredUnhooked.filter(item => item.date === date).length);
+
+      const pointRadiusAdded = countAdded.map(value => value > 0 ? 4 : 0);
+      const pointHoverRadiusAdded = countAdded.map(value => value > 0 ? 6 : 0);
+      const pointRadiusUnhooked = countUnhooked.map(value => value > 0 ? 4 : 0);
+      const pointHoverRadiusUnhooked = countUnhooked.map(value => value > 0 ? 6 : 0);
+
+      const daysDiff = Math.ceil((extendedEnd - start) / (1000 * 60 * 60 * 24));
+      let maxTicksLimit = 10;
+      if (daysDiff > 365) {
+        maxTicksLimit = 12;
+      } else if (daysDiff > 90) {
+        maxTicksLimit = 20;
+      } else if (daysDiff > 30) {
+        maxTicksLimit = 15;
+      }
+
+      if (wishlistChart) {
+        wishlistChart.destroy();
+      }
+
+      const ctx = document.getElementById('wishlistChart').getContext('2d');
+      const chartData = { labels: extendedLabels, itemsAdded: filteredAdded, itemsUnhooked: filteredUnhooked };
+      wishlistChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: extendedLabels,
+          datasets: [
+            {
+              label: 'Wishlist Items Added',
+              data: countAdded,
+              borderColor: '#6c757d',
+              backgroundColor: 'rgba(108, 117, 125, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+              pointRadius: pointRadiusAdded,
+              pointHoverRadius: pointHoverRadiusAdded,
+              pointBackgroundColor: '#6c757d',
+              pointBorderColor: '#6c757d'
+            },
+            {
+              label: 'Unhooked Items',
+              data: countUnhooked,
+              borderColor: '#28a745',
+              backgroundColor: 'rgba(40, 167, 69, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+              pointRadius: pointRadiusUnhooked,
+              pointHoverRadius: pointHoverRadiusUnhooked,
+              pointBackgroundColor: '#28a745',
+              pointBorderColor: '#28a745'
             }
-
-            // Wishlist custom tooltip
-            function showWishlistTooltip(event, dataIndex, countData, chartData, mouseX, mouseY, rect) {
-                if (currentTooltip) {
-                    currentTooltip.remove();
-                    currentTooltip = null;
-                }
-                const allTooltips = document.querySelectorAll('[id*="tooltip"], [class*="tooltip"]');
-                allTooltips.forEach(tooltip => tooltip.remove());
-
-                const value = countData[dataIndex];
-                const date = chartData.labels[dataIndex];
-                if (value > 0) {
-                    const itemsOnDate = chartData.items.filter(item => item.date === date);
-                    let tooltipContent = '';
-                    tooltipContent += '<strong style="color: #1f78b4; font-size: 14px;">Date: ' + date + '</strong><br>';
-                    tooltipContent += 'Added: ' + value + ' item' + (value > 1 ? 's' : '') + '<br>';
-                    if (itemsOnDate.length > 0) {
-                        // Sum total price for the day
-                        const totalForDay = itemsOnDate.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-                        tooltipContent += 'Total: $' + totalForDay.toFixed(2) + '<br>';
-                        tooltipContent += 'Items:<br>';
-                        itemsOnDate.forEach((item, index) => {
-                            const itemPrice = (Number(item.price) || 0).toFixed(2);
-                            tooltipContent += '  ' + (index + 1) + '. ' + item.name + ' - $' + itemPrice + '<br>';
-                        });
-                    }
-
-                    currentTooltip = document.createElement('div');
-                    currentTooltip.id = 'custom-tooltip';
-                    currentTooltip.style.position = 'fixed';
-                    currentTooltip.style.pointerEvents = 'none';
-                    currentTooltip.style.zIndex = '9999';
-                    currentTooltip.style.backgroundColor = 'rgba(213, 240, 247, 0.95)'; // Pastel blue
-                    currentTooltip.style.border = '1px solid #b3e5fc';
-                    currentTooltip.style.borderRadius = '5px';
-                    currentTooltip.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
-                    currentTooltip.style.fontFamily = 'Arial, sans-serif';
-                    currentTooltip.style.fontSize = '12px';
-                    currentTooltip.style.color = '#333';
-                    currentTooltip.style.minWidth = '200px';
-                    currentTooltip.style.padding = '10px';
-                    document.body.appendChild(currentTooltip);
-                    currentTooltip.innerHTML = tooltipContent;
-
-                    const tooltipWidth = 200;
-                    const tooltipHeight = 120;
-                    const viewportWidth = window.innerWidth;
-                    const viewportHeight = window.innerHeight;
-                    let left = rect.left + mouseX + 15;
-                    let top = rect.top + mouseY - 15;
-                    if (left + tooltipWidth > viewportWidth) {
-                        left = rect.left + mouseX - tooltipWidth - 15;
-                    }
-                    if (top + tooltipHeight > viewportHeight) {
-                        top = rect.top + mouseY - tooltipHeight - 15;
-                    }
-                    if (left < 0) left = 15;
-                    if (top < 0) top = 15;
-                    currentTooltip.style.left = left + 'px';
-                    currentTooltip.style.top = top + 'px';
-                    currentTooltip.style.display = 'block';
-                    currentTooltip.style.visibility = 'visible';
-                    currentTooltip.style.opacity = '1';
-                }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { intersect: true, mode: 'nearest' },
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: { enabled: false }
+          },
+          onHover: function(event, elements) {
+            const canvas = event.native.target;
+            if (elements.length > 0) {
+              const dataIndex = elements[0].index;
+              const datasetIndex = elements[0].datasetIndex;
+              const value = datasetIndex === 0 ? countAdded[dataIndex] : countUnhooked[dataIndex];
+              if (value > 0) {
+                canvas.style.cursor = 'pointer';
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.native.clientX - rect.left;
+                const mouseY = event.native.clientY - rect.top;
+                showWishlistTooltip(event, dataIndex, datasetIndex, countAdded, countUnhooked, chartData, mouseX, mouseY, rect);
+              } else {
+                canvas.style.cursor = 'default';
+                hideCustomTooltip();
+              }
+            } else {
+              event.native.target.style.cursor = 'default';
+              hideCustomTooltip();
             }
-
-            // Create or update the wishlist additions line chart
-            function updateWishlistChart(startDate, endDate) {
-                if (typeof Chart === 'undefined') {
-                    console.error('Chart.js is not loaded!');
-                    return;
-                }
-                const canvas = document.getElementById('wishlistChart');
-                if (!canvas) {
-                    console.error('Canvas element #wishlistChart not found!');
-                    return;
-                }
-                const start = new Date(startDate);
-                const end = new Date(endDate);
-                const today = new Date();
-                const extendedEnd = new Date(Math.max(end, today));
-
-                const allWishlistItems = getWishlistItemsData();
-                const filteredItems = allWishlistItems.filter(item => {
-                    const itemDate = new Date(item.date);
-                    return itemDate >= start && itemDate <= end;
-                });
-                filteredItems.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                const extendedLabels = [];
-                const currentDate = new Date(start);
-                while (currentDate <= extendedEnd) {
-                    extendedLabels.push(currentDate.toISOString().split('T')[0]);
-                    currentDate.setDate(currentDate.getDate() + 1);
-                }
-
-                const countData = extendedLabels.map(date => {
-                    const itemsOnDate = filteredItems.filter(item => item.date === date);
-                    return itemsOnDate.length;
-                });
-
-                const pointRadius = countData.map(value => value > 0 ? 4 : 0);
-                const pointHoverRadius = countData.map(value => value > 0 ? 6 : 0);
-
-                const daysDiff = Math.ceil((extendedEnd - start) / (1000 * 60 * 60 * 24));
-                let maxTicksLimit = 10;
-                if (daysDiff > 365) {
-                    maxTicksLimit = 12;
-                } else if (daysDiff > 90) {
-                    maxTicksLimit = 20;
-                } else if (daysDiff > 30) {
-                    maxTicksLimit = 15;
-                }
-
-                if (wishlistChart) {
-                    wishlistChart.destroy();
-                }
-
-                const ctx = document.getElementById('wishlistChart').getContext('2d');
-                const chartData = { labels: extendedLabels, items: filteredItems };
-                wishlistChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: extendedLabels,
-                        datasets: [{
-                            label: 'Wishlist Items Added',
-                            data: countData,
-                            borderColor: 'rgb(54, 162, 235)',
-                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: pointRadius,
-                            pointHoverRadius: pointHoverRadius,
-                            pointBackgroundColor: 'rgb(54, 162, 235)',
-                            pointBorderColor: 'rgb(54, 162, 235)'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: { intersect: true, mode: 'nearest' },
-                        plugins: {
-                            legend: { display: true, position: 'top' },
-                            tooltip: { enabled: false }
-                        },
-                        onHover: function(event, elements) {
-                            const canvas = event.native.target;
-                            if (elements.length > 0) {
-                                const dataIndex = elements[0].index;
-                                const value = countData[dataIndex];
-                                if (value > 0) {
-                                    canvas.style.cursor = 'pointer';
-                                    const rect = canvas.getBoundingClientRect();
-                                    const mouseX = event.native.clientX - rect.left;
-                                    const mouseY = event.native.clientY - rect.top;
-                                    showWishlistTooltip(event, dataIndex, countData, chartData, mouseX, mouseY, rect);
-                                } else {
-                                    canvas.style.cursor = 'default';
-                                    hideCustomTooltip();
-                                }
-                            } else {
-                                event.native.target.style.cursor = 'default';
-                                hideCustomTooltip();
-                            }
-                        },
-                        scales: {
-                            x: {
-                                title: { display: true, text: 'Date Added' },
-                                ticks: { maxTicksLimit: maxTicksLimit, maxRotation: 45 }
-                            },
-                            y: {
-                                title: { display: true, text: 'Items Added' },
-                                beginAtZero: true,
-                                ticks: {
-                                    precision: 0,
-                                    callback: function(value) { return value; }
-                                }
-                            }
-                        }
-                    }
-                });
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Date Added' },
+              ticks: { maxTicksLimit: maxTicksLimit, maxRotation: 45 }
+            },
+            y: {
+              title: { display: true, text: 'Items Added / Unhooked' },
+              beginAtZero: true,
+              ticks: { precision: 0, callback: function(value) { return value; } }
             }
+          }
+        }
+      });
+    }
 
-            // Function to create or update the spending line chart
             function updateSpendingChart(startDate, endDate) {
-                console.log('updateSpendingChart called with:', startDate, endDate);
-
-                // Check if Chart.js is loaded
                 if (typeof Chart === 'undefined') {
                     console.error('Chart.js is not loaded!');
                     return;
                 }
-
-                // Check if the canvas element exists
                 const canvas = document.getElementById('spendingChart');
                 if (!canvas) {
                     console.error('Canvas element #spendingChart not found!');
                     return;
                 }
-
-                console.log('Canvas found:', canvas);
-
                 const start = new Date(startDate);
                 const end = new Date(endDate);
-
-                // Extend the end date to include today for better visualization
                 const today = new Date();
                 const extendedEnd = new Date(Math.max(end, today));
 
-                // Get all purchased items data
                 const allPurchasedItems = getPurchasedItemsData();
-
-                // Filter items within the selected time range
                 const filteredItems = allPurchasedItems.filter(item => {
                     const itemDate = new Date(item.date);
                     return itemDate >= start && itemDate <= end;
                 });
-
-                // Sort by date
                 filteredItems.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                // Create extended x-axis labels from start date to today
                 const extendedLabels = [];
                 const currentDate = new Date(start);
-
                 while (currentDate <= extendedEnd) {
                     extendedLabels.push(currentDate.toISOString().split('T')[0]);
                     currentDate.setDate(currentDate.getDate() + 1);
                 }
 
-                // Aggregate spending data by date (sum multiple purchases on same day)
                 const spendingData = extendedLabels.map(date => {
                     const itemsOnDate = filteredItems.filter(item => item.date === date);
                     if (itemsOnDate.length === 0) {
-                        return 0; // No purchases on this date
+          return 0;
                     }
-                    // Sum all purchases on this date
                     return itemsOnDate.reduce((total, item) => total + item.price, 0);
                 });
 
-                // Create point radius array - only show points for actual purchases
                 const pointRadius = spendingData.map(value => value > 0 ? 4 : 0);
-                const pointHoverRadius = spendingData.map(value => value > 0 ? 6 : 0);
-
-                // Create hover radius array - only enable hover for purchase days
                 const hoverRadius = spendingData.map(value => value > 0 ? 6 : 0);
 
-                // Calculate x-axis label spacing to prevent overlap
                 const daysDiff = Math.ceil((extendedEnd - start) / (1000 * 60 * 60 * 24));
-                let maxTicksLimit = 10; // Default
+      let maxTicksLimit = 10;
                 if (daysDiff > 365) {
-                    maxTicksLimit = 12; // Monthly labels for > 1 year
+        maxTicksLimit = 12;
                 } else if (daysDiff > 90) {
-                    maxTicksLimit = 20; // Weekly labels for > 3 months
+        maxTicksLimit = 20;
                 } else if (daysDiff > 30) {
-                    maxTicksLimit = 15; // Every few days for > 1 month
+        maxTicksLimit = 15;
                 }
 
                 if (spendingChart) {
@@ -612,14 +595,7 @@
                 }
 
                 const ctx = document.getElementById('spendingChart').getContext('2d');
-                console.log('Creating chart with data:', { extendedLabels, spendingData, filteredItems });
-
-                // Store data in the chart instance so tooltip callbacks can access it
-                const chartData = {
-                    labels: extendedLabels,
-                    items: filteredItems
-                };
-
+      const chartData = { labels: extendedLabels, items: filteredItems };
                 spendingChart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -641,116 +617,61 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: {
-                            intersect: true,
-                            mode: 'nearest'
-                        },
+          interaction: { intersect: true, mode: 'nearest' },
                         plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            },
-                            tooltip: {
-                                enabled: false
-                            }
+            legend: { display: true, position: 'top' },
+            tooltip: { enabled: false }
                         },
                         onHover: function(event, elements) {
-                            console.log('onHover triggered:', { event, elements });
-
-                            // Only show pointer cursor for purchase days
                             const canvas = event.native.target;
                             if (elements.length > 0) {
                                 const dataIndex = elements[0].index;
                                 const value = spendingData[dataIndex];
-                                console.log('Hovering over data point:', { dataIndex, value, spendingData });
-
                                 if (value > 0) {
                                     canvas.style.cursor = 'pointer';
-                                    console.log('Showing tooltip for purchase day');
-
-                                    // Get accurate mouse coordinates from the canvas
                                     const rect = canvas.getBoundingClientRect();
                                     const mouseX = event.native.clientX - rect.left;
                                     const mouseY = event.native.clientY - rect.top;
-
-                                    console.log('Canvas coordinates:', { mouseX, mouseY, rect });
-
-                                    // Show custom tooltip for purchase days with accurate coordinates
                                     showCustomTooltip(event, dataIndex, spendingData, chartData, mouseX, mouseY, rect);
                                 } else {
                                     canvas.style.cursor = 'default';
-                                    console.log('Hiding tooltip for non-purchase day');
                                     hideCustomTooltip();
                                 }
                             } else {
                                 canvas.style.cursor = 'default';
-                                console.log('Hiding tooltip - no elements');
                                 hideCustomTooltip();
                             }
                         },
                         scales: {
                             x: {
-                                title: {
-                                    display: true,
-                                    text: 'Purchase Date'
-                                },
-                                ticks: {
-                                    maxTicksLimit: maxTicksLimit,
-                                    maxRotation: 45
-                                }
+              title: { display: true, text: 'Purchase Date' },
+              ticks: { maxTicksLimit: maxTicksLimit, maxRotation: 45 }
                             },
                             y: {
-                                title: {
-                                    display: true,
-                                    text: 'Total Daily Spending ($)'
-                                },
+              title: { display: true, text: 'Total Daily Spending ($)' },
                                 beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return '$' + value.toFixed(2);
-                                    }
-                                }
+              ticks: { callback: function(value) { return '$' + value.toFixed(2); } }
                             }
                         }
                     }
                 });
+    }
 
-                console.log('Chart created successfully:', spendingChart);
-
-            } // Close updateSpendingChart function
-
-            // Function to generate report
-            // This function updates ALL pie charts (wishlist and purchased) to reflect the selected time range
-            // The purchased pie charts will only show items purchased within the specified date range
             function generateReport(startDate, endDate) {
                 $.ajax({
                     url: '/generate-report',
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({
-                        start_date: startDate,
-                        end_date: endDate
-                    }),
+        data: JSON.stringify({ start_date: startDate, end_date: endDate }),
                     success: function(response) {
-                        // Update total purchase amount
-                        $('#total-purchase-amount').text(response.total_purchase_amount.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        }));
-
-                        // Update date range text
+          $('#total-purchase-amount').text(response.total_purchase_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
                         $('#date-range-text').text('from ' + response.start_date + ' to ' + response.end_date + '.');
-
-                        // Update pie charts
                         $('#category-chart').attr('src', 'data:image/png;base64,' + response.category_chart);
                         $('#brand-chart').attr('src', 'data:image/png;base64,' + response.brand_chart);
                         $('#purchased-category-chart').attr('src', 'data:image/png;base64,' + response.purchased_category_chart);
                         $('#purchased-brand-chart').attr('src', 'data:image/png;base64,' + response.purchased_brand_chart);
-
-                        // Update spending line chart
                         updateSpendingChart(response.start_date, response.end_date);
-                        // Update wishlist additions line chart
-                        updateWishlistChart(response.start_date, response.end_date);
+          updateWishlistChart(response.start_date, response.end_date);
                     },
                     error: function(xhr) {
                         const response = xhr.responseJSON;
@@ -759,127 +680,87 @@
                 });
             }
 
-                        // Handle dropdown change
             $('#dateRangeDropdown').change(function() {
                 const selectedOption = $(this).val();
-
                 if (selectedOption === 'specifyDate') {
-                    // Show custom date inputs
                     $('#customDateContainer').show();
                     $('#start_date').val('').focus();
                     $('#end_date').val('');
-                    // Reset to show all purchases
                     resetToAllPurchases();
-                    // Save selection to localStorage
                     localStorage.setItem('selectedTimeRange', selectedOption);
                 } else if (selectedOption) {
-                    // Hide custom date inputs
                     $('#customDateContainer').hide();
-
-                    // Get date range and generate report
                     const dateRange = getDateRange(selectedOption);
                     if (dateRange) {
                         generateReport(dateRange.start, dateRange.end);
                         updateSpendingChart(dateRange.start, dateRange.end);
-                        updateWishlistChart(dateRange.start, dateRange.end);
+          updateWishlistChart(dateRange.start, dateRange.end);
                     }
-                    // Save selection to localStorage
                     localStorage.setItem('selectedTimeRange', selectedOption);
                 } else {
-                    // Reset everything - show all data when no date range is selected
                     $('#customDateContainer').hide();
                     resetToAllPurchases();
-                    // Save selection to localStorage (empty string for "all data")
                     localStorage.setItem('selectedTimeRange', '');
                 }
             });
 
-            // Function to reset to show all purchases
-            // This function is called when no date range is selected (empty option)
-            // It shows ALL data without any time filtering
             function resetToAllPurchases() {
-                // Calculate total of all purchases
                 let totalAllPurchases = 0;
                 Object.values(spenditure).forEach(function(amount) {
-                    // Remove commas and convert to number
                     const cleanAmount = parseFloat(amount.replace(/,/g, ''));
                     totalAllPurchases += cleanAmount;
                 });
-
-                // Update total purchase amount
-                $('#total-purchase-amount').text(totalAllPurchases.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }));
-
-                // Clear date range text and add period
+      $('#total-purchase-amount').text(totalAllPurchases.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
                 $('#date-range-text').text('.');
-
-                // Reset pie charts to show all wishlist items (no date filtering)
                 $('#category-chart').attr('src', '/wishlist_category.png');
                 $('#brand-chart').attr('src', '/wishlist_brand.png');
                 $('#purchased-category-chart').attr('src', '/purchased_category.png');
                 $('#purchased-brand-chart').attr('src', '/purchased_brand.png');
-
-                // Reset spending line chart to show all purchases
                 updateSpendingChart('{{ user.last_purchase_date.strftime("%Y-%m-%d") }}', '{{ current_time.strftime("%Y-%m-%d") }}');
-                // Reset wishlist additions chart to show all wishlist items from earliest to today
-                (function() {
-                    const allWishlistItems = getWishlistItemsData();
-                    if (allWishlistItems.length > 0) {
-                        const dates = allWishlistItems.map(i => new Date(i.date));
-                        dates.sort((a, b) => a - b);
-                        const earliest = dates[0].toISOString().split('T')[0];
-                        const today = new Date().toISOString().split('T')[0];
-                        updateWishlistChart(earliest, today);
-                    }
-                })();
-            }
+      (function() {
+        const allWishlistItems = getWishlistItemsData();
+        if (allWishlistItems.length > 0) {
+          const dates = allWishlistItems.map(i => new Date(i.date));
+          dates.sort((a, b) => a - b);
+          const earliest = dates[0].toISOString().split('T')[0];
+          const today = new Date().toISOString().split('T')[0];
+          updateWishlistChart(earliest, today);
+        }
+      })();
+    }
 
-            // Handle custom date input
             $('#end_date').on('input', function() {
                 const startDate = $('#start_date').val();
                 const endDate = $(this).val();
-
-                // Check if both dates are filled and in correct format
                 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
                 if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
                     generateReport(startDate, endDate);
                     updateSpendingChart(startDate, endDate);
-                    updateWishlistChart(startDate, endDate);
-                    // Save custom date selection to localStorage
+        updateWishlistChart(startDate, endDate);
                     localStorage.setItem('selectedTimeRange', 'specifyDate');
                     localStorage.setItem('customStartDate', startDate);
                     localStorage.setItem('customEndDate', endDate);
                 } else if (!startDate || !endDate) {
-                    // If dates are cleared, reset to all purchases
                     resetToAllPurchases();
-                    // Clear custom date storage
                     localStorage.removeItem('customStartDate');
                     localStorage.removeItem('customEndDate');
                 }
             });
 
-            // Also handle start date input
             $('#start_date').on('input', function() {
                 const startDate = $(this).val();
                 const endDate = $('#end_date').val();
-
                 if (!startDate || !endDate) {
-                    // If either date is cleared, reset to all purchases
                     resetToAllPurchases();
-                    // Clear custom date storage
                     localStorage.removeItem('customStartDate');
                     localStorage.removeItem('customEndDate');
                 }
             });
 
-            // Function to calculate date ranges
             function getDateRange(option) {
                 const today = new Date();
                 const endDate = new Date(today);
                 let startDate = new Date(today);
-
                 switch(option) {
                     case 'last7days':
                         startDate.setDate(today.getDate() - 7);
@@ -891,7 +772,6 @@
                         startDate.setDate(today.getDate() - 30);
                         break;
                     case 'thisMonth':
-                        // Set to 1st day of current month
                         startDate = new Date(today.getFullYear(), today.getMonth(), 1);
                         break;
                     case 'thisYear':
@@ -903,47 +783,37 @@
                     default:
                         return null;
                 }
+      return { start: startDate.toISOString().split('T')[0], end: endDate.toISOString().split('T')[0] };
+    }
 
-                return {
-                    start: startDate.toISOString().split('T')[0],
-                    end: endDate.toISOString().split('T')[0]
-                };
-            }
+    const calendarEvents = Object.keys(spenditure).map(function(date) {
+      return { title: '💸 ' + '-' + spenditure[date], start: date, color: 'lightpink', textColor: 'red' };
+    }).concat(Object.keys(saves).map(function(date) {
+      return { title: '💰 ' + '+' + saves[date], start: date, color: 'lightgreen', textColor: 'green' };
+    }));
 
-            // Initialize calendar (read-only, no click functionality)
-            console.log('Spenditure data:', spenditure);
-            console.log('Saves data:', saves);
+    $('#calendar').fullCalendar({ selectable: false, selectHelper: false, events: calendarEvents });
 
-            // Initialize spending chart with default time range
             const defaultDateRange = getDateRange('last30days');
             if (defaultDateRange) {
                 updateSpendingChart(defaultDateRange.start, defaultDateRange.end);
-                updateWishlistChart(defaultDateRange.start, defaultDateRange.end);
+      updateWishlistChart(defaultDateRange.start, defaultDateRange.end);
             }
 
-                        // Check if user has a previously selected time range, otherwise default to last 30 days
             const savedTimeRange = localStorage.getItem('selectedTimeRange');
-            let selectedOption = 'last30days'; // Default fallback
-
+    let selectedOption = 'last30days';
             if (savedTimeRange) {
-                // User has a previously selected time range
                 selectedOption = savedTimeRange;
                 $('#dateRangeDropdown').val(selectedOption);
-                console.log('Restored user selection:', selectedOption);
-
-                // Handle custom date case
                 if (selectedOption === 'specifyDate') {
                     const savedStartDate = localStorage.getItem('customStartDate');
                     const savedEndDate = localStorage.getItem('customEndDate');
                     if (savedStartDate && savedEndDate) {
-                        // Show custom date container and restore dates
                         $('#customDateContainer').show();
                         $('#start_date').val(savedStartDate);
                         $('#end_date').val(savedEndDate);
-                        // Generate report with custom dates
                         generateReport(savedStartDate, savedEndDate);
                     } else {
-                        // Custom dates not found, fall back to default
                         selectedOption = 'last30days';
                         $('#dateRangeDropdown').val(selectedOption);
                         const dateRange = getDateRange(selectedOption);
@@ -952,92 +822,18 @@
                         }
                     }
                 } else {
-                    // Generate report for the selected time range
                     const dateRange = getDateRange(selectedOption);
                     if (dateRange) {
                         generateReport(dateRange.start, dateRange.end);
                     }
                 }
             } else {
-                // First time user, set default to last 30 days
                 $('#dateRangeDropdown').val('last30days');
-                console.log('Using default selection: last30days');
-
-                // Generate report for the default time range
                 const dateRange = getDateRange(selectedOption);
                 if (dateRange) {
                     generateReport(dateRange.start, dateRange.end);
                 }
             }
-
-            const calendarEvents = Object.keys(spenditure).map(function(date) {
-                return {
-                    title: '💸 ' + '-' + spenditure[date], // total price purchased
-                    start: date, // Use the key as the start date
-                    color: 'lightpink', // Light red background color
-                    textColor: 'red' // Red text color
-                };
-            }).concat(Object.keys(saves).map(function(date) {
-                return {
-                    title: '💰 ' + '+' + saves[date], // total price unhooked
-                    start: date, // Use the key as the start date
-                    color: 'lightgreen', // Light green background color
-                    textColor: 'green' // Green text color
-                };
-            }));
-
-            console.log('Calendar events:', calendarEvents);
-            console.log('Calendar container exists:', $('#calendar').length > 0);
-            console.log('FullCalendar library loaded:', typeof $.fullCalendar !== 'undefined');
-
-            $('#calendar').fullCalendar({
-                selectable: false, // Disable date selection
-                selectHelper: false,
-                events: calendarEvents
-            });
-
-            console.log('Calendar initialized');
-
         });
     </script>
-
-    <!-- Spending Line Graph -->
-    <div class="spending-graph-container">
-        <h5 style="text-align: center; margin: 20px 0;">Purchased Items Over Time</h5>
-        <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
-            <canvas id="spendingChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Wishlist Additions Line Graph -->
-    <div class="wishlist-graph-container">
-        <h5 style="text-align: center; margin: 20px 0;">Wishlist Additions Over Time</h5>
-        <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
-            <canvas id="wishlistChart"></canvas>
-        </div>
-    </div>
-
-    <div class="pie-chart-container">
-        <div class="item">
-            <h5>Wish List Category</h5>
-            <img id="category-chart" src="/wishlist_category.png" alt="Wish List Category Plot">
-        </div>
-        <div class="item">
-            <h5>Wish List Brand</h5>
-            <img id="brand-chart" src="/wishlist_brand.png" alt="Wish List Brand Plot">
-        </div>
-    </div>
-
-    <div class="pie-chart-container">
-        <div class="item">
-            <h5>Purchased Category</h5>
-            <img id="purchased-category-chart" src="/purchased_category.png" alt="Purchased Category Plot">
-        </div>
-        <div class="item">
-            <h5>Purchased Brand</h5>
-            <img id="purchased-brand-chart" src="/purchased_brand.png" alt="Purchased Brand Plot">
-        </div>
-    </div>
-</body>
-</html>
 {% endblock %}

@@ -39,14 +39,41 @@
       border: 1px solid #ffeaa7 !important;
     }
 
+    /* Wishlist page background pattern */
+    body.wishlist-bg {
+      /* image from https://wallpapercave.com/beatrix-potter-wallpapers */
+      background-image: url('/static/wishlist-pattern.png');
+      background-repeat: repeat;
+      background-size: 320px auto;
+      background-position: top left;
+      background-attachment: scroll;
+    }
+
+    /* Translucent content overlay */
+    .wishlist-content-card {
+      background-color: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px auto;
+      max-width: 1100px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
+
    </style>
   <!-- this is the same as base.html and overwrite any blocks -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.classList.add('wishlist-bg');
+    });
+  </script>
+  <div class="wishlist-content-card">
   <br>
   <h2 align="center">&#128722; Wish List &#128722;</h2>
-  <button type="button" class="btn btn-primary" style="float: right;" onclick="window.location.href='{{ url_for( 'views.unhooked_list') }}';">Go to my Unhooked List</button>
+  <a class="btn btn-primary" style="float: right;" href="{{ url_for('views.unhooked_list') }}">Go to my Unhooked List</a>
   <br>
   <br>
-  <button type="button" class="btn btn-info" style="float: right;" onclick="window.location.href='{{ url_for( 'views.purchased_list') }}';">Go to my Purchase List</button>
+  <a class="btn btn-info" style="float: right;" href="{{ url_for('views.purchased_list') }}">Go to my Purchase List</a>
   <br>
   {% set totalprice = namespace(value=0.00) %}
   {% set totalpurchasedprice = namespace(value=0.00) %}
@@ -78,7 +105,18 @@
       <thead>
         <tr>
           <th scope="col">#</th>
-          <th scope="col">Time</th>
+          <th scope="col" style="position: relative;">
+            <span id="timeHeader" style="cursor: pointer;" onclick="toggleDateFilterPopup()">Time</span>
+            <div id="dateFilterPopup" class="date-filter-popup" style="display: none; position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #ccc; padding: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 100;">
+              <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                <label for="startDate" style="margin: 0;">Start</label>
+                <input type="date" id="startDate" onchange="handleDateChange()">
+                <label for="endDate" style="margin: 0;">End</label>
+                <input type="date" id="endDate" onchange="handleDateChange()">
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="resetDateFilter()">Show All</button>
+            </div>
+          </th>
           <th scope="col">Brand
           <select id="brandFilter" onchange="filterTable()">
             <option value="">All brands</option>
@@ -107,7 +145,7 @@
       {% for wishitem in user.wishitems %}
       {% if not wishitem.unhooked and not wishitem.purchased %}
       {% set count.value = count.value + 1 %}
-        <tr data-wishitem-id="{{ wishitem.id }}" data-wishitem-category="{{ wishitem.category }}" data-wishitem-brand="{{ wishitem.brand }}">
+        <tr data-wishitem-id="{{ wishitem.id }}" data-wishitem-category="{{ wishitem.category }}" data-wishitem-brand="{{ wishitem.brand }}" data-wishitem-time="{{ wishitem.date.isoformat() if wishitem.date else '' }}">
           <th scope="row">{{count.value}}</th>
           <td> {{wishitem.date | format_datetime}} </td>
           <td contenteditable="true" oninput="autoSave(this)"> {{wishitem.brand}} </td>
@@ -155,20 +193,20 @@
               {% endif %}
           </td>
           <td>
-            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist'), addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
+            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist'); addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
               <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> unhook&#129693;</span>
             </button>
           </td>
           <td>
-          <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, true, '/my-wishlist'), addWishItemPeriod({{wishitem.id}}, '/my-wishlist')"">
+          <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, true, '/my-wishlist'); addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
           <span id='purchase-button' style="color: red; font-size: 11pt;" aria-hidden="true"> purchase&#129297;</span>
           </button>
           </td>
           <td>
           <button type="button" class="close" onClick="deleteItem({{ wishitem.id }}, '/my-wishlist')">
             <span aria-hidden="true">&times;</span>
-          </td>
           </button>
+          </td>
         </tr>
       {% endif %}
       </li>
@@ -339,25 +377,90 @@
               .catch(error => console.error('Error:', error));
             }
         }
-      // Function to filter table based on category
+      // Function to filter table based on category, brand, and date range
       function filterTable() {
         var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
-        console.log('categoryFilter:', categoryFilter); // Print categoryFilter
+        console.log('categoryFilter:', categoryFilter);
         var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
-        console.log('brandFilter:', brandFilter); // Print categoryFilter
+        console.log('brandFilter:', brandFilter);
+
+        var startInput = document.getElementById("startDate");
+        var endInput = document.getElementById("endDate");
+        var startDateValue = startInput && startInput.value ? startInput.value : "";
+        var endDateValue = endInput && endInput.value ? endInput.value : "";
+        var startDate = startDateValue ? new Date(startDateValue) : null;
+        var endDate = endDateValue ? new Date(endDateValue) : null;
+        if (endDate) { endDate.setHours(23, 59, 59, 999); }
+
         var rows = document.querySelectorAll("#wishlist-table tbody tr");
 
         rows.forEach(row => {
-          var tdCategory = row.getAttribute("data-wishitem-category").toLowerCase();
-          console.log('tdCategory:', tdCategory); // Print tdCategory
-          var tdBrand = row.getAttribute("data-wishitem-brand").toLowerCase();
-          if ((categoryFilter === "" || tdCategory.includes(categoryFilter)) &&
-              (brandFilter === "" || tdBrand.includes(brandFilter))) {
+          var tdCategory = (row.getAttribute("data-wishitem-category") || "").toLowerCase();
+          console.log('tdCategory:', tdCategory);
+          var tdBrand = (row.getAttribute("data-wishitem-brand") || "").toLowerCase();
+          var rowTimeAttr = row.getAttribute("data-wishitem-time") || "";
+          var rowDate = rowTimeAttr ? new Date(rowTimeAttr) : null;
+
+          var categoryMatch = (categoryFilter === "" || tdCategory.includes(categoryFilter));
+          var brandMatch = (brandFilter === "" || tdBrand.includes(brandFilter));
+          var dateMatch = true;
+
+          if (startDate || endDate) {
+            if (rowDate) {
+              if (startDate && endDate) {
+                dateMatch = rowDate >= startDate && rowDate <= endDate;
+              } else if (startDate) {
+                dateMatch = rowDate >= startDate;
+              } else if (endDate) {
+                dateMatch = rowDate <= endDate;
+              }
+            } else {
+              dateMatch = false;
+            }
+          }
+
+          if (categoryMatch && brandMatch && dateMatch) {
             row.style.display = "";
           } else {
             row.style.display = "none";
           }
         });
+      }
+
+      function toggleDateFilterPopup(forceState) {
+        var popup = document.getElementById("dateFilterPopup");
+        if (!popup) return;
+        if (typeof forceState === "boolean") {
+          popup.style.display = forceState ? "block" : "none";
+          return;
+        }
+        popup.style.display = (popup.style.display === "none" || popup.style.display === "") ? "block" : "none";
+      }
+
+      function handleDateChange() {
+        var startInput = document.getElementById("startDate");
+        var endInput = document.getElementById("endDate");
+        if (!startInput || !endInput) return;
+
+        if (startInput.value && endInput.value) {
+          filterTable();
+          toggleDateFilterPopup(false);
+        }
+      }
+
+      function resetDateFilter() {
+        var startInput = document.getElementById("startDate");
+        var endInput = document.getElementById("endDate");
+        if (startInput) startInput.value = "";
+        if (endInput) endInput.value = "";
+
+        var brandFilterEl = document.getElementById("brandFilter");
+        var tagFilterEl = document.getElementById("tagFilter");
+        if (brandFilterEl) brandFilterEl.value = "";
+        if (tagFilterEl) tagFilterEl.value = "";
+
+        filterTable();
+        toggleDateFilterPopup(false);
       }
       </script>
    <br />
@@ -626,4 +729,5 @@
      <div id="modalCaption" style="margin: auto; display: block; width: 80%; max-width: 700px; text-align: center; color: #ccc; padding: 10px 0; height: 150px;"></div>
    </div>
  </div>
+  </div>
  {% endblock %}
