@@ -1,6 +1,5 @@
 {% extends "base.html" %} {% block title %}Wish List{% endblock %} {% block content
   %}
-  <!-- below is sample style -->
    <style>
     input:placeholder-shown {
       font-style: italic;
@@ -161,7 +160,7 @@
               <img src="{{ wishitem.image_url }}" alt="{{ wishitem.name }}" style="max-width: 80px; max-height: 80px; object-fit: cover; margin: 5px 0; cursor: pointer;" onclick="openImageModal('{{ wishitem.image_url }}', '{{ wishitem.name }}')">
               <br>
             {% endif %}
-            <span style="font-size: smaller; color: grey; font-style: italic;">
+            <span class="desc-container" style="font-size: smaller; color: grey; font-style: italic;">
               {{ wishitem.description | format_description }}
             </span>
           </td>
@@ -481,6 +480,45 @@
         window.scrollTo(0, scrollPosition);
         localStorage.removeItem('scrollPosition'); // Clean up
       }
+
+      // Truncate descriptions and handle expand/collapse
+      const MAX_DESC = 90;
+      const descNodes = document.querySelectorAll('.desc-container');
+      descNodes.forEach(node => {
+        const full = node.textContent.trim();
+        node.setAttribute('data-full', full);
+        if (full.length > MAX_DESC) {
+          const truncated = full.slice(0, MAX_DESC) + '...';
+          node.textContent = truncated;
+          node.setAttribute('data-truncated', truncated);
+          node.setAttribute('data-expanded', 'false');
+          node.style.cursor = 'pointer';
+        }
+      });
+
+      document.addEventListener('click', function(e) {
+        const target = e.target;
+        // Toggle on clicking the description itself
+        if (target.classList && target.classList.contains('desc-container')) {
+          const expanded = target.getAttribute('data-expanded') === 'true';
+          if (!expanded) {
+            target.textContent = target.getAttribute('data-full');
+            target.setAttribute('data-expanded', 'true');
+          } else {
+            target.textContent = target.getAttribute('data-truncated') || target.getAttribute('data-full');
+            target.setAttribute('data-expanded', 'false');
+          }
+          return;
+        }
+        // Collapse any expanded descriptions when clicking outside
+        document.querySelectorAll('.desc-container[data-expanded="true"]').forEach(openNode => {
+          const truncated = openNode.getAttribute('data-truncated');
+          if (truncated) {
+            openNode.textContent = truncated;
+            openNode.setAttribute('data-expanded', 'false');
+          }
+        });
+      });
 
             // Initialize price fields with original values for validation
       const priceFields = document.querySelectorAll('td[data-field="price"]');
