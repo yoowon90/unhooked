@@ -353,6 +353,7 @@ class ItemDetails:
 
         # Add image URL to the result
         result['image_url'] = self.extract_image_url()
+        print(f"Image URL: {result['image_url']}")
 
         # If direct image extraction failed, try Google search fallback
         if not result['image_url']:
