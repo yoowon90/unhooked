@@ -15,8 +15,36 @@
     #purchasedlist-table { --bs-table-border-color: #dee2e6 !important; }
     #purchasedlist-table th,
     #purchasedlist-table td { border-color: #dee2e6 !important; }
+
+    /* Purchased page background pattern */
+    body.purchased-bg {
+      /* image from https://www.redbubble.com/i/art-board-print/Nursery-Characters-Peter-Rabbit-Beatrix-Potter-by-SvetlanaArt/146953707.7Q6GI */
+      background-image: url('/static/purchased-pattern.png');
+      background-repeat: repeat;
+      background-size: 260px auto;
+      background-position: top left;
+      background-attachment: scroll;
+    }
+
+    /* Translucent content overlay */
+    .purchased-content-card {
+      background-color: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px auto;
+      max-width: 1100px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
    </style>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.classList.add('purchased-bg');
+    });
+  </script>
+
+  <div class="purchased-content-card">
   <!-- this is the same as base.html and overwrite any blocks -->
   <br>
   <h2 align="center">&#129534; Purchase List &#129534;</h2>
@@ -163,4 +191,5 @@
     </script>
 
   <br>
+  </div>
  {% endblock %}
