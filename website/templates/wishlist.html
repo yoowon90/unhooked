@@ -43,7 +43,7 @@
       /* image from https://wallpapercave.com/beatrix-potter-wallpapers */
       background-image: url('/static/wishlist-pattern.png');
       background-repeat: repeat;
-      background-size: 320px auto;
+      background-size: 380px auto;
       background-position: top left;
       background-attachment: scroll;
     }
@@ -57,6 +57,44 @@
       margin: 24px auto;
       max-width: 1100px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Image thumbnail wrapper and remove control */
+    .image-thumb-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .image-thumb {
+      max-width: 80px;
+      max-height: 80px;
+      object-fit: cover;
+      margin: 5px 0;
+      cursor: pointer;
+      display: block;
+    }
+
+    .image-remove-ctrl {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(255, 255, 255, 0.7);
+      color: #333;
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      user-select: none;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .image-remove-ctrl:hover {
+      background: rgba(255, 255, 255, 0.9);
     }
 
    </style>
@@ -155,9 +193,12 @@
             </span>
           </td>
           <td contenteditable="true" oninput="autoSave(this)">
-            <span style="color: blue; text-decoration: underline; font-size:11pt" onClick="window.open('{{ wishitem.link }}', '_blank')"> {{wishitem.name}} </span> <br>
+            <span style="color: blue; text-decoration: underline; font-size:11pt" onclick="window.open('{{ wishitem.link }}', '_blank')"> {{wishitem.name}} </span> <br>
             {% if wishitem.image_url %}
-              <img src="{{ wishitem.image_url }}" alt="{{ wishitem.name }}" style="max-width: 80px; max-height: 80px; object-fit: cover; margin: 5px 0; cursor: pointer;" onclick="openImageModal('{{ wishitem.image_url }}', '{{ wishitem.name }}')">
+              <div class="image-thumb-wrapper" data-wishitem-id="{{ wishitem.id }}">
+                <img class="image-thumb" src="{{ wishitem.image_url }}" alt="{{ wishitem.name }}" onclick="openImageModal('{{ wishitem.image_url }}', '{{ wishitem.name }}')">
+                <div class="image-remove-ctrl" title="Remove image" onclick="removeWishItemImage({{ wishitem.id }}, this, event)">×</div>
+              </div>
               <br>
             {% endif %}
             <span class="desc-container" style="font-size: smaller; color: grey; font-style: italic;">
@@ -165,7 +206,7 @@
             </span>
           </td>
           <td>
-            <button type="button" class="close" onClick="toggleFavoriteWishItem({{ wishitem.id }})">
+            <button type="button" class="close" onclick="toggleFavoriteWishItem({{ wishitem.id }})">
               <!-- <span class="favorite-icon" style="font-size: 11pt;" aria-hidden="true">⠀</span> Heart emoji &#10084;-->
               <span id="favorite-button" style="font-size: 11pt;" aria-hidden="true">
                 {% if wishitem.favorited %}
@@ -192,12 +233,12 @@
               {% endif %}
           </td>
           <td>
-            <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist'); addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
+            <button type="button" class="close" onclick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist'); addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
               <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> unhook&#129693;</span>
             </button>
           </td>
           <td>
-          <button type="button" class="close" onClick="toggleWishItem({{ wishitem.id }}, false, true, '/my-wishlist'); addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
+          <button type="button" class="close" onclick="toggleWishItem({{ wishitem.id }}, false, true, '/my-wishlist'); addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
           <span id='purchase-button' style="color: red; font-size: 11pt;" aria-hidden="true"> purchase&#129297;</span>
           </button>
           </td>
@@ -359,7 +400,31 @@
             } else {
               // Handle other editable fields (existing logic)
               const cells = row.querySelectorAll('td[contenteditable="true"]:not([data-field="price"])');
-              const data = Array.from(cells).map(cell => cell.innerText);
+
+              // Extract brand and category/tag as-is
+              const brandVal = cells[0] ? cells[0].innerText : '';
+              const categoryTagVal = cells[1] ? cells[1].innerText : '';
+
+              // For Name/Description, exclude Show more/less and use only description text
+              const nameDescCell = cells[2];
+              let nameVal = '';
+              let descVal = '';
+              if (nameDescCell) {
+                const nameEl = nameDescCell.querySelector('span[style*="text-decoration: underline"]');
+                nameVal = nameEl ? nameEl.textContent.trim() : (nameDescCell.innerText.split('\n')[0] || '').trim();
+                const descContainer = nameDescCell.querySelector('.desc-container');
+                const descTextEl = descContainer ? descContainer.querySelector('.desc-text') : null;
+                if (descContainer && descTextEl) {
+                  // Keep data-full in sync with what's visible/edited
+                  descContainer.setAttribute('data-full', descTextEl.textContent.trim());
+                  descVal = descContainer.getAttribute('data-full') || '';
+                } else {
+                  descVal = (nameDescCell.innerText.split('\n')[1] || '').trim();
+                }
+              }
+              const nameDescVal = nameVal + (descVal ? ('\n' + descVal) : '');
+
+              const data = [brandVal, categoryTagVal, nameDescVal];
 
               // print/log the data to the console
               console.log(data); // print data array to browser console (F12 -> Console tab)
@@ -481,43 +546,63 @@
         localStorage.removeItem('scrollPosition'); // Clean up
       }
 
-      // Truncate descriptions and handle expand/collapse
+      // Truncate descriptions and add Show more/Show less controls
       const MAX_DESC = 90;
       const descNodes = document.querySelectorAll('.desc-container');
+
+      function renderDesc(node) {
+        const full = node.getAttribute('data-full') || '';
+        const expanded = node.getAttribute('data-expanded') === 'true';
+        const truncated = node.getAttribute('data-truncated') || full;
+        node.innerHTML = '';
+
+        const textSpan = document.createElement('span');
+        textSpan.className = 'desc-text';
+        textSpan.textContent = expanded ? full : truncated;
+        node.appendChild(textSpan);
+
+        if (full.length > MAX_DESC) {
+          const toggle = document.createElement('span');
+          toggle.className = 'desc-toggle';
+          toggle.setAttribute('contenteditable', 'false');
+          toggle.innerHTML = expanded ? ' <em><u>Show less</u></em>' : ' <em><u>Show more</u></em>';
+          node.appendChild(toggle);
+        }
+      }
+
       descNodes.forEach(node => {
         const full = node.textContent.trim();
         node.setAttribute('data-full', full);
         if (full.length > MAX_DESC) {
-          const truncated = full.slice(0, MAX_DESC) + '...';
-          node.textContent = truncated;
+          let truncated = full.slice(0, MAX_DESC).trimEnd();
+          const lastSpace = truncated.lastIndexOf(' ');
+          if (lastSpace > 40) truncated = truncated.slice(0, lastSpace);
           node.setAttribute('data-truncated', truncated);
           node.setAttribute('data-expanded', 'false');
-          node.style.cursor = 'pointer';
+        } else {
+          node.setAttribute('data-expanded', 'true');
+        }
+        renderDesc(node);
+      });
+
+      // Prevent focus/caret on toggles inside contenteditable cells
+      document.addEventListener('mousedown', function(e) {
+        if (e.target.closest && e.target.closest('.desc-toggle')) {
+          e.preventDefault();
         }
       });
 
+      // Handle Show more/Show less clicks only
       document.addEventListener('click', function(e) {
-        const target = e.target;
-        // Toggle on clicking the description itself
-        if (target.classList && target.classList.contains('desc-container')) {
-          const expanded = target.getAttribute('data-expanded') === 'true';
-          if (!expanded) {
-            target.textContent = target.getAttribute('data-full');
-            target.setAttribute('data-expanded', 'true');
-          } else {
-            target.textContent = target.getAttribute('data-truncated') || target.getAttribute('data-full');
-            target.setAttribute('data-expanded', 'false');
-          }
-          return;
-        }
-        // Collapse any expanded descriptions when clicking outside
-        document.querySelectorAll('.desc-container[data-expanded="true"]').forEach(openNode => {
-          const truncated = openNode.getAttribute('data-truncated');
-          if (truncated) {
-            openNode.textContent = truncated;
-            openNode.setAttribute('data-expanded', 'false');
-          }
-        });
+        const toggleEl = e.target.closest && e.target.closest('.desc-toggle');
+        if (!toggleEl) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const container = toggleEl.closest('.desc-container');
+        if (!container) return;
+        const expanded = container.getAttribute('data-expanded') === 'true';
+        container.setAttribute('data-expanded', expanded ? 'false' : 'true');
+        renderDesc(container);
       });
 
             // Initialize price fields with original values for validation

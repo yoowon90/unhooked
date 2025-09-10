@@ -209,7 +209,8 @@ class ItemDetails:
             print(f"Error extracting image: {e}")
             return None
 
-    def google_search_image_fallback(self, brand, name, description):
+    @staticmethod
+    def google_search_image_fallback(brand, name, description, price):
         """Fallback method to search Google for product images when direct extraction fails"""
         try:
             # Construct search query from brand, name, and description
@@ -220,21 +221,21 @@ class ItemDetails:
                 search_terms.append(name)
             if description:
                 # Clean description to get key terms
-                desc_clean = re.sub(r'[^\w\s]', ' ', description)
-                desc_words = desc_clean.split()[:5]  # Take first 5 words
-                search_terms.extend(desc_words)
-
+                desc_clean = re.sub(r'[^\w\s]', '', description)
+                search_terms.append(desc_clean)
+            if price:
+                search_terms.append(price)
             if not search_terms:
                 return None
 
             # Create search query - add "product" to make it more specific
-            search_query = ' '.join(search_terms) + ' product'
+            search_query = ' '.join(search_terms)
             print(f"Google search fallback for: {search_query}")
 
             # Try multiple search strategies
             search_strategies = [
-                f"https://www.google.com/search?q={quote_plus(search_query)}",
-                f"https://www.google.com/search?q={quote_plus(search_query)}&tbm=shop",  # Shopping tab
+                # f"https://www.google.com/search?q={quote_plus(search_query)}",
+                # f"https://www.google.com/search?q={quote_plus(search_query)}&tbm=shop",  # Shopping tab
                 f"https://www.google.com/search?q={quote_plus(search_query)}&tbm=isch"   # Image search
             ]
 
@@ -292,8 +293,8 @@ class ItemDetails:
                                 return filtered_matches[0]
 
                     # Add delay between requests to be respectful
-                    import time
-                    time.sleep(1)
+                    # import time
+                    # time.sleep(1)
 
                 except Exception as e:
                     print(f"Error with search strategy {search_url}: {e}")
@@ -354,19 +355,5 @@ class ItemDetails:
         # Add image URL to the result
         result['image_url'] = self.extract_image_url()
         print(f"Image URL: {result['image_url']}")
-
-        # If direct image extraction failed, try Google search fallback
-        if not result['image_url']:
-            print("Direct image extraction failed, trying Google search fallback...")
-            fallback_image = self.google_search_image_fallback(
-                result.get('brand'),
-                result.get('name'),
-                result.get('description')
-            )
-            if fallback_image:
-                result['image_url'] = fallback_image
-                print(f"Successfully found fallback image: {fallback_image}")
-            else:
-                print("Google search fallback also failed")
 
         return result
