@@ -17,7 +17,7 @@ from pytz import timezone
 # store standard routes (url defined), anything that users can navitage to.
 
 views = Blueprint('views', __name__)  # define blueprint
-TAX = {'11217': 0.0875}
+TAX = {'11217': 0.0875, '15206': 0}
 # manhattan, brooklyn, queens, bronx, staten island
 NYC = ['10001', '10011', '11019', '10023', '10128',
                 '11201', '11211', '11217', '11231', '11238',
