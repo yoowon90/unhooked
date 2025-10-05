@@ -1,18 +1,16 @@
 """ Description: This file contains the routes for the website."""
 # Imports
+import re
 import os
 import datetime
 import json
 import requests
 from bs4 import BeautifulSoup
-from sqlalchemy.sql import func
 from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import current_user, login_required
 from .models import Note, WishItem
 from . import db
 from .url_extraction import ItemDetails
-from pytz import timezone
-
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -70,6 +68,8 @@ def wishlist():
     if request.method == 'POST':
         # allow flexibility with price
         raw_price = request.form.get('price')
+        if re.search(r'[A-Za-z]\s*$', raw_price):  # ends with an alphabet (optionally followed by spaces)
+            raw_price = re.sub(r'[A-Za-z]+\s*$', '', raw_price)
         if raw_price.startswith('$'):
             raw_price = raw_price[1:].strip()
         raw_price = raw_price.replace(',', '')  # replace comma with period
