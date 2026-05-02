@@ -126,7 +126,7 @@
 
   <!-- URL fetch card -->
   <div class="url-fetch-card" id="url-fetch-card">
-    <h5 style="margin-bottom: 12px;">&#10133; Add Item from URL</h5>
+    <h5 style="margin-bottom: 12px;">&#10133; Add Item from URL <span id="url-loading-msg" style="display: none; font-size: 13px; font-weight: normal; color: #888; font-style: italic;"></span></h5>
     <div style="display: flex; align-items: center; gap: 8px;">
       <input type="text" id="url-input" placeholder="Paste a product URL..."
              class="form-control" style="flex: 1;">
@@ -235,8 +235,30 @@
       errIcon.style.display = 'none';
       wrapper.style.display = 'none';
 
+      var _loadingMessages = [
+        'ooh, cute find! pulling the details...',
+        'window shopping at warp speed...',
+        'checking the price tag for you...',
+        'almost in your cart...',
+        'manifesting the perfect deets...',
+      ];
+      var _msgEl = document.getElementById('url-loading-msg');
+      var _msgIdx = 0;
+      _msgEl.textContent = _loadingMessages[0];
+      _msgEl.style.display = 'inline';
+      var _msgTimer = setInterval(function() {
+        _msgIdx = (_msgIdx + 1) % _loadingMessages.length;
+        _msgEl.textContent = _loadingMessages[_msgIdx];
+      }, 2500);
+
+      function _stopLoading() {
+        clearInterval(_msgTimer);
+        _msgEl.style.display = 'none';
+        _msgEl.textContent = '';
+      }
+
       var controller = new AbortController();
-      var timeoutId = setTimeout(function() { controller.abort(); }, 6000);
+      var timeoutId = setTimeout(function() { controller.abort(); }, 10000);
 
       fetch('/fetch-url-info', {
         method: 'POST',
@@ -247,6 +269,7 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         clearTimeout(timeoutId);
+        _stopLoading();
         spinner.style.display = 'none';
         var hasData = data.success && (data.name || data.price || data.brand);
 
@@ -272,6 +295,7 @@
       })
       .catch(function() {
         clearTimeout(timeoutId);
+        _stopLoading();
         spinner.style.display = 'none';
         errIcon.style.display = 'inline';
         document.getElementById('fetch-link').value = url;
