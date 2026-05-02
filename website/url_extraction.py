@@ -36,6 +36,9 @@ async def _pydoll_fetch(url: str) -> str:
         tab = await browser.start()
         await tab.enable_auto_solve_cloudflare_captcha()
         await tab.go_to(url, timeout=30)
+        # go_to() resolves on Page.loadEventFired, but SPAs (e.g. Next.js/Zara) fetch
+        # product data after that event. Give JS time to finish rendering.
+        await asyncio.sleep(4)
         return await tab.page_source
 
 
@@ -369,6 +372,57 @@ class ItemDetails:
         suffix = normalized.lower().replace(' ', '_').replace('.', '').replace('-', '_')
         return f'extract_{suffix}'
 
+    def extract_generic(self):
+        """
+        Last-resort extractor for any site. Tries schema.org Product JSON-LD first,
+        then falls back to OpenGraph and itemprop meta tags.
+        Runs only when all brand-specific extractors return empty.
+        """
+        data_copy = copy.deepcopy(self.__default_data)
+        try:
+            soup = self.soup
+
+            # 1. Try every JSON-LD block and pick the first Product schema
+            for script in soup.find_all('script', {'type': 'application/ld+json'}):
+                try:
+                    json_data = json.loads(script.string)
+                    if isinstance(json_data, list):
+                        json_data = next((d for d in json_data if d.get('@type') == 'Product'), json_data[0])
+                    if json_data.get('@type') == 'Product':
+                        brand = json_data.get('brand', {})
+                        data_copy['name'] = json_data.get('name')
+                        data_copy['brand'] = brand.get('name') if isinstance(brand, dict) else brand
+                        data_copy['price'] = json_data.get('offers', {}).get('price')
+                        data_copy['currency'] = json_data.get('offers', {}).get('priceCurrency')
+                        data_copy['description'] = json_data.get('description')
+                        if any(v is not None for v in data_copy.values()):
+                            print("extract_generic: matched via JSON-LD Product schema")
+                            return data_copy
+                except Exception:
+                    continue
+
+            # 2. Fall back to OpenGraph / itemprop meta tags
+            def og(prop):
+                tag = soup.find('meta', {'property': prop}) or soup.find('meta', {'name': prop})
+                return tag.get('content') if tag else None
+
+            def itemprop(prop):
+                tag = soup.find('meta', {'itemprop': prop})
+                return tag.get('content') if tag else None
+
+            data_copy['name'] = og('og:title')
+            data_copy['brand'] = og('og:site_name')
+            data_copy['price'] = (og('og:price:amount') or og('product:price:amount') or itemprop('price'))
+            data_copy['currency'] = (og('og:price:currency') or og('product:price:currency') or itemprop('priceCurrency'))
+            data_copy['description'] = og('og:description')
+
+            if any(v is not None for v in data_copy.values()):
+                print("extract_generic: matched via OpenGraph tags")
+
+        except Exception as e:
+            print(f"extract_generic failed: {e}")
+        return data_copy
+
     def get_item_data(self):
         extract_methods = self.get_extract_methods()
         matches = {brand: dict() for brand in self.brands}
@@ -378,7 +432,6 @@ class ItemDetails:
             if method_name in extract_methods:
                 result = extract_methods[method_name]()
                 print(f"{brand} → {method_name}: {result}")
-                # Use a separate variable to avoid shadowing the loop variable
                 matches[brand] = dict(
                     name=result['name'],
                     price=result['price'],
@@ -390,23 +443,18 @@ class ItemDetails:
             else:
                 print(f"{brand} → {method_name}: no extractor")
 
-        # get the brand with the most matches. if multiple, pick one where brand_extract_dict['brand'] is equal to brand.
-        # if still multiple, pick the first one
-        match_counts = {brand: sum([1 for value in brand_dict.values() if value is not None]) for brand, brand_dict in matches.items()}
+        match_counts = {brand: sum(1 for v in d.values() if v is not None) for brand, d in matches.items()}
         max_matches = max(match_counts.values())
         if max_matches == 0:
-            print("No matches found. Using default data..")
-            result = self.__default_data
+            print("No brand-specific matches. Trying generic extractor...")
+            result = self.extract_generic()
         else:
-            # first filter bratches that have a brand among the matches
-            brand_detections = [brand for brand, count in match_counts.items() if count == max_matches and brand is not None]
-            if len(brand_detections):
-                print(f"There has been a match and a branch detection: {brand_detections[0]}")
+            brand_detections = [b for b, count in match_counts.items() if count == max_matches and b is not None]
+            if brand_detections:
+                print(f"Matched brand: {brand_detections[0]}")
                 result = matches[brand_detections[0]]
             else:
-                print("There has been a match, but no branch match. Using url extraction with the most matches..")
-                # get the brand with the most matches
-                best_brand = [brand for brand, count in match_counts.items() if count == max_matches][0]
+                best_brand = [b for b, count in match_counts.items() if count == max_matches][0]
                 result = matches[best_brand]
 
         # Add image URL to the result
