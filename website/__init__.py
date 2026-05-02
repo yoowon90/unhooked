@@ -3,10 +3,12 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
+from flask_jwt_extended import JWTManager
 from config import Config, ProductionConfig, DevelopmentConfig
 import datetime
 
-db = SQLAlchemy()  # not sure if this is right if want to use migrate
+db = SQLAlchemy()
+jwt = JWTManager()
 
 def create_app():
     # initialize the Flask app
@@ -24,17 +26,18 @@ def create_app():
 
 
     db.init_app(app)
-    migrate = Migrate(app, db)  # Initialize Flask-Migrate
+    jwt.init_app(app)
+    migrate = Migrate(app, db)
 
     from .views import views
     from .auth import auth
     from .reports import reports
-    # TODO: ADD MORE
+    from .api import api
 
-    app.register_blueprint(views, url_prefix='/')  # how to access all of the urls inside blueprint files
-    app.register_blueprint(auth, url_prefix='/')  # '/' means no prefix
-    app.register_blueprint(reports, url_prefix='/')  # '/' means no prefix
-    # TODO: ADD MORE
+    app.register_blueprint(views, url_prefix='/')
+    app.register_blueprint(auth, url_prefix='/')
+    app.register_blueprint(reports, url_prefix='/')
+    app.register_blueprint(api, url_prefix='/api/v1')
 
     from .models import User, Note, WishItem
 

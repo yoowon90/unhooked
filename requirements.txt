@@ -2,6 +2,8 @@ flask
 Flask-SQLAlchemy
 flask-login
 flask-migrate
+flask-jwt-extended
+python-dotenv
 matplotlib
 beautifulsoup4
 requests

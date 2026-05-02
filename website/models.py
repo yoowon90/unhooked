@@ -41,11 +41,22 @@ class WishItem(db.Model):
             'name': self.name,
             'brand': self.brand,
             'category': self.category,
+            'tag': self.tag,
+            'description': self.description,
+            'link': self.link,
+            'image_url': self.image_url,
             'price': self.price,
+            'taxed_price': self.taxed_price,
+            'delivery_fee': self.delivery_fee,
+            'total_price': self.total_price,
+            'favorited': self.favorited,
+            'unhooked': self.unhooked,
+            'purchased': self.purchased,
+            'ineligible': self.ineligible,
+            'date': self.date.isoformat() if self.date is not None else None,
             'purchase_date': self.purchase_date.isoformat() if self.purchase_date is not None else None,
-            # Convert datetime to ISO format string
-            'unhooked_date': self.unhooked_date.isoformat() if self.unhooked_date is not None else None
-
+            'unhooked_date': self.unhooked_date.isoformat() if self.unhooked_date is not None else None,
+            'wish_period_seconds': int(self.wish_period.total_seconds()) if self.wish_period is not None else None,
         }
 
 class User(db.Model, UserMixin):

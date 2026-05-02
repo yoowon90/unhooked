@@ -10,3 +10,10 @@ instance/database_prod.db
 
 # Do not track test scripts made for dev purposes.
 BeautifulSoup_test.ipynb
+
+# Environment variables (contains secrets)
+.env
+
+# React Native / Expo
+mobile/node_modules
+mobile/.expo

@@ -1,0 +1,390 @@
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from werkzeug.security import generate_password_hash, check_password_hash
+from .models import User, WishItem
+from . import db
+from .url_extraction import ItemDetails
+import datetime
+import requests
+from bs4 import BeautifulSoup
+
+api = Blueprint('api', __name__)
+
+TAX = {'11217': 0.0875, '15206': 0}
+NYC = ['10001', '10011', '11019', '10023', '10128',
+       '11201', '11211', '11217', '11231', '11238',
+       '11101', '11354', '11375', '11432', '11691',
+       '10451', '10452', '10463', '10467', '10469',
+       '10301', '10304', '10306', '10314']
+
+
+def _current_user():
+    return User.query.get(int(get_jwt_identity()))
+
+
+def _get_item(item_id):
+    """Return WishItem if it belongs to the current user, else a 404 response tuple."""
+    user = _current_user()
+    item = WishItem.query.get(item_id)
+    if not item or item.user_id != user.id:
+        return None, (jsonify({'error': 'Item not found'}), 404)
+    return item, None
+
+
+def _calc_tax(zipcode, price):
+    tax_rate = 0 if (zipcode in NYC and price < 110.00) else TAX.get(zipcode, 0)
+    return price * (1 + tax_rate)
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+
+@api.route('/auth/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    user = User.query.filter_by(email=data.get('email', '').strip()).first()
+    if not user or not check_password_hash(user.password, data.get('password', '')):
+        return jsonify({'error': 'Invalid email or password'}), 401
+    token = create_access_token(identity=str(user.id))
+    return jsonify({'token': token, 'user': _user_dict(user)})
+
+
+@api.route('/auth/signup', methods=['POST'])
+def signup():
+    data = request.get_json() or {}
+    email = data.get('email', '').strip()
+    first_name = data.get('first_name', '').strip()
+    password = data.get('password', '')
+    zipcode = data.get('zipcode', '').strip()
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already exists'}), 409
+    if len(email) < 4:
+        return jsonify({'error': 'Email must be at least 4 characters'}), 400
+    if len(first_name) < 2:
+        return jsonify({'error': 'First name must be at least 2 characters'}), 400
+    if len(password) < 7:
+        return jsonify({'error': 'Password must be at least 7 characters'}), 400
+    if len(zipcode) != 5:
+        return jsonify({'error': 'Zipcode must be 5 digits'}), 400
+
+    user = User(
+        email=email,
+        first_name=first_name,
+        password=generate_password_hash(password, method='pbkdf2:sha256'),
+        zipcode=zipcode,
+    )
+    db.session.add(user)
+    db.session.commit()
+    token = create_access_token(identity=str(user.id))
+    return jsonify({'token': token, 'user': _user_dict(user)}), 201
+
+
+@api.route('/auth/me', methods=['GET'])
+@jwt_required()
+def me():
+    return jsonify(_user_dict(_current_user()))
+
+
+def _user_dict(user):
+    return {
+        'id': user.id,
+        'email': user.email,
+        'first_name': user.first_name,
+        'zipcode': user.zipcode,
+        'last_purchase_date': user.last_purchase_date.isoformat() if user.last_purchase_date else None,
+    }
+
+
+# ── WishItems ─────────────────────────────────────────────────────────────────
+
+@api.route('/wishitems', methods=['GET'])
+@jwt_required()
+def list_wishitems():
+    user = _current_user()
+    status = request.args.get('status')
+    category = request.args.get('category')
+    brand = request.args.get('brand')
+
+    q = WishItem.query.filter_by(user_id=user.id)
+    if status == 'wishlist':
+        q = q.filter_by(unhooked=False, purchased=False)
+    elif status == 'purchased':
+        q = q.filter_by(purchased=True, unhooked=False)
+    elif status == 'unhooked':
+        q = q.filter_by(unhooked=True, purchased=False)
+    if category:
+        q = q.filter_by(category=category)
+    if brand:
+        q = q.filter_by(brand=brand)
+
+    return jsonify([i.to_dict() for i in q.order_by(WishItem.date.desc()).all()])
+
+
+@api.route('/wishitems', methods=['POST'])
+@jwt_required()
+def create_wishitem():
+    user = _current_user()
+    data = request.get_json() or {}
+
+    name = data.get('name', '').strip()
+    brand = data.get('brand', '').strip()
+    category = data.get('category', '').strip()
+    link = data.get('link', '').strip()
+
+    if not name:
+        return jsonify({'error': 'Name is required'}), 400
+    if not brand:
+        return jsonify({'error': 'Brand is required'}), 400
+    if not category:
+        return jsonify({'error': 'Category is required'}), 400
+    if len(link) < 5:
+        return jsonify({'error': 'Invalid link'}), 400
+
+    try:
+        price = float(data.get('price', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Price must be a number'}), 400
+    if price < 0:
+        return jsonify({'error': 'Price cannot be negative'}), 400
+
+    try:
+        delivery_fee = float(data.get('delivery_fee') or 0)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Delivery fee must be a number'}), 400
+    if delivery_fee < 0:
+        return jsonify({'error': 'Delivery fee cannot be negative'}), 400
+
+    tag = data.get('tag')
+    description = data.get('description', '')
+    image_url = data.get('image_url')
+
+    taxed_price = _calc_tax(user.zipcode, price)
+
+    if not image_url:
+        try:
+            image_url = ItemDetails.google_search_image_fallback(brand, name, description, price)
+        except Exception:
+            pass
+
+    name = ' '.join(word.capitalize() for word in name.split())
+
+    item = WishItem(
+        user_id=user.id,
+        name=name,
+        brand=brand,
+        category=category,
+        tag=tag,
+        link=link,
+        description=description,
+        image_url=image_url,
+        price=price,
+        taxed_price=taxed_price,
+        delivery_fee=delivery_fee,
+        total_price=taxed_price + delivery_fee,
+        wish_period=datetime.timedelta(seconds=0),
+        date=datetime.datetime.now(),
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(item.to_dict()), 201
+
+
+@api.route('/wishitems/<int:item_id>', methods=['GET'])
+@jwt_required()
+def get_wishitem(item_id):
+    item, err = _get_item(item_id)
+    if err:
+        return err
+    return jsonify(item.to_dict())
+
+
+@api.route('/wishitems/<int:item_id>', methods=['PATCH'])
+@jwt_required()
+def update_wishitem(item_id):
+    item, err = _get_item(item_id)
+    if err:
+        return err
+
+    data = request.get_json() or {}
+
+    for field in ('name', 'brand', 'category', 'tag', 'description', 'link', 'image_url'):
+        if field in data:
+            setattr(item, field, data[field])
+
+    if 'price' in data:
+        try:
+            new_price = float(data['price'])
+            if new_price < 0:
+                return jsonify({'error': 'Price cannot be negative'}), 400
+            user = _current_user()
+            item.price = new_price
+            item.taxed_price = _calc_tax(user.zipcode, new_price)
+            item.total_price = item.taxed_price + (item.delivery_fee or 0)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Price must be a number'}), 400
+
+    if 'delivery_fee' in data:
+        try:
+            item.delivery_fee = float(data['delivery_fee'])
+            item.total_price = item.taxed_price + item.delivery_fee
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Delivery fee must be a number'}), 400
+
+    db.session.commit()
+    return jsonify(item.to_dict())
+
+
+@api.route('/wishitems/<int:item_id>', methods=['DELETE'])
+@jwt_required()
+def delete_wishitem(item_id):
+    item, err = _get_item(item_id)
+    if err:
+        return err
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({})
+
+
+@api.route('/wishitems/<int:item_id>/status', methods=['POST'])
+@jwt_required()
+def set_status(item_id):
+    item, err = _get_item(item_id)
+    if err:
+        return err
+
+    status = (request.get_json() or {}).get('status')
+    if status not in ('wishlist', 'purchased', 'unhooked'):
+        return jsonify({'error': 'status must be wishlist, purchased, or unhooked'}), 400
+
+    if status == 'wishlist':
+        item.unhooked = False
+        item.purchased = False
+    elif status == 'purchased':
+        item.purchased = True
+        item.unhooked = False
+        item.purchase_date = datetime.datetime.now()
+        user = _current_user()
+        user.last_purchase_date = item.purchase_date
+    elif status == 'unhooked':
+        item.unhooked = True
+        item.purchased = False
+        item.unhooked_date = datetime.datetime.now()
+        if item.date:
+            item.wish_period = datetime.datetime.now() - item.date
+
+    db.session.commit()
+    return jsonify(item.to_dict())
+
+
+@api.route('/wishitems/<int:item_id>/favorite', methods=['POST'])
+@jwt_required()
+def toggle_favorite(item_id):
+    item, err = _get_item(item_id)
+    if err:
+        return err
+    item.favorited = not item.favorited
+    db.session.commit()
+    return jsonify(item.to_dict())
+
+
+@api.route('/wishitems/<int:item_id>/image', methods=['DELETE'])
+@jwt_required()
+def remove_image(item_id):
+    item, err = _get_item(item_id)
+    if err:
+        return err
+    item.image_url = None
+    db.session.commit()
+    return jsonify({})
+
+
+# ── URL Extraction ────────────────────────────────────────────────────────────
+
+@api.route('/extract', methods=['POST'])
+@jwt_required()
+def extract_url():
+    url = (request.get_json() or {}).get('url')
+    if not url:
+        return jsonify({'error': 'url is required'}), 400
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.8',
+        'Connection': 'keep-alive',
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=5)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        data = ItemDetails(soup).get_item_data()
+        data['success'] = True
+        return jsonify(data)
+    except Exception as e:
+        print(f"URL extraction error: {e}")
+        return jsonify({'success': False, 'name': None, 'price': None, 'brand': None,
+                        'description': None, 'currency': None, 'image_url': None})
+
+
+# ── Reports ───────────────────────────────────────────────────────────────────
+
+@api.route('/reports/summary', methods=['GET'])
+@jwt_required()
+def reports_summary():
+    user = _current_user()
+
+    spenditure = {}
+    saves = {}
+    for item in user.wishitems:
+        if item.purchased and item.purchase_date:
+            key = item.purchase_date.date().isoformat()
+            spenditure[key] = round(spenditure.get(key, 0) + (item.price or 0), 2)
+        if item.unhooked and item.unhooked_date:
+            key = item.unhooked_date.date().isoformat()
+            saves[key] = round(saves.get(key, 0) + (item.price or 0), 2)
+
+    return jsonify({
+        'last_purchase_date': user.last_purchase_date.isoformat() if user.last_purchase_date else None,
+        'spenditure': spenditure,
+        'saves': saves,
+    })
+
+
+@api.route('/reports/generate', methods=['POST'])
+@jwt_required()
+def reports_generate():
+    user = _current_user()
+    data = request.get_json() or {}
+
+    try:
+        start = datetime.datetime.strptime(data['start_date'], '%Y-%m-%d')
+        end = datetime.datetime.strptime(data['end_date'], '%Y-%m-%d')
+    except (KeyError, ValueError):
+        return jsonify({'error': 'start_date and end_date required in YYYY-MM-DD format'}), 400
+
+    purchased = [i for i in user.wishitems
+                 if i.purchased and i.purchase_date and start <= i.purchase_date <= end]
+    unhooked = [i for i in user.wishitems
+                if i.unhooked and i.unhooked_date and start <= i.unhooked_date <= end]
+    wishlist = [i for i in user.wishitems
+                if not i.purchased and not i.unhooked and i.date and start <= i.date <= end]
+
+    def count_by(items, field):
+        counts = {}
+        for item in items:
+            key = getattr(item, field) or 'Unknown'
+            counts[key] = counts.get(key, 0) + 1
+        return [{'label': k, 'count': v} for k, v in sorted(counts.items(), key=lambda x: -x[1])]
+
+    return jsonify({
+        'start_date': data['start_date'],
+        'end_date': data['end_date'],
+        'total_spent': round(sum(i.taxed_price or 0 for i in purchased), 2),
+        'total_saved': round(sum(i.price or 0 for i in unhooked), 2),
+        'purchased_by_category': count_by(purchased, 'category'),
+        'purchased_by_brand': count_by(purchased, 'brand'),
+        'unhooked_by_category': count_by(unhooked, 'category'),
+        'unhooked_by_brand': count_by(unhooked, 'brand'),
+        'wishlist_by_category': count_by(wishlist, 'category'),
+        'wishlist_by_brand': count_by(wishlist, 'brand'),
+    })
