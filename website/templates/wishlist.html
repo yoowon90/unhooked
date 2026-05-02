@@ -243,6 +243,7 @@
       document.getElementById('fetch-name').value        = '';
       document.getElementById('fetch-price').value       = '';
       document.getElementById('fetch-description').value = '';
+      document.getElementById('fetch-category').value   = '';
       document.getElementById('fetch-link').value        = '';
       document.getElementById('fetch-image-url').value   = '';
       document.getElementById('fetch-tag').value         = '';
@@ -337,6 +338,7 @@
           document.getElementById('fetch-price').value       = data.price       || '';
           document.getElementById('fetch-description').value = data.description || '';
           document.getElementById('fetch-image-url').value   = data.image_url  || '';
+          document.getElementById('fetch-category').value   = data.category    || '';
           var preview = document.getElementById('fetch-image-preview');
           if (data.image_url) {
             preview.src = data.image_url;
@@ -369,6 +371,7 @@
       document.getElementById('fetch-name').value        = '';
       document.getElementById('fetch-price').value       = '';
       document.getElementById('fetch-description').value = '';
+      document.getElementById('fetch-category').value   = '';
       document.getElementById('fetch-link').value        = '';
       document.getElementById('fetch-image-url').value   = '';
     }
