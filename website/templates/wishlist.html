@@ -127,30 +127,29 @@
   <!-- URL fetch card -->
   <div class="url-fetch-card" id="url-fetch-card">
     <h5 style="margin-bottom: 12px;">&#10133; Add Item from URL</h5>
-    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-      <input type="text" id="url-input" placeholder="Paste product URL and press Enter..."
-             class="form-control" style="flex: 1; min-width: 280px;">
-      <button type="button" class="btn btn-primary btn-sm" onclick="triggerUrlFetch()">Fetch</button>
-      <div class="spinner-border spinner-border-sm text-primary" id="url-spinner" style="display: none;" role="status">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <input type="text" id="url-input" placeholder="Paste a product URL..."
+             class="form-control" style="flex: 1;">
+      <div class="spinner-border spinner-border-sm text-primary" id="url-spinner" style="display: none; flex-shrink: 0;" role="status">
         <span class="sr-only">Loading...</span>
       </div>
-      <span id="url-error-icon" style="display: none; color: #dc3545; font-size: 20px;" title="Could not load details">&#9888;</span>
+      <span id="url-error-icon" style="display: none; color: #dc3545; font-size: 20px; flex-shrink: 0;" title="Could not load details">&#9888;</span>
     </div>
 
-    <!-- Form revealed after successful fetch -->
-    <div id="url-fetch-form-wrapper" style="display: none; margin-top: 18px; border-top: 1px solid #dee2e6; padding-top: 16px;">
+    <!-- Form — always revealed once a URL is entered; pre-filled on success, empty on failure -->
+    <div id="url-fetch-form-wrapper" style="display: none; margin-top: 18px; border-top: 1px solid #dee2e6; padding-top: 4px;">
       <form method="POST" id="url-fetch-form">
         <input type="hidden" name="image_url" id="fetch-image-url">
-        <table class="table table-sm table-borderless" style="max-width: 700px; margin-bottom: 12px;">
+        <table align="center">
           <tbody>
             <tr>
-              <td style="width: 150px; vertical-align: middle;"><label for="fetch-brand">Brand*</label></td>
-              <td><input type="text" id="fetch-brand" name="brand" class="form-control form-control-sm" placeholder="Rouje"></td>
+              <td>Enter Brand*:</td>
+              <td><input type="text" id="fetch-brand" name="brand" size=60 placeholder="Rouje"></td>
             </tr>
             <tr>
-              <td style="vertical-align: middle;"><label for="fetch-category">Category*</label></td>
+              <td>Enter Category*:</td>
               <td>
-                <select id="fetch-category" name="category" class="form-control form-control-sm">
+                <select id="fetch-category" name="category">
                   <option value="">Select Category</option>
                   <option value="Top">Top</option>
                   <option value="Pants">Pants</option>
@@ -176,34 +175,34 @@
               </td>
             </tr>
             <tr>
-              <td style="vertical-align: middle;"><label for="fetch-tag">Tag</label></td>
-              <td><input type="text" id="fetch-tag" name="tag" class="form-control form-control-sm" placeholder="Tag"></td>
+              <td>Enter Tag:</td>
+              <td><input type="text" id="fetch-tag" name="tag" size=60 placeholder="Tag"></td>
             </tr>
             <tr>
-              <td style="vertical-align: middle;"><label for="fetch-name">Name*</label></td>
-              <td><input type="text" id="fetch-name" name="name" class="form-control form-control-sm" placeholder="Dress Name"></td>
+              <td>Enter Name*:</td>
+              <td><input type="text" id="fetch-name" name="name" size=60 placeholder="CYRIELLE DRESS"></td>
             </tr>
             <tr>
-              <td style="vertical-align: middle;"><label for="fetch-description">Description</label></td>
-              <td><input type="text" id="fetch-description" name="description" class="form-control form-control-sm" placeholder="Pink Dress"></td>
+              <td>Enter Description:</td>
+              <td><input type="text" id="fetch-description" name="description" size=60 placeholder="Pink Dress"></td>
             </tr>
             <tr>
-              <td style="vertical-align: middle;"><label for="fetch-price">Price*</label></td>
-              <td><input type="text" id="fetch-price" name="price" class="form-control form-control-sm" placeholder="212.00"></td>
+              <td>Enter Price*:</td>
+              <td><input type="text" id="fetch-price" name="price" size=60 placeholder="212.00"></td>
             </tr>
             <tr>
-              <td style="vertical-align: middle;"><label for="fetch-delivery-fee">Delivery Fee</label></td>
-              <td><input type="text" id="fetch-delivery-fee" name="delivery-fee" class="form-control form-control-sm" placeholder="0.00"></td>
+              <td>Enter Delivery Fee (if exists):</td>
+              <td><input type="text" id="fetch-delivery-fee" name="delivery-fee" size=60 placeholder="30.00"></td>
             </tr>
             <tr>
-              <td style="vertical-align: middle;"><label for="fetch-link">Link*</label></td>
-              <td><input type="text" id="fetch-link" name="link" class="form-control form-control-sm"></td>
+              <td>Enter Link*:</td>
+              <td><input type="text" id="fetch-link" name="link" size=60 placeholder="https://us.rouje.com/products/..."></td>
             </tr>
           </tbody>
         </table>
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <button type="submit" class="btn btn-success btn-sm">Add to Wishlist</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="resetUrlCard()">Clear</button>
+        <br>
+        <div align="center" style="display: flex; justify-content: center; align-items: center; gap: 12px;">
+          <button type="submit" class="btn btn-primary">Add Item</button>
           <img src="" id="fetch-image-preview" alt="preview"
                style="max-height: 70px; max-width: 90px; object-fit: cover; border-radius: 4px; display: none;">
         </div>
@@ -212,17 +211,29 @@
   </div>
 
   <script>
+    var _urlDebounceTimer = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('url-input').addEventListener('input', function() {
+        clearTimeout(_urlDebounceTimer);
+        var url = this.value.trim();
+        if (!url) { resetUrlCard(); return; }
+        // Start spinner after debounce delay to signal something is about to happen
+        _urlDebounceTimer = setTimeout(function() { triggerUrlFetch(); }, 1500);
+      });
+    });
+
     function triggerUrlFetch() {
       var url = document.getElementById('url-input').value.trim();
       if (!url) return;
 
-      var spinner  = document.getElementById('url-spinner');
-      var errIcon  = document.getElementById('url-error-icon');
-      var wrapper  = document.getElementById('url-fetch-form-wrapper');
+      var spinner = document.getElementById('url-spinner');
+      var errIcon = document.getElementById('url-error-icon');
+      var wrapper = document.getElementById('url-fetch-form-wrapper');
 
-      spinner.style.display  = 'inline-block';
-      errIcon.style.display  = 'none';
-      wrapper.style.display  = 'none';
+      spinner.style.display = 'inline-block';
+      errIcon.style.display = 'none';
+      wrapper.style.display = 'none';
 
       fetch('/fetch-url-info', {
         method: 'POST',
@@ -233,14 +244,15 @@
       .then(function(data) {
         spinner.style.display = 'none';
         var hasData = data.success && (data.name || data.price || data.brand);
+
+        // Always reveal the form; pre-fill on success, leave empty on failure
+        document.getElementById('fetch-link').value = url;
         if (hasData) {
           document.getElementById('fetch-brand').value       = data.brand       || '';
           document.getElementById('fetch-name').value        = data.name        || '';
           document.getElementById('fetch-price').value       = data.price       || '';
           document.getElementById('fetch-description').value = data.description || '';
-          document.getElementById('fetch-link').value        = url;
           document.getElementById('fetch-image-url').value   = data.image_url  || '';
-
           var preview = document.getElementById('fetch-image-preview');
           if (data.image_url) {
             preview.src = data.image_url;
@@ -248,29 +260,30 @@
           } else {
             preview.style.display = 'none';
           }
-          wrapper.style.display = 'block';
         } else {
           errIcon.style.display = 'inline';
         }
+        wrapper.style.display = 'block';
       })
       .catch(function() {
         spinner.style.display = 'none';
         errIcon.style.display = 'inline';
+        document.getElementById('fetch-link').value = url;
+        document.getElementById('url-fetch-form-wrapper').style.display = 'block';
       });
     }
 
     function resetUrlCard() {
-      document.getElementById('url-input').value         = '';
       document.getElementById('url-error-icon').style.display          = 'none';
       document.getElementById('url-fetch-form-wrapper').style.display  = 'none';
       document.getElementById('fetch-image-preview').style.display     = 'none';
+      document.getElementById('fetch-brand').value       = '';
+      document.getElementById('fetch-name').value        = '';
+      document.getElementById('fetch-price').value       = '';
+      document.getElementById('fetch-description').value = '';
+      document.getElementById('fetch-link').value        = '';
+      document.getElementById('fetch-image-url').value   = '';
     }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      document.getElementById('url-input').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); triggerUrlFetch(); }
-      });
-    });
   </script>
 
   {% set totalprice = namespace(value=0.00) %}
@@ -417,140 +430,7 @@
   <!--br>
   <hr width="50%" color="green" size="50px" />
   <img src="./website/static/" alt="Italian Trulli"-->
-  <br>
-  <hr width="50%" color="green" size="50px" />
-  <h2 align="center">&#128156; Add New Item &#128156;</h2>
- <form method="POST" id="manual-add-form">
-   <!-- sample: Madewell, Dress, Linen Blue, madewell.com, 129.12-->
-   <body>
-   <table align="center">
-     <tbody>
-       <tr>
-         <td>
-           Enter Brand*:
-         </td>
-         <td>
-           <input type="text" id="brand" name="brand" size=60 placeholder="Rouje">
-         </td>
-       </tr>
-      <tr>
-       <td>
-         Enter Category*:
-       </td>
-       <td>
-        <select id="category" name="category">
-          <option value="">Select Category</option>
-          <option value="Top">Top</option>
-          <option value="Pants">Pants</option>
-          <option value="Skirt">Skirt</option>
-          <option value="Bag">Bag</option>
-          <option value="Dress">Dress</option>
-          <option value="Shoes">Shoes</option>
-          <option disabled>------</option>
-          <option value="Beauty">Beauty/Makeup</option>
-          <option value="Jacket">Jacket</option>
-          <option value="Ring">Ring</option>
-          <option value="Earrings">Earrings</option>
-          <option value="Wallet">Wallet</option>
-          <option value="Wallet">Workout Gear</option>
-          <option value="Pajamas">Pajamas</option>
-          <option value="Underwear">Underwear</option>
-          <option value="Scarf">Scarf</option>
-          <option value="Living">Living</option>
-          <option value="Leggings">Leggings</option>
-          <option value="Other accessories">Other accessories</option>
-          <option value="Other">Other (e.g. Luggage)</option>
-        </select>
-        </td>
-      </tr>
-      <tr>
-        <td>
-          Enter Tag:
-        </td>
-        <td>
-          <input type="text" id="tag" name="tag" size=60 placeholder="Tag">
-        </td>
-       </tr>
-      <tr>
-       <td>
-         Enter Name*:
-       </td>
-       <td>
-         <input type="text" id="name" name="name" size=60 placeholder="CYRIELLE DRESS">
-       </td>
-      </tr>
-      <tr>
-        <td>
-          Enter Description:
-        </td>
-        <td>
-          <input type="text" id="description" name="description" size=60 placeholder="Pink Dress">
-        </td>
-       </tr>
-      <tr>
-       <td>
-         Enter Price*:
-       </td>
-       <td>
-         <input type="text" id="price" name="price" size=60 placeholder="212.00">
-       </td>
-      </tr>
-      <tr>
-        <td>
-          Enter Deliver Fee (if exists):
-        </td>
-        <td>
-          <input type="text" id="delivery-fee" name="delivery-fee" size=60 placeholder="30.00">
-        </td>
-      </tr>
-      <tr>
-        <td>
-          Enter Link*:
-        </td>
-        <td>
-          <input type="text" id="link" name="link" size=60 placeholder="https://us.rouje.com/products/cyrielle-fleurdepechepeche">
-        </td>
-       </tr>
-     </tbody>
-   </table>
-
-    <!-- Add the JavaScript code here -->
-    <script>
-      document.getElementById('link').addEventListener('blur', function() {
-          const url = this.value;
-          if (url) {
-              fetch('/fetch-url-info', {
-                  method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({ url: url })
-              })
-              .then(response => response.json())
-              .then(data => {
-                  if (data.success) {
-                      document.getElementById('name').value = data.name;
-                      document.getElementById('price').value = data.price;
-                      document.getElementById('brand').value = data.brand;
-                      document.getElementById('description').value = data.description;
-                      // Store image_url in a hidden field
-                      if (data.image_url) {
-                          if (!document.getElementById('image_url')) {
-                              const hiddenField = document.createElement('input');
-                              hiddenField.type = 'hidden';
-                              hiddenField.id = 'image_url';
-                              hiddenField.name = 'image_url';
-                              document.getElementById('manual-add-form').appendChild(hiddenField);
-                          }
-                          document.getElementById('image_url').value = data.image_url;
-                      }
-                  } else {
-                      alert('Failed to fetch URL information');
-                  }
-              })
-              .catch(error => console.error('Error:', error));
-          }
-      });
+  <script>
 
       function autoSave(cell) {
             const row = cell.parentNode;
@@ -691,11 +571,6 @@
         toggleDateFilterPopup(false);
       }
       </script>
-   <br />
-   <div align="center">
-    <button type="submit" class="btn btn-primary">Add Item</button>
-   </div>
-  </body>
   <script>
     // Save scroll position before form submission (covers both the URL card form and the manual form)
     document.querySelectorAll('form').forEach(function(form) {
@@ -1008,7 +883,6 @@
       });
     }
   </script>
- </form>
 
  <!-- Image Modal -->
  <div id="imageModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.9);">
