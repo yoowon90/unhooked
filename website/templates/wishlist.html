@@ -439,13 +439,10 @@
 
         </tr>
       </thead>
-      <li class="list-group-item">
-      {% set count = namespace(value=0) %}
-      {% for wishitem in user.wishitems %}
-      {% if not wishitem.unhooked and not wishitem.purchased %}
-      {% set count.value = count.value + 1 %}
+      <tbody>
+      {% for wishitem in wishitems %}
         <tr data-wishitem-id="{{ wishitem.id }}" data-wishitem-category="{{ wishitem.category }}" data-wishitem-brand="{{ wishitem.brand }}" data-wishitem-time="{{ wishitem.date.isoformat() if wishitem.date else '' }}">
-          <th scope="row">{{count.value}}</th>
+          <th scope="row">{{ loop.index }}</th>
           <td> {{wishitem.date | format_datetime}} </td>
           <td contenteditable="true" oninput="autoSave(this)"> {{wishitem.brand}} </td>
           <td contenteditable="true" oninput="autoSave(this)">
@@ -510,11 +507,14 @@
           </button>
           </td>
         </tr>
-      {% endif %}
-      </li>
       {% endfor %}
+      </tbody>
       </table>
-    </ul>
+  <div id="pagination-controls" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin: 8px 0 16px;">
+    <button id="prev-page-btn" onclick="changePage(-1)" class="btn btn-outline-secondary btn-sm">&#8249;</button>
+    <span id="page-info" style="font-size: 13px; color: #555;"></span>
+    <button id="next-page-btn" onclick="changePage(1)" class="btn btn-outline-secondary btn-sm">&#8250;</button>
+  </div>
   <!--br>
   <hr width="50%" color="green" size="50px" />
   <img src="./website/static/" alt="Italian Trulli"-->
@@ -573,26 +573,22 @@
               .catch(error => console.error('Error:', error));
             }
         }
-      // Function to filter table based on category, brand, and date range
-      function filterTable() {
-        var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
-        console.log('categoryFilter:', categoryFilter);
-        var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
-        console.log('brandFilter:', brandFilter);
+      var _currentPage = 1;
+      var _pageSize = 20;
 
+      function getFilteredRows() {
+        var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
+        var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
         var startInput = document.getElementById("startDate");
         var endInput = document.getElementById("endDate");
-        var startDateValue = startInput && startInput.value ? startInput.value : "";
-        var endDateValue = endInput && endInput.value ? endInput.value : "";
-        var startDate = startDateValue ? new Date(startDateValue) : null;
-        var endDate = endDateValue ? new Date(endDateValue) : null;
+        var startDate = (startInput && startInput.value) ? new Date(startInput.value) : null;
+        var endDate = (endInput && endInput.value) ? new Date(endInput.value) : null;
         if (endDate) { endDate.setHours(23, 59, 59, 999); }
 
         var rows = document.querySelectorAll("#wishlist-table tbody tr");
-
-        rows.forEach(row => {
+        var matching = [];
+        rows.forEach(function(row) {
           var tdCategory = (row.getAttribute("data-wishitem-category") || "").toLowerCase();
-          console.log('tdCategory:', tdCategory);
           var tdBrand = (row.getAttribute("data-wishitem-brand") || "").toLowerCase();
           var rowTimeAttr = row.getAttribute("data-wishitem-time") || "";
           var rowDate = rowTimeAttr ? new Date(rowTimeAttr) : null;
@@ -600,36 +596,54 @@
           var categoryMatch = (categoryFilter === "" || tdCategory.includes(categoryFilter));
           var brandMatch = (brandFilter === "" || tdBrand.includes(brandFilter));
           var dateMatch = true;
-
           if (startDate || endDate) {
             if (rowDate) {
-              if (startDate && endDate) {
-                dateMatch = rowDate >= startDate && rowDate <= endDate;
-              } else if (startDate) {
-                dateMatch = rowDate >= startDate;
-              } else if (endDate) {
-                dateMatch = rowDate <= endDate;
-              }
-            } else {
-              dateMatch = false;
-            }
+              if (startDate && endDate) { dateMatch = rowDate >= startDate && rowDate <= endDate; }
+              else if (startDate) { dateMatch = rowDate >= startDate; }
+              else if (endDate) { dateMatch = rowDate <= endDate; }
+            } else { dateMatch = false; }
           }
-
-          if (categoryMatch && brandMatch && dateMatch) {
-            row.style.display = "";
-          } else {
-            row.style.display = "none";
-          }
+          if (categoryMatch && brandMatch && dateMatch) { matching.push(row); }
         });
+        return matching;
+      }
+
+      function renderPage() {
+        var filtered = getFilteredRows();
+        var totalPages = Math.max(1, Math.ceil(filtered.length / _pageSize));
+        _currentPage = Math.max(1, Math.min(_currentPage, totalPages));
+        var start = (_currentPage - 1) * _pageSize;
+        var end = start + _pageSize;
+
+        document.querySelectorAll("#wishlist-table tbody tr").forEach(function(row) { row.style.display = "none"; });
+        filtered.slice(start, end).forEach(function(row) { row.style.display = ""; });
+
+        var startNum = filtered.length === 0 ? 0 : start + 1;
+        var endNum = Math.min(end, filtered.length);
+        var info = document.getElementById("page-info");
+        if (info) info.textContent = startNum + "–" + endNum + " of " + filtered.length;
+        var prevBtn = document.getElementById("prev-page-btn");
+        var nextBtn = document.getElementById("next-page-btn");
+        if (prevBtn) prevBtn.disabled = _currentPage <= 1;
+        if (nextBtn) nextBtn.disabled = _currentPage >= totalPages;
+      }
+
+      function filterTable() {
+        _currentPage = 1;
+        renderPage();
+      }
+
+      function changePage(delta) {
+        var filtered = getFilteredRows();
+        var totalPages = Math.max(1, Math.ceil(filtered.length / _pageSize));
+        _currentPage = Math.max(1, Math.min(_currentPage + delta, totalPages));
+        renderPage();
       }
 
       function toggleDateFilterPopup(forceState) {
         var popup = document.getElementById("dateFilterPopup");
         if (!popup) return;
-        if (typeof forceState === "boolean") {
-          popup.style.display = forceState ? "block" : "none";
-          return;
-        }
+        if (typeof forceState === "boolean") { popup.style.display = forceState ? "block" : "none"; return; }
         popup.style.display = (popup.style.display === "none" || popup.style.display === "") ? "block" : "none";
       }
 
@@ -637,11 +651,7 @@
         var startInput = document.getElementById("startDate");
         var endInput = document.getElementById("endDate");
         if (!startInput || !endInput) return;
-
-        if (startInput.value && endInput.value) {
-          filterTable();
-          toggleDateFilterPopup(false);
-        }
+        if (startInput.value && endInput.value) { filterTable(); toggleDateFilterPopup(false); }
       }
 
       function resetDateFilter() {
@@ -649,12 +659,10 @@
         var endInput = document.getElementById("endDate");
         if (startInput) startInput.value = "";
         if (endInput) endInput.value = "";
-
         var brandFilterEl = document.getElementById("brandFilter");
         var tagFilterEl = document.getElementById("tagFilter");
         if (brandFilterEl) brandFilterEl.value = "";
         if (tagFilterEl) tagFilterEl.value = "";
-
         filterTable();
         toggleDateFilterPopup(false);
       }
@@ -669,6 +677,7 @@
 
     // Restore scroll position after page reload
     window.addEventListener('load', function() {
+      renderPage();
       const scrollPosition = localStorage.getItem('scrollPosition');
       if (scrollPosition) {
         window.scrollTo(0, scrollPosition);

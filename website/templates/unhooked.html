@@ -121,62 +121,76 @@
       {% endfor %}
       </tbody>
       </table>
+  <div id="pagination-controls" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin: 8px 0 16px;">
+    <button id="prev-page-btn" onclick="changePage(-1)" class="btn btn-outline-secondary btn-sm">&#8249;</button>
+    <span id="page-info" style="font-size: 13px; color: #555;"></span>
+    <button id="next-page-btn" onclick="changePage(1)" class="btn btn-outline-secondary btn-sm">&#8250;</button>
+  </div>
     <!-- Add the JavaScript code here -->
     <script>
-      // Function to filter table based on category, brand, and unhooked date range
-      function filterTable() {
-            var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
-            console.log('categoryFilter:', categoryFilter);
-            var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
-            console.log('brandFilter:', brandFilter);
+      var _currentPage = 1;
+      var _pageSize = 20;
 
-            var startInput = document.getElementById("unhookedStartDate");
-            var endInput = document.getElementById("unhookedEndDate");
-            var startDate = (startInput && startInput.value) ? new Date(startInput.value) : null;
-            var endDate = (endInput && endInput.value) ? new Date(endInput.value) : null;
-            if (endDate) { endDate.setHours(23,59,59,999); }
+      function getFilteredRows() {
+        var categoryFilter = document.getElementById("tagFilter").value.toLowerCase();
+        var brandFilter = document.getElementById("brandFilter").value.toLowerCase();
+        var startInput = document.getElementById("unhookedStartDate");
+        var endInput = document.getElementById("unhookedEndDate");
+        var startDate = (startInput && startInput.value) ? new Date(startInput.value) : null;
+        var endDate = (endInput && endInput.value) ? new Date(endInput.value) : null;
+        if (endDate) { endDate.setHours(23,59,59,999); }
 
-            var rows = document.querySelectorAll("#unhookedlist-table tbody tr");
+        var rows = document.querySelectorAll("#unhookedlist-table tbody tr");
+        var matching = [];
+        rows.forEach(function(row) {
+          var tdCategory = (row.getAttribute("data-wishitem-category") || "").toLowerCase();
+          var tdBrand = (row.getAttribute("data-wishitem-brand") || "").toLowerCase();
+          var dateAttr = row.getAttribute("data-unhooked-date");
+          var rowDate = null;
+          if (dateAttr) { var s = Number(dateAttr); if (!isNaN(s) && s > 0) rowDate = new Date(s * 1000); }
 
-            rows.forEach(row => {
-                var tdCategory = (row.getAttribute("data-wishitem-category") || "").toLowerCase();
-                console.log('tdCategory:', tdCategory);
-                var tdBrand = (row.getAttribute("data-wishitem-brand") || "").toLowerCase();
+          var categoryMatch = (categoryFilter === "" || tdCategory.includes(categoryFilter));
+          var brandMatch = (brandFilter === "" || tdBrand.includes(brandFilter));
+          var dateMatch = true;
+          if (startDate || endDate) {
+            if (rowDate) {
+              if (startDate && endDate) { dateMatch = rowDate >= startDate && rowDate <= endDate; }
+              else if (startDate) { dateMatch = rowDate >= startDate; }
+              else if (endDate) { dateMatch = rowDate <= endDate; }
+            } else { dateMatch = false; }
+          }
+          if (categoryMatch && brandMatch && dateMatch) matching.push(row);
+        });
+        return matching;
+      }
 
-                var dateAttr = row.getAttribute("data-unhooked-date"); // seconds since epoch
-                var rowDate = null;
-                if (dateAttr) {
-                  var seconds = Number(dateAttr);
-                  if (!isNaN(seconds) && seconds > 0) {
-                    rowDate = new Date(seconds * 1000);
-                  }
-                }
+      function renderPage() {
+        var filtered = getFilteredRows();
+        var totalPages = Math.max(1, Math.ceil(filtered.length / _pageSize));
+        _currentPage = Math.max(1, Math.min(_currentPage, totalPages));
+        var start = (_currentPage - 1) * _pageSize;
+        var end = start + _pageSize;
 
-                var categoryMatch = (categoryFilter === "" || tdCategory.includes(categoryFilter));
-                var brandMatch = (brandFilter === "" || tdBrand.includes(brandFilter));
-                var dateMatch = true;
+        document.querySelectorAll("#unhookedlist-table tbody tr").forEach(function(row) { row.style.display = "none"; });
+        filtered.slice(start, end).forEach(function(row) { row.style.display = ""; });
 
-                if (startDate || endDate) {
-                  if (rowDate) {
-                    if (startDate && endDate) {
-                      dateMatch = rowDate >= startDate && rowDate <= endDate;
-                    } else if (startDate) {
-                      dateMatch = rowDate >= startDate;
-                    } else if (endDate) {
-                      dateMatch = rowDate <= endDate;
-                    }
-                  } else {
-                    dateMatch = false;
-                  }
-                }
+        var startNum = filtered.length === 0 ? 0 : start + 1;
+        var info = document.getElementById("page-info");
+        if (info) info.textContent = startNum + "–" + Math.min(end, filtered.length) + " of " + filtered.length;
+        var prevBtn = document.getElementById("prev-page-btn");
+        var nextBtn = document.getElementById("next-page-btn");
+        if (prevBtn) prevBtn.disabled = _currentPage <= 1;
+        if (nextBtn) nextBtn.disabled = _currentPage >= totalPages;
+      }
 
-                if (categoryMatch && brandMatch && dateMatch) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
-            });
-        }
+      function filterTable() { _currentPage = 1; renderPage(); }
+
+      function changePage(delta) {
+        var filtered = getFilteredRows();
+        var totalPages = Math.max(1, Math.ceil(filtered.length / _pageSize));
+        _currentPage = Math.max(1, Math.min(_currentPage + delta, totalPages));
+        renderPage();
+      }
 
         function toggleUnhookedDateFilterPopup(forceState) {
           var popup = document.getElementById('unhookedDateFilterPopup');
@@ -223,7 +237,7 @@
 
           // Unhooked Date filtering popup is handled via header click; sorting disabled.
 
-
+          renderPage();
         });
 
         function sortTableByAttribute(attribute, order) {

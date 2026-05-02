@@ -186,13 +186,16 @@ def wishlist():
     # render the template using name of template
     # now when go to '/', render unhooked.html
 
+    wishitems_sorted = WishItem.query.filter_by(user_id=current_user.id, unhooked=False, purchased=False).order_by(WishItem.date.desc()).all()
+
     return render_template("wishlist.html",
                            user=current_user,
                            last_updated=dir_last_updated(r'./website/static'),
                            current_time=current_time,
                            tags=tags,
                            categories=categories,
-                           brands=brands)  # return html when we got root
+                           brands=brands,
+                           wishitems=wishitems_sorted)  # return html when we got root
 
 
 # wishlist
@@ -324,7 +327,7 @@ def unhooked_list():
     unhooked_brands.sort()
 
     # sort user's wishitems by unhooked date
-    unhooked_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=True, purchased=False).order_by(WishItem.unhooked_date.asc()).all()
+    unhooked_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=True, purchased=False).order_by(WishItem.unhooked_date.desc()).all()
 
     return render_template("unhooked.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
                            unhooked_cats=unhooked_cats, unhooked_brands=unhooked_brands, unhooked_items=unhooked_items)  # return html when we got root
@@ -350,7 +353,7 @@ def purchased_list():
     purchased_brands.sort()
 
     # define wish_to_purchase_period
-    purchased_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=False, purchased=True).order_by(WishItem.purchase_date.asc()).all()
+    purchased_items = WishItem.query.filter_by(user_id=current_user.id, unhooked=False, purchased=True).order_by(WishItem.purchase_date.desc()).all()
 
     return render_template("purchased.html", user=current_user, last_updated=dir_last_updated(r'./website/static'),
                            purchased_cats=purchased_cats, purchased_brands=purchased_brands, purchased_items=purchased_items)  # return html when we got root
