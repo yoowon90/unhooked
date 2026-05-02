@@ -7,4 +7,5 @@ python-dotenv
 matplotlib
 beautifulsoup4
 requests
+pydoll-python
 notebook

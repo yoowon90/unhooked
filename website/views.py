@@ -4,13 +4,12 @@ import re
 import os
 import datetime
 import json
-import requests
 from bs4 import BeautifulSoup
 from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import current_user, login_required
 from .models import Note, WishItem
 from . import db
-from .url_extraction import ItemDetails
+from .url_extraction import ItemDetails, fetch_page_html
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -361,46 +360,23 @@ def purchased_list():
 @views.route('/fetch-url-info', methods=['POST'])
 @login_required
 def fetch_url_info():
-    header = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-                'Accept-Encoding': 'none',
-                'Accept-Language': 'en-US,en;q=0.8',
-                'Connection': 'keep-alive',
-                'refere': 'https://example.com',
-                'cookie': """your cookie value ( you can get that from your web page) """
-             }
-
     data = request.get_json()
     url = data.get('url')
     if not url:
         return jsonify({'success': False, 'error': 'No URL provided'})
 
     try:
-        response = requests.get(url, headers=header, timeout=5)  # times out in 20 seconds
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-
+        html = fetch_page_html(url)
+        soup = BeautifulSoup(html, 'html.parser')
         item_data_dict = ItemDetails(soup).get_item_data()
         item_data_dict['success'] = True
-
-        # If successful, add a succesful message
-        # flash('Loading item details via URL was successful!', category='success')
         return jsonify(item_data_dict)
-
     except Exception as e:
-        # return jsonify({'success': False, 'error': str(e)})
+        print(f"Error fetching URL info: {e}")
         default_value = None
-        print(f"error while fetching url info: {str(e)}")
-
-        # display exception to users
-        # flash('Couldn\'t load items using provided URL. Please input details manually.', category='error')
-
-        # if error encountered, still treat as success but return None for all values
-        return jsonify({'success': True, 'name': default_value, 'price': default_value, 'brand': default_value, 'description': default_value,
-                 'currency': default_value, 'image_url': default_value})
+        return jsonify({'success': True, 'name': default_value, 'price': default_value,
+                        'brand': default_value, 'description': default_value,
+                        'currency': default_value, 'image_url': default_value})
 
 
 @views.route('/remove-wishitem-image', methods=['POST'])

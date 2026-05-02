@@ -1,9 +1,56 @@
+import asyncio
 import copy
 import json
 import inspect
 import requests
 from urllib.parse import quote_plus
 import re
+
+# Shared headers for lightweight requests.get() fetches
+_FETCH_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.8',
+    'Connection': 'keep-alive',
+}
+
+
+def _is_blocked(html: str, status_code: int) -> bool:
+    """Return True if the response looks like a CAPTCHA or bot-block page."""
+    if status_code in (403, 429):
+        return True
+    lower = html.lower()
+    return any(marker in lower for marker in [
+        'captcha', 'cf-challenge', 'just a moment',
+        'checking your browser', 'access denied', 'automated request',
+    ])
+
+
+async def _pydoll_fetch(url: str) -> str:
+    """Fetch page HTML via a real Chrome instance (avoids bot detection + Cloudflare)."""
+    from pydoll.browser import Chrome
+    async with Chrome() as browser:
+        browser.options.headless = True  # remove this line if a site detects headless via canvas/WebGL fingerprinting despite pydoll's bot mitigations
+        tab = await browser.start()
+        await tab.enable_auto_solve_cloudflare_captcha()
+        await tab.go_to(url, timeout=30)
+        return await tab.page_source
+
+
+def fetch_page_html(url: str) -> str:
+    """
+    Fetch product page HTML. Tries requests.get() first (fast); falls back to
+    pydoll (real Chrome, ~2-3s) if the response looks like a CAPTCHA or block page.
+    """
+    try:
+        response = requests.get(url, headers=_FETCH_HEADERS, timeout=5)
+        if not _is_blocked(response.text, response.status_code):
+            return response.text
+        print(f"Bot block detected for {url}, retrying with pydoll...")
+    except Exception as e:
+        print(f"requests.get failed ({e}), retrying with pydoll...")
+
+    return asyncio.run(_pydoll_fetch(url))
 
 BRANDS = ['Reformation',
           'Rouje',
