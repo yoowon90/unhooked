@@ -172,15 +172,20 @@ async def _playwright_fetch(url: str) -> str:
                     return
                 body = await response.text()
                 if body and len(body) > 200:
-                    _json.loads(body)  # validate JSON
-                    captured[resp_url] = body
+                    parsed = _json.loads(body)
+                    # Only keep responses that contain actual product data (name + price)
+                    if ItemDetails._find_product_in_json(parsed):
+                        captured[resp_url] = body
             except Exception:
                 pass
 
         page.on('response', on_response)
 
         try:
-            await page.goto(url, wait_until='networkidle', timeout=15000)
+            # Use 'load' instead of 'networkidle': fires once initial HTML+scripts are
+            # loaded, which is sufficient for server-rendered JSON-LD. 'networkidle'
+            # never fires on sites with continuous analytics pings (e.g. Reformation).
+            await page.goto(url, wait_until='load', timeout=15000)
         except Exception as e:
             print(f"[playwright] goto timed out or failed ({e}), using what loaded so far")
 
@@ -194,7 +199,7 @@ async def _playwright_fetch(url: str) -> str:
         except Exception as e:
             print(f"[playwright] __NEXT_DATA__ extraction failed: {e}")
 
-        # 2. Try intercepted JSON API responses
+        # 2. Try intercepted JSON API responses (already validated to contain product data)
         for resp_url, body in list(captured.items()):
             print(f"[playwright] Captured API response from {resp_url}")
             await browser.close()
