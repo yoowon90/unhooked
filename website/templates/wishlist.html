@@ -235,13 +235,18 @@
       errIcon.style.display = 'none';
       wrapper.style.display = 'none';
 
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function() { controller.abort(); }, 6000);
+
       fetch('/fetch-url-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url })
+        body: JSON.stringify({ url: url }),
+        signal: controller.signal
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
+        clearTimeout(timeoutId);
         spinner.style.display = 'none';
         var hasData = data.success && (data.name || data.price || data.brand);
 
@@ -266,6 +271,7 @@
         wrapper.style.display = 'block';
       })
       .catch(function() {
+        clearTimeout(timeoutId);
         spinner.style.display = 'none';
         errIcon.style.display = 'inline';
         document.getElementById('fetch-link').value = url;
