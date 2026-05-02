@@ -140,6 +140,9 @@
     <div id="url-fetch-form-wrapper" style="display: none; margin-top: 18px; border-top: 1px solid #dee2e6; padding-top: 4px;">
       <form method="POST" id="url-fetch-form">
         <input type="hidden" name="image_url" id="fetch-image-url">
+        <p id="fetch-fail-msg" style="display: none; text-align: center; color: #888; font-style: italic; margin-bottom: 10px;">
+          Failed to fetch details. Please fill them out manually.
+        </p>
         <table align="center">
           <tbody>
             <tr>
@@ -243,6 +246,7 @@
       document.getElementById('fetch-link').value        = '';
       document.getElementById('fetch-image-url').value   = '';
       document.getElementById('fetch-tag').value         = '';
+      document.getElementById('fetch-fail-msg').style.display = 'none';
       var _prevPreview = document.getElementById('fetch-image-preview');
       _prevPreview.src = '';
       _prevPreview.style.display = 'none';
@@ -325,7 +329,9 @@
 
         // Always reveal the form; pre-fill on success, leave empty on failure
         document.getElementById('fetch-link').value = url;
+        var failMsg = document.getElementById('fetch-fail-msg');
         if (hasData) {
+          failMsg.style.display = 'none';
           document.getElementById('fetch-brand').value       = data.brand       || '';
           document.getElementById('fetch-name').value        = data.name        || '';
           document.getElementById('fetch-price').value       = data.price       || '';
@@ -340,6 +346,7 @@
           }
         } else {
           errIcon.style.display = 'inline';
+          failMsg.style.display = 'block';
         }
         wrapper.style.display = 'block';
       })
@@ -348,6 +355,7 @@
         _stopLoading();
         spinner.style.display = 'none';
         errIcon.style.display = 'inline';
+        document.getElementById('fetch-fail-msg').style.display = 'block';
         document.getElementById('fetch-link').value = url;
         document.getElementById('url-fetch-form-wrapper').style.display = 'block';
       });
