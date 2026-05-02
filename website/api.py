@@ -3,9 +3,8 @@ from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_requir
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem
 from . import db
-from .url_extraction import ItemDetails, fetch_page_html
+from .url_extraction import ItemDetails, scrape_item
 import datetime
-from bs4 import BeautifulSoup
 
 api = Blueprint('api', __name__)
 
@@ -307,9 +306,7 @@ def extract_url():
         return jsonify({'error': 'url is required'}), 400
 
     try:
-        html = fetch_page_html(url)
-        soup = BeautifulSoup(html, 'html.parser')
-        data = ItemDetails(soup).get_item_data()
+        data = scrape_item(url)
         data['success'] = True
         return jsonify(data)
     except Exception as e:

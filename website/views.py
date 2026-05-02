@@ -4,12 +4,11 @@ import re
 import os
 import datetime
 import json
-from bs4 import BeautifulSoup
 from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import current_user, login_required
 from .models import Note, WishItem
 from . import db
-from .url_extraction import ItemDetails, fetch_page_html
+from .url_extraction import scrape_item
 
 # store standard routes (url defined), anything that users can navitage to.
 
@@ -366,17 +365,14 @@ def fetch_url_info():
         return jsonify({'success': False, 'error': 'No URL provided'})
 
     try:
-        html = fetch_page_html(url)
-        soup = BeautifulSoup(html, 'html.parser')
-        item_data_dict = ItemDetails(soup).get_item_data()
+        item_data_dict = scrape_item(url)
         item_data_dict['success'] = True
         return jsonify(item_data_dict)
     except Exception as e:
         print(f"Error fetching URL info: {e}")
-        default_value = None
-        return jsonify({'success': True, 'name': default_value, 'price': default_value,
-                        'brand': default_value, 'description': default_value,
-                        'currency': default_value, 'image_url': default_value})
+        return jsonify({'success': True, 'name': None, 'price': None,
+                        'brand': None, 'description': None,
+                        'currency': None, 'image_url': None})
 
 
 @views.route('/remove-wishitem-image', methods=['POST'])
