@@ -22,10 +22,20 @@ def _is_blocked(html: str, status_code: int) -> bool:
     if status_code in (403, 429):
         return True
     lower = html.lower()
-    return any(marker in lower for marker in [
+    if any(marker in lower for marker in [
         'captcha', 'cf-challenge', 'just a moment',
         'checking your browser', 'access denied', 'automated request',
-    ])
+    ]):
+        return True
+    # Catch silent bot-wall pages: tiny response with no meaningful title
+    # (e.g. Zara/Akamai returns 200 with a 2KB shell and title='\xa0')
+    if len(html) < 5000:
+        from bs4 import BeautifulSoup as _BS
+        soup = _BS(html, 'html.parser')
+        title = (soup.title.string or '').strip() if soup.title else ''
+        if not title or title in ('\xa0', '&nbsp;'):
+            return True
+    return False
 
 
 async def _pydoll_fetch(url: str) -> str:
