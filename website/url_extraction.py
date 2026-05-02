@@ -5,7 +5,7 @@ import inspect
 import unicodedata
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse, urlunparse
 import re
 
 # Shared headers for lightweight requests.get() fetches
@@ -38,106 +38,173 @@ def _is_blocked(html: str, status_code: int) -> bool:
     return False
 
 
-async def _pydoll_fetch(url: str) -> str:
-    """Fetch page via Chrome CDP with network interception.
+def _try_shopify_json(url: str):
+    """If the URL is a Shopify /products/ page, fetch the undocumented .json endpoint.
+
+    Returns a standard item dict on success, or None if not applicable/failed.
+    No JS rendering needed — Shopify serves full product data as plain JSON.
+    """
+    parsed = urlparse(url)
+    if '/products/' not in parsed.path:
+        return None
+    path = parsed.path.rstrip('/')
+    if not path.endswith('.json'):
+        path = path + '.json'
+    json_url = urlunparse((parsed.scheme, parsed.netloc, path, '', '', ''))
+    try:
+        resp = requests.get(json_url, headers=_FETCH_HEADERS, timeout=8)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        product = data.get('product')
+        if not product:
+            return None
+        print(f"[shopify] Got product JSON from {json_url}")
+        return _extract_from_shopify_json(product)
+    except Exception as e:
+        print(f"[shopify] .json fetch failed: {e}")
+        return None
+
+
+def _extract_from_shopify_json(product: dict) -> dict:
+    """Map a Shopify product JSON object to our standard item dict."""
+    body_html = product.get('body_html') or ''
+    description = BeautifulSoup(body_html, 'html.parser').get_text(separator=' ').strip() if body_html else None
+    variants = product.get('variants') or []
+    images = product.get('images') or []
+    return {
+        'name': product.get('title'),
+        'brand': product.get('vendor'),
+        'price': variants[0].get('price') if variants else None,
+        'currency': 'USD',
+        'description': description or None,
+        'category': product.get('product_type') or None,
+        'image_url': images[0].get('src') if images else None,
+    }
+
+
+async def _playwright_fetch(url: str) -> str:
+    """Fetch page via Playwright with stealth patches and network interception.
 
     Priority order:
     1. __NEXT_DATA__ (Next.js sites embed full page data here after JS runs)
     2. Intercepted JSON API responses matching product-like URL patterns
-    3. Full rendered page_source as fallback
+    3. Full rendered page source as fallback
 
     Returns either rendered HTML or a pseudo-HTML fragment wrapping the
     most useful JSON payload (parsed downstream by extract_generic).
     """
-    from pydoll.browser import Chrome
-    from pydoll.protocol.network.events import NetworkEvent
+    from playwright.async_api import async_playwright
     import json as _json
 
-    captured = {}  # requestId -> response_url for JSON responses
+    captured = {}  # resp_url -> body for product-looking JSON responses
 
-    async def on_response(event):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-blink-features=AutomationControlled'],
+        )
+        context = await browser.new_context(
+            user_agent=(
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/123.0.0.0 Safari/537.36'
+            ),
+            locale='en-US',
+            viewport={'width': 1280, 'height': 800},
+        )
+        await context.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        )
+        page = await context.new_page()
+
+        product_kw = ('product', 'detail', 'pdp', 'catalog', 'item')
+
+        async def on_response(response):
+            try:
+                ct = response.headers.get('content-type', '')
+                if 'json' not in ct:
+                    return
+                resp_url = response.url
+                if not any(kw in resp_url.lower() for kw in product_kw):
+                    return
+                body = await response.text()
+                if body and len(body) > 200:
+                    _json.loads(body)  # validate JSON
+                    captured[resp_url] = body
+            except Exception:
+                pass
+
+        page.on('response', on_response)
+
         try:
-            params = event.get('params', {})
-            resp = params.get('response', {})
-            if 'json' in resp.get('mimeType', ''):
-                req_id = params.get('requestId')
-                if req_id:
-                    captured[req_id] = resp.get('url', '')
-        except Exception:
-            pass
+            await page.goto(url, wait_until='networkidle', timeout=15000)
+        except Exception as e:
+            print(f"[playwright] goto timed out or failed ({e}), using what loaded so far")
 
-    async with Chrome() as browser:
-        browser.options.headless = True  # remove if site detects headless via canvas/WebGL fingerprinting
-        tab = await browser.start()
-        await tab.enable_auto_solve_cloudflare_captcha()
-        await tab.enable_network_events()
-        await tab.on(NetworkEvent.RESPONSE_RECEIVED, on_response)
-        await tab.go_to(url, timeout=30)
-        # go_to() resolves on Page.loadEventFired, but SPAs fetch product data after.
-        await asyncio.sleep(4)
-
-        # 1. Try __NEXT_DATA__ (Next.js embeds full SSR data in this script tag)
+        # 1. Try __NEXT_DATA__
         try:
-            result = await tab.execute_script(
-                "document.getElementById('__NEXT_DATA__')?.textContent || ''"
-            )
-            raw = result.value if hasattr(result, 'value') else (result.get('value', '') if isinstance(result, dict) else '')
+            raw = await page.evaluate("document.getElementById('__NEXT_DATA__')?.textContent || ''")
             if raw and len(raw) > 100:
-                print(f"[pydoll] Found __NEXT_DATA__ ({len(raw)} chars)")
+                print(f"[playwright] Found __NEXT_DATA__ ({len(raw)} chars)")
+                await browser.close()
                 return f'<script id="__NEXT_DATA__" type="application/json">{raw}</script>'
         except Exception as e:
-            print(f"[pydoll] __NEXT_DATA__ extraction failed: {e}")
+            print(f"[playwright] __NEXT_DATA__ extraction failed: {e}")
 
-        # 2. Try intercepted JSON API responses that look like product endpoints
-        product_kw = ('product', 'detail', 'pdp', 'catalog', 'item')
-        for req_id, resp_url in list(captured.items()):
-            if any(kw in resp_url.lower() for kw in product_kw):
-                try:
-                    body = await tab.get_network_response_body(req_id)
-                    if body and len(body) > 200:
-                        _json.loads(body)  # validate JSON before returning
-                        print(f"[pydoll] Captured API response from {resp_url}")
-                        return f'<script type="application/json" data-intercepted="true">{body}</script>'
-                except Exception:
-                    continue
+        # 2. Try intercepted JSON API responses
+        for resp_url, body in list(captured.items()):
+            print(f"[playwright] Captured API response from {resp_url}")
+            await browser.close()
+            return f'<script type="application/json" data-intercepted="true">{body}</script>'
 
-        return await tab.page_source
+        content = await page.content()
+        await browser.close()
+        return content
 
 
 def fetch_page_html(url: str) -> str:
     """
     Fetch product page HTML. Tries requests.get() first (fast); falls back to
-    pydoll (real Chrome, ~2-3s) if the response looks like a CAPTCHA or block page.
+    Playwright (real Chrome) if the response looks like a CAPTCHA or block page.
     """
     try:
         response = requests.get(url, headers=_FETCH_HEADERS, timeout=5)
         if not _is_blocked(response.text, response.status_code):
             return response.text
-        print(f"Bot block detected for {url}, retrying with pydoll...")
+        print(f"Bot block detected for {url}, retrying with playwright...")
     except Exception as e:
-        print(f"requests.get failed ({e}), retrying with pydoll...")
+        print(f"requests.get failed ({e}), retrying with playwright...")
 
-    return asyncio.run(_pydoll_fetch(url))
+    return asyncio.run(_playwright_fetch(url))
 
 
 def scrape_item(url: str) -> dict:
     """
     Full pipeline: fetch URL and extract item data.
-    If requests succeeds but all fields are None (e.g. JS-rendered page),
-    automatically retries with pydoll before giving up.
+
+    Order:
+    1. Shopify .json fast path (no JS needed, bypasses Cloudflare)
+    2. requests.get() + brand/generic extractor
+    3. Playwright (real Chrome) if step 2 returns all-None fields
     """
+    # 1. Shopify fast path
+    shopify = _try_shopify_json(url)
+    if shopify and any(v is not None for v in shopify.values()):
+        return shopify
+
     html = fetch_page_html(url)
     result = ItemDetails(BeautifulSoup(html, 'html.parser')).get_item_data()
 
-    # All None means the page likely needs JS to render product data — retry with pydoll
+    # All None means the page likely needs JS to render — retry with Playwright
     data_fields = {k: v for k, v in result.items() if k != 'image_url'}
     if all(v is None for v in data_fields.values()):
-        print(f"All fields None after initial fetch, retrying {url} with pydoll...")
+        print(f"All fields None after initial fetch, retrying {url} with playwright...")
         try:
-            html = asyncio.run(_pydoll_fetch(url))
+            html = asyncio.run(_playwright_fetch(url))
             result = ItemDetails(BeautifulSoup(html, 'html.parser')).get_item_data()
         except Exception as e:
-            print(f"Pydoll retry failed: {e}")
+            print(f"Playwright retry failed: {e}")
 
     return result
 
