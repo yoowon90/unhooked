@@ -8,6 +8,48 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote_plus, urlparse, urlunparse
 import re
 
+# Ordered keyword → dropdown-value map for category normalization.
+# Order matters: more specific entries (Leggings, Dress) before broader ones (Top, Workout Gear).
+_CATEGORY_KEYWORDS = [
+    ('Dress',             ['dress', 'gown', 'romper', 'jumpsuit']),
+    ('Skirt',             ['skirt']),
+    ('Leggings',          ['legging']),
+    ('Pants',             ['pant', 'trouser', 'jean', 'denim', 'shorts', 'culotte', 'chino', 'cargo']),
+    ('Jacket',            ['jacket', 'coat', 'blazer', 'cardigan', 'outerwear', 'trench', 'parka', 'anorak']),
+    ('Top',               ['top', 'blouse', 'shirt', 'tee', 't-shirt', 'tshirt', 'tank', 'camisole', 'cami',
+                           'crop', 'tunic', 'sweater', 'sweatshirt', 'hoodie', 'pullover', 'knit']),
+    ('Underwear',         ['underwear', 'lingerie', 'bra', 'bralette', 'panty', 'panties', 'thong']),
+    ('Pajamas',           ['pajama', 'pyjama', 'nightwear', 'nightgown', 'sleepwear', 'loungewear']),
+    ('Workout Gear',      ['workout', 'activewear', 'athletic', 'yoga', 'running', 'gym wear', 'sports bra']),
+    ('Scarf',             ['scarf', 'bandana']),
+    ('Bag',               ['bag', 'tote', 'handbag', 'purse', 'clutch', 'backpack', 'satchel', 'pouch', 'crossbody']),
+    ('Shoes',             ['shoe', 'boot', 'sneaker', 'heel', 'sandal', 'loafer', 'mule', 'pump',
+                           'stiletto', 'wedge', 'clog', 'slipper', 'espadrille', 'flat', 'footwear']),
+    ('Earrings',          ['earring']),
+    ('Ring',              ['ring']),
+    ('Wallet',            ['wallet', 'cardholder', 'card holder', 'coin purse']),
+    ('Beauty',            ['beauty', 'makeup', 'skincare', 'cosmetic', 'perfume', 'fragrance',
+                           'serum', 'moisturizer', 'lipstick', 'foundation']),
+    ('Living',            ['home decor', 'candle', 'bedding', 'pillow', 'throw', 'tableware']),
+    ('Other accessories', ['necklace', 'bracelet', 'hat', 'belt', 'sunglasses', 'glove',
+                           'headband', 'watch', 'jewelry', 'jewellery']),
+]
+
+
+def _normalize_category(raw: str | None, fallback_text: str | None = None) -> str | None:
+    """Map a raw scraped category (or item name/description) to a fixed dropdown value.
+
+    Checks `raw` first, then `fallback_text`, so e.g. a name like "Floral Midi Dress"
+    can produce "Dress" even when the scraped category field is missing.
+    """
+    for text in filter(None, [raw, fallback_text]):
+        lower = text.lower()
+        for category, keywords in _CATEGORY_KEYWORDS:
+            if any(kw in lower for kw in keywords):
+                return category
+    return None
+
+
 # Shared headers for lightweight requests.get() fetches
 _FETCH_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
@@ -191,6 +233,10 @@ def scrape_item(url: str) -> dict:
     # 1. Shopify fast path
     shopify = _try_shopify_json(url)
     if shopify and any(v is not None for v in shopify.values()):
+        shopify['category'] = _normalize_category(
+            shopify.get('category'),
+            fallback_text=f"{shopify.get('name', '')} {shopify.get('description', '')}",
+        )
         return shopify
 
     html = fetch_page_html(url)
@@ -206,6 +252,10 @@ def scrape_item(url: str) -> dict:
         except Exception as e:
             print(f"Playwright retry failed: {e}")
 
+    result['category'] = _normalize_category(
+        result.get('category'),
+        fallback_text=f"{result.get('name', '')} {result.get('description', '')}",
+    )
     return result
 
 BRANDS = ['Reformation',
