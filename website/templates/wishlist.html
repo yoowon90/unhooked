@@ -235,6 +235,18 @@
       errIcon.style.display = 'none';
       wrapper.style.display = 'none';
 
+      // Clear any pre-filled data from a previous successful fetch
+      document.getElementById('fetch-brand').value       = '';
+      document.getElementById('fetch-name').value        = '';
+      document.getElementById('fetch-price').value       = '';
+      document.getElementById('fetch-description').value = '';
+      document.getElementById('fetch-link').value        = '';
+      document.getElementById('fetch-image-url').value   = '';
+      document.getElementById('fetch-tag').value         = '';
+      var _prevPreview = document.getElementById('fetch-image-preview');
+      _prevPreview.src = '';
+      _prevPreview.style.display = 'none';
+
       var _loadingPhrases = [
         [
           'ooh, cute find! pulling the details...',
