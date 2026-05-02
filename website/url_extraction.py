@@ -305,11 +305,9 @@ class ItemDetails:
         try:
             script_tag = self.soup.find('script', {'type': 'application/ld+json'})
             json_data = json.loads(script_tag.string)
-            data_copy['name'] = json_data.get('name')
-            data_copy['price'] = json_data.get('offers', {}).get('price')
-            data_copy['brand'] = json_data.get('brand', {}).get('name')
-            data_copy['currency'] = json_data.get('offers', {}).get('priceCurrency')
-            data_copy['description'] = json_data.get('description')
+            if isinstance(json_data, list):
+                json_data = next((d for d in json_data if d.get('@type') == 'Product'), json_data[0])
+            self._fill_from_product_dict(data_copy, json_data)
         except Exception as e:
             print(f"extract_reformation failed: {e}")
         return data_copy
@@ -346,19 +344,14 @@ class ItemDetails:
         return data_copy
 
     def extract_zara(self):
-        # Zara is a JS SPA — this works after pydoll renders the page.
+        # Zara is a JS SPA — this works after Playwright renders the page.
         data_copy = copy.deepcopy(self.__default_data)
         try:
             script_tag = self.soup.find('script', {'type': 'application/ld+json'})
             json_data = json.loads(script_tag.string)
-            # Zara wraps schema in a list; handle both forms
             if isinstance(json_data, list):
-                json_data = json_data[0]
-            data_copy['name'] = json_data.get('name')
-            data_copy['price'] = json_data.get('offers', {}).get('price')
-            data_copy['brand'] = json_data.get('brand', {}).get('name') if isinstance(json_data.get('brand'), dict) else json_data.get('brand')
-            data_copy['currency'] = json_data.get('offers', {}).get('priceCurrency')
-            data_copy['description'] = json_data.get('description')
+                json_data = next((d for d in json_data if d.get('@type') == 'Product'), json_data[0])
+            self._fill_from_product_dict(data_copy, json_data)
         except Exception as e:
             print(f"extract_zara failed: {e}")
         return data_copy
