@@ -235,20 +235,58 @@
       errIcon.style.display = 'none';
       wrapper.style.display = 'none';
 
-      var _loadingMessages = [
-        'ooh, cute find! pulling the details...',
-        'window shopping at warp speed...',
-        'checking the price tag for you...',
-        'almost in your cart...',
-        'manifesting the perfect deets...',
+      var _loadingPhrases = [
+        [
+          'ooh, cute find! pulling the details...',
+          'oh this looks good, let me investigate...',
+          'spotted something worth stalking...',
+          'scouting this one out for you...',
+          'okay I see you, fetching the info...',
+          'this has potential, digging in...',
+        ],
+        [
+          'window shopping at warp speed...',
+          'browsing so you don\'t have to...',
+          'doing the detective work...',
+          'on the hunt for the good stuff...',
+          'crawling the internet so you can treat yourself...',
+          'deep in the rabbit hole for you...',
+        ],
+        [
+          'checking the price tag for you...',
+          'seeing if it\'s worth the splurge...',
+          'reading the fine print...',
+          'calculating treat-yourself tax...',
+          'asking if it sparks joy...',
+          'does it come in other colors though...',
+        ],
+        [
+          'almost in your cart...',
+          'wrapping it up with a bow...',
+          'nearly there, hang tight...',
+          'just a little longer, it\'s worth it...',
+          'putting a bow on it...',
+          'almost ready for your wishlist...',
+        ],
+        [
+          'manifesting the perfect deets...',
+          'adding to the mood board...',
+          'this is going straight to the wishlist...',
+          'channeling main character energy...',
+          'speaking it into existence...',
+          'the universe is delivering the info...',
+        ],
       ];
+      function _pickPhrase(step) {
+        var pool = _loadingPhrases[step % _loadingPhrases.length];
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
       var _msgEl = document.getElementById('url-loading-msg');
-      var _msgIdx = 0;
-      _msgEl.textContent = _loadingMessages[0];
+      var _msgStep = 0;
+      _msgEl.textContent = _pickPhrase(0);
       _msgEl.style.display = 'inline';
       var _msgTimer = setInterval(function() {
-        _msgIdx = (_msgIdx + 1) % _loadingMessages.length;
-        _msgEl.textContent = _loadingMessages[_msgIdx];
+        _msgEl.textContent = _pickPhrase(++_msgStep);
       }, 2500);
 
       function _stopLoading() {
