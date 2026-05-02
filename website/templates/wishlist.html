@@ -198,8 +198,11 @@
               <td><input type="text" id="fetch-delivery-fee" name="delivery-fee" size=60 placeholder="30.00"></td>
             </tr>
             <tr>
-              <td>Enter Link*:</td>
-              <td><input type="text" id="fetch-link" name="link" size=60 placeholder="https://us.rouje.com/products/..."></td>
+              <td>Link:</td>
+              <td>
+                <input type="hidden" id="fetch-link" name="link">
+                <a id="fetch-link-display" href="#" target="_blank" style="word-break:break-all;"></a>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -245,6 +248,7 @@
       document.getElementById('fetch-description').value = '';
       document.getElementById('fetch-category').value   = '';
       document.getElementById('fetch-link').value        = '';
+      var _ld = document.getElementById('fetch-link-display'); _ld.href = '#'; _ld.textContent = '';
       document.getElementById('fetch-image-url').value   = '';
       document.getElementById('fetch-tag').value         = '';
       document.getElementById('fetch-fail-msg').style.display = 'none';
@@ -330,6 +334,8 @@
 
         // Always reveal the form; pre-fill on success, leave empty on failure
         document.getElementById('fetch-link').value = url;
+        var linkDisplay = document.getElementById('fetch-link-display');
+        linkDisplay.href = url; linkDisplay.textContent = url;
         var failMsg = document.getElementById('fetch-fail-msg');
         if (hasData) {
           failMsg.style.display = 'none';
@@ -373,6 +379,7 @@
       document.getElementById('fetch-description').value = '';
       document.getElementById('fetch-category').value   = '';
       document.getElementById('fetch-link').value        = '';
+      var _rld = document.getElementById('fetch-link-display'); _rld.href = '#'; _rld.textContent = '';
       document.getElementById('fetch-image-url').value   = '';
     }
   </script>
