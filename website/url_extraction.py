@@ -39,16 +39,68 @@ def _is_blocked(html: str, status_code: int) -> bool:
 
 
 async def _pydoll_fetch(url: str) -> str:
-    """Fetch page HTML via a real Chrome instance (avoids bot detection + Cloudflare)."""
+    """Fetch page via Chrome CDP with network interception.
+
+    Priority order:
+    1. __NEXT_DATA__ (Next.js sites embed full page data here after JS runs)
+    2. Intercepted JSON API responses matching product-like URL patterns
+    3. Full rendered page_source as fallback
+
+    Returns either rendered HTML or a pseudo-HTML fragment wrapping the
+    most useful JSON payload (parsed downstream by extract_generic).
+    """
     from pydoll.browser import Chrome
+    from pydoll.protocol.network.events import NetworkEvent
+    import json as _json
+
+    captured = {}  # requestId -> response_url for JSON responses
+
+    async def on_response(event):
+        try:
+            params = event.get('params', {})
+            resp = params.get('response', {})
+            if 'json' in resp.get('mimeType', ''):
+                req_id = params.get('requestId')
+                if req_id:
+                    captured[req_id] = resp.get('url', '')
+        except Exception:
+            pass
+
     async with Chrome() as browser:
-        browser.options.headless = True  # remove this line if a site detects headless via canvas/WebGL fingerprinting despite pydoll's bot mitigations
+        browser.options.headless = True  # remove if site detects headless via canvas/WebGL fingerprinting
         tab = await browser.start()
         await tab.enable_auto_solve_cloudflare_captcha()
+        await tab.enable_network_events()
+        await tab.on(NetworkEvent.RESPONSE_RECEIVED, on_response)
         await tab.go_to(url, timeout=30)
-        # go_to() resolves on Page.loadEventFired, but SPAs (e.g. Next.js/Zara) fetch
-        # product data after that event. Give JS time to finish rendering.
+        # go_to() resolves on Page.loadEventFired, but SPAs fetch product data after.
         await asyncio.sleep(4)
+
+        # 1. Try __NEXT_DATA__ (Next.js embeds full SSR data in this script tag)
+        try:
+            result = await tab.execute_script(
+                "document.getElementById('__NEXT_DATA__')?.textContent || ''"
+            )
+            raw = result.value if hasattr(result, 'value') else (result.get('value', '') if isinstance(result, dict) else '')
+            if raw and len(raw) > 100:
+                print(f"[pydoll] Found __NEXT_DATA__ ({len(raw)} chars)")
+                return f'<script id="__NEXT_DATA__" type="application/json">{raw}</script>'
+        except Exception as e:
+            print(f"[pydoll] __NEXT_DATA__ extraction failed: {e}")
+
+        # 2. Try intercepted JSON API responses that look like product endpoints
+        product_kw = ('product', 'detail', 'pdp', 'catalog', 'item')
+        for req_id, resp_url in list(captured.items()):
+            if any(kw in resp_url.lower() for kw in product_kw):
+                try:
+                    body = await tab.get_network_response_body(req_id)
+                    if body and len(body) > 200:
+                        _json.loads(body)  # validate JSON before returning
+                        print(f"[pydoll] Captured API response from {resp_url}")
+                        return f'<script type="application/json" data-intercepted="true">{body}</script>'
+                except Exception:
+                    continue
+
         return await tab.page_source
 
 
@@ -382,36 +434,97 @@ class ItemDetails:
         suffix = normalized.lower().replace(' ', '_').replace('.', '').replace('-', '_')
         return f'extract_{suffix}'
 
+    @staticmethod
+    def _find_product_in_json(obj, depth=0):
+        """Walk an arbitrary JSON structure and return the first dict that looks like a product."""
+        if depth > 6:
+            return None
+        if isinstance(obj, dict):
+            # A product-like dict has at least a name and a price
+            if obj.get('name') and ('price' in obj or 'offers' in obj):
+                return obj
+            for v in obj.values():
+                found = ItemDetails._find_product_in_json(v, depth + 1)
+                if found:
+                    return found
+        elif isinstance(obj, list):
+            for item in obj[:5]:
+                found = ItemDetails._find_product_in_json(item, depth + 1)
+                if found:
+                    return found
+        return None
+
+    @staticmethod
+    def _fill_from_product_dict(data_copy, product):
+        """Populate data_copy from a schema.org-ish product dict."""
+        data_copy['name'] = product.get('name')
+        data_copy['description'] = product.get('description')
+        brand = product.get('brand')
+        data_copy['brand'] = brand.get('name') if isinstance(brand, dict) else brand
+        offers = product.get('offers') or {}
+        if isinstance(offers, list):
+            offers = offers[0] if offers else {}
+        price_val = product.get('price') or offers.get('price') or offers.get('value') or offers.get('amount')
+        data_copy['price'] = str(price_val) if price_val is not None else None
+        data_copy['currency'] = (offers.get('priceCurrency') or offers.get('currency')
+                                 or product.get('priceCurrency') or product.get('currency'))
+
     def extract_generic(self):
         """
-        Last-resort extractor for any site. Tries schema.org Product JSON-LD first,
-        then falls back to OpenGraph and itemprop meta tags.
-        Runs only when all brand-specific extractors return empty.
+        Last-resort extractor for any site. Tries (in order):
+        1. __NEXT_DATA__ embedded JSON (Next.js SSR sites)
+        2. CDP-intercepted API JSON (data-intercepted script tag from _pydoll_fetch)
+        3. schema.org Product JSON-LD blocks
+        4. OpenGraph / itemprop meta tags
         """
         data_copy = copy.deepcopy(self.__default_data)
         try:
             soup = self.soup
 
-            # 1. Try every JSON-LD block and pick the first Product schema
+            # 1. __NEXT_DATA__ (Next.js sites — pydoll pseudo-HTML or real page)
+            next_script = soup.find('script', {'id': '__NEXT_DATA__'})
+            if next_script and next_script.string:
+                try:
+                    next_data = json.loads(next_script.string)
+                    page_props = next_data.get('props', {}).get('pageProps', {})
+                    product = self._find_product_in_json(page_props)
+                    if product:
+                        self._fill_from_product_dict(data_copy, product)
+                        if any(v is not None for v in data_copy.values()):
+                            print("extract_generic: matched via __NEXT_DATA__")
+                            return data_copy
+                except Exception as e:
+                    print(f"extract_generic __NEXT_DATA__ parse failed: {e}")
+
+            # 2. CDP-intercepted API JSON
+            api_script = soup.find('script', {'data-intercepted': 'true'})
+            if api_script and api_script.string:
+                try:
+                    api_data = json.loads(api_script.string)
+                    product = self._find_product_in_json(api_data)
+                    if product:
+                        self._fill_from_product_dict(data_copy, product)
+                        if any(v is not None for v in data_copy.values()):
+                            print("extract_generic: matched via intercepted API response")
+                            return data_copy
+                except Exception as e:
+                    print(f"extract_generic intercepted API parse failed: {e}")
+
+            # 3. JSON-LD Product schema
             for script in soup.find_all('script', {'type': 'application/ld+json'}):
                 try:
                     json_data = json.loads(script.string)
                     if isinstance(json_data, list):
                         json_data = next((d for d in json_data if d.get('@type') == 'Product'), json_data[0])
                     if json_data.get('@type') == 'Product':
-                        brand = json_data.get('brand', {})
-                        data_copy['name'] = json_data.get('name')
-                        data_copy['brand'] = brand.get('name') if isinstance(brand, dict) else brand
-                        data_copy['price'] = json_data.get('offers', {}).get('price')
-                        data_copy['currency'] = json_data.get('offers', {}).get('priceCurrency')
-                        data_copy['description'] = json_data.get('description')
+                        self._fill_from_product_dict(data_copy, json_data)
                         if any(v is not None for v in data_copy.values()):
                             print("extract_generic: matched via JSON-LD Product schema")
                             return data_copy
                 except Exception:
                     continue
 
-            # 2. Fall back to OpenGraph / itemprop meta tags
+            # 4. OpenGraph / itemprop meta tags
             def og(prop):
                 tag = soup.find('meta', {'property': prop}) or soup.find('meta', {'name': prop})
                 return tag.get('content') if tag else None
