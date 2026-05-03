@@ -1,71 +1,89 @@
 # Unhooked
 
-Designed to help myself control impulsive shopping
+A personal shopping tracker for curbing impulsive purchases.
 
-# Features
+## Features
 
-Requirements
-- Enable page to add rows of items I would like to buy and their prices
-- Enable a page to move those wanted items to a column of items I eventually gave up
-- Calculate how much money I potentially saved by not buying
-- Enable a calendar to track how much i can buy in a certain period
-- Enable functionality to move money I saved by giving up to my Savings account
-
-
-# Below are instructions related to Flask application
+- **Wish List** — add items you want to buy with price, brand, category, and a scraped image
+- **Unhooked List** — items you decided not to buy; tracks money saved
+- **Purchase List** — items you did buy; tracks spend with NYC tax logic
+- **Reports** — spending and savings summaries with charts
+- **URL extraction** — paste a product URL and have brand/price/image auto-filled (Zara, Reformation, Bloomingdale's, and more)
+- **Gmail Backfill** — connect Gmail via OAuth to scan order confirmation emails and import missed purchases with a Tinder-style review UI
+- **REST API** — full `/api/v1/` endpoints for all wishlist, auth, and reports operations
+- **React Native mobile app** — Expo-based iOS/Android app in `mobile/` backed by the same Flask API
 
 ## Setup & Installation
 
-Make sure you have the latest version of Python installed.
-
 ```bash
 git clone <repo-url>
+pip install -r requirements.txt
 ```
 
-```bash
-pip install -r requirements.txt
+Copy `.env` and fill in the required keys:
+
+```
+SECRET_KEY=...           # python -c "import secrets; print(secrets.token_hex(32))"
+JWT_SECRET_KEY=...       # same as above
+FLASK_ENV=development
+ANTHROPIC_API_KEY=...    # console.anthropic.com → API Keys
+GOOGLE_CLIENT_ID=...     # Google Cloud Console → Credentials (see ROADMAP.md)
+GOOGLE_CLIENT_SECRET=... # same as above
+GOOGLE_REDIRECT_URI=http://localhost:5001/connectors/gmail/callback
 ```
 
 ## Running The App
 
-For `production`:
 ```bash
-FLASK_ENV=production python main.py
+FLASK_ENV=production python main.py   # port 5000, database_prod.db
+FLASK_ENV=development python main.py  # port 5001, database_dev.db
 ```
 
-For `development`:
-```bash
-FLASK_ENV=development python main.py
-```
 ## Viewing The App
 
-For `production`: Go to `http://127.0.0.1:5000`
+- Production: `http://127.0.0.1:5000`
+- Development: `http://127.0.0.1:5001`
 
-For `development`: Go to `http://127.0.0.1:5001`
+## Database
+
+**Live databases are never committed to git** — they contain user data and OAuth tokens.
+
+`instance/database_template.db` is the only database file tracked in git. It contains the full schema with no user data, serving as a reference for the table/column structure. **Do not modify it directly** — schema changes happen via Alembic migrations and the template is regenerated from the model.
+
+When you first run the app, SQLAlchemy creates `database_dev.db` or `database_prod.db` automatically from the models. Apply migrations after:
+
+```bash
+FLASK_ENV=development flask --app main db upgrade -d migrations_dev
+FLASK_ENV=production flask --app main db upgrade -d migrations_prod
+```
 
 ## To run production code in background
 
-`# sudo nohup FLASK_ENV=production python main.py > log.txt 2>&1`
-
-## To initialize migrations
-
-For `production`: `FLASK_ENV=production flask db init --directory=migrations_prod --multidb`
-
-For `development`: `FLASK_ENV=development flask db init --directory=migrations_dev`
-
+```bash
+sudo nohup FLASK_ENV=production python main.py > log.txt 2>&1
+```
 
 ## Generate and Apply Migrations
-For `production`:
+
 ```bash
-export FLASK_APP=website
-FLASK_ENV=production flask db migrate -m "Description of changes" --directory=migrations_prod
-FLASK_ENV=production flask db upgrade --directory=migrations_prod
+# dev
+FLASK_ENV=development flask --app main db migrate -d migrations_dev -m "description"
+FLASK_ENV=development flask --app main db upgrade -d migrations_dev
+
+# prod
+FLASK_ENV=production flask --app main db migrate -d migrations_prod -m "description"
+FLASK_ENV=production flask --app main db upgrade -d migrations_prod
 ```
 
-For `development`:
-```bash
-export FLASK_APP=website
-FLASK_ENV=development flask db migrate -m "Description of changes" --directory=migrations_dev
-FLASK_ENV=development flask db upgrade --directory=migrations_dev
-```
+## Gmail Backfill setup
 
+See `ROADMAP.md` for full Google Cloud Console setup steps. Short version:
+1. Create a project at console.cloud.google.com, enable Gmail API
+2. Set up OAuth consent screen (External, add yourself as test user)
+3. Create OAuth 2.0 credentials (Web app), add redirect URI
+4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `.env`
+5. Restart app → Settings → Connectors → Connect Gmail
+
+## Privacy
+
+See `PRIVACY.md` for data collection and third-party sharing details.
