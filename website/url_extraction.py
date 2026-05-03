@@ -371,17 +371,52 @@ class ItemDetails:
 
     def extract_bloomingdales(self):
         data_copy = copy.deepcopy(self.__default_data)
+        soup = self.soup
+
+        # 1. productMktData script (schema.org JSON embedded by Bloomingdales)
         try:
-            soup = self.soup
             script_tag = soup.find('script', {'id': 'productMktData'})
-            json_data = json.loads(script_tag.string)
-            data_copy['brand'] = json_data.get('brand').get('name')
-            data_copy['name'] = json_data.get('name')
-            data_copy['price'] = json_data.get('offers')[0].get('price')
-            data_copy['currency'] = json_data.get('offers')[0].get('priceCurrency')
-            data_copy['description'] = soup.find('meta', {'property': 'og:title'}).get('content')
+            if script_tag and script_tag.string:
+                json_data = json.loads(script_tag.string)
+                self._fill_from_product_dict(data_copy, json_data)
+                data_copy['description'] = (soup.find('meta', {'property': 'og:description'}) or {}).get('content')
+                if any(v is not None for v in data_copy.values()):
+                    return data_copy
         except Exception as e:
-            print(f"extract_bloomingdales failed: {e}")
+            print(f"extract_bloomingdales productMktData failed: {e}")
+
+        # 2. JSON-LD Product schema
+        try:
+            for script in soup.find_all('script', {'type': 'application/ld+json'}):
+                if not script.string:
+                    continue
+                json_data = json.loads(script.string)
+                if isinstance(json_data, list):
+                    json_data = next((d for d in json_data if d.get('@type') == 'Product'), None)
+                if json_data and json_data.get('@type') == 'Product':
+                    self._fill_from_product_dict(data_copy, json_data)
+                    if any(v is not None for v in data_copy.values()):
+                        return data_copy
+        except Exception as e:
+            print(f"extract_bloomingdales ld+json failed: {e}")
+
+        # 3. OpenGraph / itemprop meta tags
+        try:
+            def og(prop):
+                tag = soup.find('meta', {'property': prop}) or soup.find('meta', {'name': prop})
+                return tag.get('content') if tag else None
+            def itemprop(prop):
+                tag = soup.find('meta', {'itemprop': prop})
+                return tag.get('content') if tag else None
+
+            data_copy['name'] = og('og:title')
+            data_copy['brand'] = og('og:site_name')
+            data_copy['price'] = og('og:price:amount') or og('product:price:amount') or itemprop('price')
+            data_copy['currency'] = og('og:price:currency') or og('product:price:currency') or itemprop('priceCurrency')
+            data_copy['description'] = og('og:description')
+        except Exception as e:
+            print(f"extract_bloomingdales og failed: {e}")
+
         return data_copy
 
     def extract_doen(self):
