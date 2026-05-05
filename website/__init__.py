@@ -11,7 +11,12 @@ import datetime
 
 db = SQLAlchemy()
 jwt = JWTManager()
-limiter = Limiter(key_func=get_remote_address, default_limits=[])
+# storage_uri='memory://' is the explicit form of the default in-memory store
+# and silences Flask-Limiter's "no storage specified" startup warning. This
+# app is single-process self-hosted, so in-memory is appropriate — rate-limit
+# state lives only for the lifetime of the process. Switch to redis://... if
+# we ever scale to multiple workers.
+limiter = Limiter(key_func=get_remote_address, default_limits=[], storage_uri='memory://')
 
 def create_app():
     # initialize the Flask app
