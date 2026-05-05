@@ -9,17 +9,11 @@ from flask_login import current_user, login_required
 from .models import Note, WishItem
 from . import db
 from .url_extraction import scrape_item
+from .tax import taxed_price
 
 # store standard routes (url defined), anything that users can navitage to.
 
 views = Blueprint('views', __name__)  # define blueprint
-TAX = {'11217': 0.0875, '15206': 0}
-# manhattan, brooklyn, queens, bronx, staten island
-NYC = ['10001', '10011', '11019', '10023', '10128',
-                '11201', '11211', '11217', '11231', '11238',
-                '11101', '11354', '11375', '11432', '11691',
-                '10451', '10452', '10463', '10467', '10469',
-                '10301', '10304', '10306', '10314']
 
 
 @views.route('/delete-item', methods=['POST'])
@@ -106,10 +100,7 @@ def wishlist():
 
         else:
             # print(f"delivery_fee: {wish_item_delivery_fee}")
-            # extra tax rules for nyc
-            zipcode = current_user.zipcode
-            tax = 0 if (zipcode in NYC and (wish_item_price < 110.00)) else TAX.get(zipcode, 0)
-            taxed_price = wish_item_price*(1+tax)
+            taxed_item_price = taxed_price(current_user.zipcode, wish_item_price)
 
             # Server-side image fallback: run Google search only if no image_url provided
             if not wish_item_image_url:
@@ -131,9 +122,9 @@ def wishlist():
                                 brand=wish_item_brand,
                                 name=wish_item_name,
                                 price=wish_item_price,
-                                taxed_price=taxed_price,
+                                taxed_price=taxed_item_price,
                                 delivery_fee=wish_item_delivery_fee,
-                                total_price=taxed_price + wish_item_delivery_fee,  # taxed price plus delivery fee
+                                total_price=taxed_item_price + wish_item_delivery_fee,  # taxed price plus delivery fee
                                 link=wish_item_link,
                                 description=wish_item_description,
                                 image_url=wish_item_image_url,
@@ -269,10 +260,9 @@ def save_table():
                                         # Update the pre-tax price field (this is what the user actually entered)
                     wishitem.price = new_price
 
-                    # Calculate and update the taxed price (assuming 8.75% tax rate for NYC)
-                    # Always calculate tax from the user's input, never from an already-taxed value
-                    tax_rate = 0.0875
-                    wishitem.taxed_price = new_price * (1 + tax_rate)
+                    # Recalculate taxed price using the shared tax helper, which honors
+                    # the NYC clothing exemption (<$110) and per-zipcode rules.
+                    wishitem.taxed_price = taxed_price(current_user.zipcode, new_price)
 
                     # Update total price (including delivery fee if any)
                     if wishitem.delivery_fee:

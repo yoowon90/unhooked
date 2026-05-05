@@ -3,6 +3,15 @@
 ## What this is
 A Flask web app for tracking personal online shopping habits. Users maintain a wishlist, mark items as purchased or "unhooked" (decided not to buy), and view spending/savings reports.
 
+## DB backup — ask first
+
+**Before starting the app**, ask the user: "Do you want to back up the databases before starting?"
+If yes, run:
+```bash
+bash scripts/backup_db.sh
+```
+Timestamped copies land in `backups/` (gitignored). This protects against accidental data loss (e.g. from git operations that rewrite history).
+
 ## How to run
 
 ```bash

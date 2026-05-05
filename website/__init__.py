@@ -4,11 +4,19 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import Config, ProductionConfig, DevelopmentConfig
 import datetime
 
 db = SQLAlchemy()
 jwt = JWTManager()
+# storage_uri='memory://' is the explicit form of the default in-memory store
+# and silences Flask-Limiter's "no storage specified" startup warning. This
+# app is single-process self-hosted, so in-memory is appropriate — rate-limit
+# state lives only for the lifetime of the process. Switch to redis://... if
+# we ever scale to multiple workers.
+limiter = Limiter(key_func=get_remote_address, default_limits=[], storage_uri='memory://')
 
 def create_app():
     # initialize the Flask app
@@ -27,17 +35,22 @@ def create_app():
 
     db.init_app(app)
     jwt.init_app(app)
+    limiter.init_app(app)
     migrate = Migrate(app, db)
 
     from .views import views
     from .auth import auth
     from .reports import reports
     from .api import api
+    from .connectors import connectors
+    from .backfill import backfill
 
     app.register_blueprint(views, url_prefix='/')
     app.register_blueprint(auth, url_prefix='/')
     app.register_blueprint(reports, url_prefix='/')
     app.register_blueprint(api, url_prefix='/api/v1')
+    app.register_blueprint(connectors, url_prefix='/')
+    app.register_blueprint(backfill, url_prefix='/')
 
     from .models import User, Note, WishItem
 

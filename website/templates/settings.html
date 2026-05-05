@@ -1,0 +1,132 @@
+{% extends "base.html" %} {% block title %}Settings{% endblock %} {% block content %}
+<style>
+  .settings-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .settings-card h5 {
+    font-weight: 600;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 10px;
+    color: #343a40;
+  }
+  .connector-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .connector-row:last-child { border-bottom: none; }
+  .connector-info { display: flex; align-items: center; gap: 12px; }
+  .connector-icon { font-size: 1.5rem; width: 36px; text-align: center; }
+  .connector-title { font-weight: 500; font-size: 0.95rem; }
+  .connector-sub { font-size: 0.8rem; color: #6c757d; margin-top: 2px; }
+  .status-pill {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+  .status-connected { background: #d4edda; color: #155724; }
+  .status-disconnected { background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
+</style>
+
+<div style="max-width: 720px; margin: 32px auto;">
+  <h3 style="margin-bottom: 24px;">&#9881;&#65039; Settings</h3>
+
+  <!-- ── Account ── -->
+  <div class="settings-card">
+    <h5>&#128100; Account</h5>
+    <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 18px;">
+      Signed in as <strong>{{ user.email }}</strong>
+    </p>
+
+    <!-- Zipcode row -->
+    <div class="connector-row" style="border-bottom:none; padding-top:6px; align-items: flex-start;">
+      <div class="connector-info">
+        <div class="connector-icon">&#127968;</div>
+        <div style="flex:1;">
+          <div class="connector-title">Shipping zipcode</div>
+          <div class="connector-sub">
+            Used to estimate sales tax on wishlist items. Updating this recalculates taxes on items currently in your wishlist; <strong>purchased and unhooked items are never modified.</strong>
+          </div>
+        </div>
+      </div>
+      <form method="POST" action="{{ url_for('connectors.update_zipcode') }}" style="margin: 0; display:flex; gap:8px; align-items:center;">
+        <input
+          type="text"
+          name="zipcode"
+          value="{{ user.zipcode or '' }}"
+          maxlength="5"
+          pattern="\d{5}"
+          inputmode="numeric"
+          placeholder="00000"
+          required
+          style="width: 80px; padding: 4px 8px; border:1px solid #ced4da; border-radius:4px; font-family: monospace;"
+        />
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </form>
+    </div>
+
+    <div style="background:#f1f3f5; padding:10px 14px; margin-top:14px; border-radius:4px; font-size:0.78rem; color:#495057;">
+      <strong>Tax estimate notes:</strong>
+      <ul style="margin: 4px 0 0 18px; padding: 0;">
+        <li>NYC zipcodes: <strong>0% under $110, 8.75% at/above</strong> (NY clothing exemption).</li>
+        <li>Clothing fully exempt in <strong>PA, NJ, MN, RI, VT</strong> regardless of price.</li>
+        <li>Other states use the state base rate; <strong>local/county/city rates are not included</strong>, so big-city totals (Chicago, LA) will be undercounted.</li>
+        <li>Unknown zipcodes default to 0%.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Connectors ── -->
+  <div class="settings-card">
+    <h5>&#128268; Connectors</h5>
+
+    <!-- Gmail row -->
+    <div class="connector-row">
+      <div class="connector-info">
+        <div class="connector-icon">&#128231;</div>
+        <div>
+          <div class="connector-title">Gmail</div>
+          <div class="connector-sub">
+            {% if user.gmail_connected_email %}
+              Connected as <strong>{{ user.gmail_connected_email }}</strong>
+            {% else %}
+              Connect to enable order backfilling from your inbox
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        {% if user.gmail_connected_email %}
+          <span class="status-pill status-connected">Connected</span>
+          <a href="{{ url_for('backfill.backfill_page') }}" class="btn btn-success btn-sm">&#128241; Start Backfill</a>
+          <form method="POST" action="{{ url_for('connectors.gmail_disconnect') }}" style="margin: 0;">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Disconnect</button>
+          </form>
+        {% else %}
+          <span class="status-pill status-disconnected">Not connected</span>
+          <a href="{{ url_for('connectors.gmail_connect') }}" class="btn btn-primary btn-sm">Connect Gmail</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if not user.gmail_connected_email %}
+    <div style="background:#fff8e1; border-left:3px solid #ffc107; padding:10px 14px; margin-top:14px; border-radius:4px; font-size:0.82rem; color:#6c5d00;">
+      <strong>Before connecting:</strong> Gmail access is read-only. When you scan, the subject and first ~3,000 characters of each matched order email are sent to Anthropic's API to extract order details. See <a href="https://github.com/yoowon90/unhooked/blob/main/PRIVACY.md" target="_blank" rel="noopener">PRIVACY.md</a> for full details.
+    </div>
+    {% endif %}
+
+  </div><!-- /settings-card -->
+
+</div>
+{% endblock %}

@@ -1,0 +1,661 @@
+{% extends "base.html" %} {% block title %}Backfill Orders{% endblock %} {% block content %}
+<style>
+  .backfill-wrap {
+    max-width: 520px;
+    margin: 40px auto;
+  }
+  /* ── Scan Screen ── */
+  .scan-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.1);
+    padding: 36px 40px;
+    text-align: center;
+  }
+  .scan-card h4 { font-weight: 700; margin-bottom: 8px; }
+  .scan-card p { color: #6c757d; font-size: 0.9rem; margin-bottom: 24px; }
+  .day-pills { display: flex; justify-content: center; gap: 10px; margin-bottom: 28px; }
+  .day-pill {
+    padding: 8px 22px;
+    border-radius: 20px;
+    border: 2px solid #dee2e6;
+    background: white;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .day-pill.active {
+    border-color: #343a40;
+    background: #343a40;
+    color: white;
+  }
+  .spinner-wrap { padding: 20px 0; }
+
+  /* ── Review Screen ── */
+  .review-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .progress-text { font-size: 0.85rem; color: #6c757d; margin-top: 6px; }
+  .card-stack {
+    position: relative;
+    height: 420px;
+    margin-bottom: 24px;
+  }
+  .order-card {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+    padding: 28px 28px 22px;
+    transition: transform 0.32s ease, opacity 0.32s ease;
+    will-change: transform;
+  }
+  .order-card.depth-0 { z-index: 10; }
+  .order-card.depth-1 { z-index: 9;  transform: translateY(8px) scale(0.97); }
+  .order-card.depth-2 { z-index: 8;  transform: translateY(16px) scale(0.94); }
+  .order-card.swipe-right {
+    transform: translateX(160%) rotate(15deg) !important;
+    opacity: 0;
+  }
+  .order-card.swipe-left {
+    transform: translateX(-160%) rotate(-15deg) !important;
+    opacity: 0;
+  }
+  .card-brand {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 3px;
+    letter-spacing: -0.3px;
+  }
+  .card-meta {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 14px;
+  }
+  .card-divider { border-top: 1px solid #f0f0f0; margin: 10px 0; }
+  .card-items { list-style: none; padding: 0; margin: 0 0 10px; font-size: 0.9rem; }
+  .card-items li {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px dotted #f0f0f0;
+  }
+  .card-items li:last-child { border-bottom: none; }
+  .card-total {
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-align: right;
+    margin-top: 8px;
+  }
+  .card-subject {
+    font-size: 0.75rem;
+    color: #adb5bd;
+    margin-top: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dup-pill {
+    display: inline-block;
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .card-items li.dup-item {
+    background: #fffaf0;
+  }
+  .card-items li.dup-item .name-flag {
+    color: #856404;
+    font-size: 0.7rem;
+    margin-left: 6px;
+  }
+  .swipe-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+  }
+  .btn-deny, .btn-approve {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 3px solid;
+    font-size: 1.6rem;
+    cursor: pointer;
+    background: white;
+    transition: transform 0.12s, box-shadow 0.12s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-deny   { border-color: #dc3545; color: #dc3545; }
+  .btn-approve{ border-color: #28a745; color: #28a745; }
+  .btn-deny:hover   { background: #dc3545; color: white; transform: scale(1.08); box-shadow: 0 4px 14px rgba(220,53,69,0.3); }
+  .btn-approve:hover{ background: #28a745; color: white; transform: scale(1.08); box-shadow: 0 4px 14px rgba(40,167,69,0.3); }
+
+  /* ── Summary Screen ── */
+  .summary-cols { display: flex; gap: 16px; margin-bottom: 24px; }
+  .summary-col {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+    padding: 16px;
+  }
+  .summary-col h6 { font-weight: 700; font-size: 0.85rem; margin-bottom: 12px; }
+  .summary-col h6.approved-head { color: #28a745; }
+  .summary-col h6.denied-head   { color: #dc3545; }
+  .summary-mini-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 0.82rem;
+    position: relative;
+    transition: background 0.15s, opacity 0.15s, transform 0.1s;
+    cursor: grab;
+    user-select: none;
+  }
+  .summary-mini-card:hover { background: #eef0f2; }
+  .summary-mini-card:active { cursor: grabbing; }
+  .summary-mini-card.dragging {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+  .summary-mini-card .brand { font-weight: 600; padding-right: 24px; }
+  .summary-mini-card .items-preview { color: #6c757d; margin-top: 3px; font-size: 0.78rem; }
+  .summary-empty {
+    color: #adb5bd;
+    font-size: 0.83rem;
+    text-align: center;
+    padding: 18px 0;
+    border: 1px dashed #dee2e6;
+    border-radius: 6px;
+  }
+  .summary-col {
+    transition: background 0.18s, box-shadow 0.18s;
+  }
+  .summary-col.drag-over {
+    background: #e7f3ff;
+    box-shadow: 0 0 0 2px #0967d2 inset;
+  }
+  .move-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid #ced4da;
+    background: white;
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .move-btn:hover {
+    background: #343a40;
+    color: white;
+    border-color: #343a40;
+  }
+
+  /* ── Done Screen ── */
+  .done-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.1);
+    padding: 48px 40px;
+    text-align: center;
+  }
+  .done-icon { font-size: 3rem; margin-bottom: 12px; }
+</style>
+
+<div class="backfill-wrap">
+
+  <!-- ── Cancel bar (hidden on Done screen) ── -->
+  <div id="cancelBar" style="text-align:right; margin-bottom:8px;">
+    <a href="#" onclick="cancelBackfill(event)" style="font-size:0.78rem; color:#6c757d; text-decoration:underline;">
+      &larr; Cancel and return to Purchase List
+    </a>
+  </div>
+
+  <!-- ── SCAN SCREEN ── -->
+  <div id="scanScreen">
+    <div class="scan-card">
+      <div style="font-size: 2.2rem; margin-bottom: 10px;">&#128241;</div>
+      <h4>Backfill Orders from Gmail</h4>
+      <p>Scan your inbox for order confirmations and add missed purchases to your list.</p>
+
+      <div class="day-pills">
+        <button class="day-pill active" data-days="30" onclick="selectDays(this)">30 days</button>
+        <button class="day-pill" data-days="60" onclick="selectDays(this)">60 days</button>
+        <button class="day-pill" data-days="90" onclick="selectDays(this)">90 days</button>
+      </div>
+
+      <button class="btn btn-dark btn-block" id="scanBtn" onclick="startScan()">
+        &#128269; Scan Gmail
+      </button>
+
+      <div class="spinner-wrap" id="scanSpinner" style="display:none;">
+        <div class="spinner-border text-secondary" role="status"></div>
+        <div style="font-size:0.85rem; color:#6c757d; margin-top:8px;">Scanning inbox and parsing orders…</div>
+      </div>
+      <div id="scanError" style="display:none;" class="alert alert-danger mt-3" role="alert"></div>
+    </div>
+  </div>
+
+  <!-- ── REVIEW SCREEN ── -->
+  <div id="reviewScreen" style="display:none;">
+    <div class="review-header">
+      <h4 style="font-weight:700; margin-bottom:4px;">Review Orders</h4>
+      <div class="progress-text" id="progressText"></div>
+      <div class="progress mt-2" style="height:4px;">
+        <div class="progress-bar bg-dark" id="progressBar" role="progressbar" style="width:0%"></div>
+      </div>
+      <div id="mergedEmailsNote" style="display:none; font-size:0.75rem; color:#6c757d; margin-top:8px; font-style:italic;"></div>
+    </div>
+
+    <div class="card-stack" id="cardStack"></div>
+
+    <div class="swipe-buttons">
+      <button class="btn-deny"    onclick="decide('deny')"    title="Skip">✕</button>
+      <button class="btn-approve" onclick="decide('approve')" title="Add">✓</button>
+    </div>
+    <p style="text-align:center; font-size:0.78rem; color:#adb5bd; margin-top:12px;">
+      ← Skip &nbsp;|&nbsp; Add →  &nbsp;·&nbsp; or use arrow keys
+    </p>
+  </div>
+
+  <!-- ── SUMMARY SCREEN ── -->
+  <div id="summaryScreen" style="display:none;">
+    <h4 style="font-weight:700; text-align:center; margin-bottom:20px;">&#128203; Review Summary</h4>
+    <div class="summary-cols">
+      <div class="summary-col"
+           data-side="approved"
+           ondragover="onColDragOver(event)"
+           ondragleave="onColDragLeave(event)"
+           ondrop="onColDrop(event, 'approved')">
+        <h6 class="approved-head">&#10003; Adding <span id="approvedCount">0</span></h6>
+        <div id="approvedList"></div>
+      </div>
+      <div class="summary-col"
+           data-side="denied"
+           ondragover="onColDragOver(event)"
+           ondragleave="onColDragLeave(event)"
+           ondrop="onColDrop(event, 'denied')">
+        <h6 class="denied-head">&#10005; Skipped <span id="deniedCount">0</span></h6>
+        <div id="deniedList"></div>
+      </div>
+    </div>
+    <div style="text-align:center; font-size:0.72rem; color:#adb5bd; margin-bottom:14px;">
+      Drag a card to swap columns, or click the &#8592;/&#8594; arrow.
+    </div>
+
+    <div style="text-align:center; display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-success btn-block" id="confirmBtn" onclick="confirmBackfill()">
+        &#10003; Confirm &amp; Add to Purchases
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="goBackToReview()">
+        Re-review
+      </button>
+    </div>
+    <div id="confirmError" style="display:none;" class="alert alert-danger mt-3" role="alert"></div>
+  </div>
+
+  <!-- ── DONE SCREEN ── -->
+  <div id="doneScreen" style="display:none;">
+    <div class="done-card">
+      <div class="done-icon">&#127881;</div>
+      <h4 style="font-weight:700;">All done!</h4>
+      <p class="text-muted" id="doneMessage"></p>
+      <a href="{{ url_for('views.purchased_list') }}" class="btn btn-dark mt-2">View Purchase List</a>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+  let selectedDays = 30;
+  let allOrders = [];
+  let currentIndex = 0;
+  let approved = [];
+  let denied = [];
+  let isAnimating = false;
+
+  function selectDays(el) {
+    document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    selectedDays = parseInt(el.dataset.days);
+  }
+
+  async function startScan() {
+    document.getElementById('scanBtn').disabled = true;
+    document.getElementById('scanSpinner').style.display = 'block';
+    document.getElementById('scanError').style.display = 'none';
+
+    try {
+      const res = await fetch('/backfill/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: selectedDays }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Scan failed');
+
+      allOrders = data.orders || [];
+      if (allOrders.length === 0) {
+        showError('scanError', `No new order confirmation emails found in the last ${selectedDays} days.`);
+        document.getElementById('scanBtn').disabled = false;
+        document.getElementById('scanSpinner').style.display = 'none';
+        return;
+      }
+      currentIndex = 0;
+      approved = [];
+      denied = [];
+      document.getElementById('scanScreen').style.display = 'none';
+      document.getElementById('reviewScreen').style.display = 'block';
+      const mergedNote = document.getElementById('mergedEmailsNote');
+      if (mergedNote) {
+        const mergedCount = data.merged_email_count || 0;
+        const autoSkipped = data.auto_skipped_count || 0;
+        const parts = [];
+        if (mergedCount > 0) {
+          parts.push(`combined ${mergedCount} related email${mergedCount !== 1 ? 's' : ''}`);
+        }
+        if (autoSkipped > 0) {
+          parts.push(`auto-skipped ${autoSkipped} order${autoSkipped !== 1 ? 's' : ''} already in your purchase list`);
+        }
+        if (parts.length) {
+          mergedNote.textContent = parts.join(' · ');
+          mergedNote.style.display = 'block';
+        } else {
+          mergedNote.style.display = 'none';
+        }
+      }
+      renderCards();
+    } catch (e) {
+      showError('scanError', e.message);
+      document.getElementById('scanBtn').disabled = false;
+    }
+    document.getElementById('scanSpinner').style.display = 'none';
+  }
+
+  function renderCards() {
+    const stack = document.getElementById('cardStack');
+    stack.innerHTML = '';
+    const total = allOrders.length;
+    const remaining = total - currentIndex;
+
+    updateProgress();
+
+    // Render up to 3 cards for depth effect (back to front in DOM)
+    const depthSlots = [2, 1, 0];
+    depthSlots.forEach(d => {
+      const idx = currentIndex + d;
+      if (idx < allOrders.length) {
+        const card = buildCard(allOrders[idx]);
+        card.classList.add(`depth-${d}`);
+        stack.prepend(card); // prepend so depth-0 is last in DOM = on top
+      }
+    });
+  }
+
+  function buildCard(order) {
+    const card = document.createElement('div');
+    card.className = 'order-card';
+
+    const date = order.order_date
+      ? new Date(order.order_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
+    const orderNum = order.order_number ? `&nbsp;·&nbsp; ${order.order_number}` : '';
+
+    let itemsHtml = '';
+    if (order.items && order.items.length) {
+      const visible = order.items.slice(0, 5);
+      const more = order.items.length - visible.length;
+      itemsHtml = '<ul class="card-items">' +
+        visible.map(it => {
+          const dup = it._possible_duplicate ? ' class="dup-item"' : '';
+          const flag = it._possible_duplicate ? '<span class="name-flag">⚠ likely duplicate</span>' : '';
+          const qty = (it.quantity && it.quantity > 1) ? ` <span style="color:#6c757d; font-size:0.8em;">× ${it.quantity}</span>` : '';
+          const lineTotal = (it.quantity && it.quantity > 1 && it.price)
+            ? `<span>$${it.price.toFixed(2)} ea<br><span style="font-size:0.78em;color:#6c757d;">$${(it.price * it.quantity).toFixed(2)} total</span></span>`
+            : `<span>${it.price ? '$' + it.price.toFixed(2) : ''}</span>`;
+          return `<li${dup}><span>${esc(it.name)}${qty}${flag}</span>${lineTotal}</li>`;
+        }).join('') +
+        (more > 0 ? `<li style="color:#adb5bd;">+ ${more} more item${more > 1 ? 's' : ''}</li>` : '') +
+        '</ul>';
+    }
+
+    const total = order.order_total ? `<div class="card-total">Total: $${parseFloat(order.order_total).toFixed(2)}</div>` : '';
+    const dupPill = order.possible_duplicate
+      ? `<div><span class="dup-pill">⚠ Possible duplicate of an existing purchase — swipe left to skip</span></div>`
+      : '';
+
+    card.innerHTML = `
+      ${dupPill}
+      <div class="card-brand">${esc(order.brand || 'Unknown Store')}</div>
+      <div class="card-meta">${date}${orderNum}</div>
+      <div class="card-divider"></div>
+      ${itemsHtml}
+      ${total}
+      <div class="card-subject">&#9993; ${esc(order.email_subject || '')}</div>
+    `;
+    return card;
+  }
+
+  function decide(action) {
+    if (isAnimating) return;
+    if (currentIndex >= allOrders.length) return;
+
+    const stack = document.getElementById('cardStack');
+    const topCard = stack.querySelector('.depth-0');
+    if (!topCard) return;
+
+    isAnimating = true;
+    const order = allOrders[currentIndex];
+    if (action === 'approve') {
+      approved.push(order);
+      topCard.classList.add('swipe-right');
+    } else {
+      denied.push(order);
+      topCard.classList.add('swipe-left');
+    }
+
+    setTimeout(() => {
+      currentIndex++;
+      if (currentIndex >= allOrders.length) {
+        showSummary();
+      } else {
+        renderCards();
+      }
+      isAnimating = false;
+    }, 320);
+  }
+
+  function updateProgress() {
+    const total = allOrders.length;
+    const done = currentIndex;
+    document.getElementById('progressText').textContent =
+      `${done} of ${total} reviewed`;
+    document.getElementById('progressBar').style.width = `${(done / total) * 100}%`;
+  }
+
+  function showSummary() {
+    document.getElementById('reviewScreen').style.display = 'none';
+    document.getElementById('summaryScreen').style.display = 'block';
+
+    document.getElementById('approvedCount').textContent = approved.length;
+    document.getElementById('deniedCount').textContent = denied.length;
+
+    renderSummaryList('approvedList', approved, 'approved');
+    renderSummaryList('deniedList', denied, 'denied');
+  }
+
+  function renderSummaryList(containerId, orders, side) {
+    const el = document.getElementById(containerId);
+    if (!orders.length) {
+      el.innerHTML = '<div class="summary-empty">Drop here</div>';
+      return;
+    }
+    // 'approved' cards show → (move to Skipped); 'denied' cards show ← (move to Adding)
+    const arrow = side === 'approved' ? '→' : '←';
+    const tooltip = side === 'approved' ? 'Move to Skipped' : 'Move to Adding';
+    el.innerHTML = orders.map(o => {
+      const preview = (o.items || []).slice(0, 2).map(i => i.name).join(', ');
+      const more = (o.items || []).length > 2 ? ` +${(o.items||[]).length-2} more` : '';
+      const id = esc(o.email_id || '');
+      return `<div class="summary-mini-card"
+        draggable="true"
+        data-email-id="${id}"
+        ondragstart="onCardDragStart(event)"
+        ondragend="onCardDragEnd(event)">
+        <button type="button" class="move-btn" onclick="moveCard('${id}')" title="${tooltip}">${arrow}</button>
+        <div class="brand">${esc(o.brand || 'Unknown')}</div>
+        ${o.order_date ? `<div style="font-size:0.75rem;color:#6c757d;">${o.order_date}</div>` : ''}
+        <div class="items-preview">${esc(preview)}${more}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function rerenderSummary() {
+    document.getElementById('approvedCount').textContent = approved.length;
+    document.getElementById('deniedCount').textContent = denied.length;
+    renderSummaryList('approvedList', approved, 'approved');
+    renderSummaryList('deniedList', denied, 'denied');
+  }
+
+  function moveCard(emailId) {
+    if (!emailId) return;
+    const moveOne = (from, to) => {
+      const idx = from.findIndex(o => o.email_id === emailId);
+      if (idx === -1) return false;
+      to.push(from.splice(idx, 1)[0]);
+      return true;
+    };
+    if (!moveOne(approved, denied)) moveOne(denied, approved);
+    rerenderSummary();
+  }
+
+  // ── Drag-and-drop ─────────────────────────────────────────────
+  function onCardDragStart(e) {
+    const id = e.currentTarget.getAttribute('data-email-id') || '';
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    e.currentTarget.classList.add('dragging');
+  }
+
+  function onCardDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.summary-col.drag-over').forEach(c => c.classList.remove('drag-over'));
+  }
+
+  function onColDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over');
+  }
+
+  function onColDragLeave(e) {
+    // Only clear if leaving the column itself, not bubbling from a child
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    e.currentTarget.classList.remove('drag-over');
+  }
+
+  function onColDrop(e, targetSide) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    const emailId = e.dataTransfer.getData('text/plain');
+    if (!emailId) return;
+
+    const inApproved = approved.findIndex(o => o.email_id === emailId);
+    const inDenied = denied.findIndex(o => o.email_id === emailId);
+
+    if (targetSide === 'approved' && inApproved === -1 && inDenied !== -1) {
+      approved.push(denied.splice(inDenied, 1)[0]);
+    } else if (targetSide === 'denied' && inDenied === -1 && inApproved !== -1) {
+      denied.push(approved.splice(inApproved, 1)[0]);
+    }
+    // If targetSide matches current side, no-op (just a click+release in the same column)
+    rerenderSummary();
+  }
+
+  function goBackToReview() {
+    // Reset to re-review from scratch
+    currentIndex = 0;
+    approved = [];
+    denied = [];
+    document.getElementById('summaryScreen').style.display = 'none';
+    document.getElementById('reviewScreen').style.display = 'block';
+    renderCards();
+  }
+
+  async function confirmBackfill() {
+    document.getElementById('confirmBtn').disabled = true;
+    document.getElementById('confirmBtn').textContent = 'Adding…';
+    document.getElementById('confirmError').style.display = 'none';
+
+    try {
+      const res = await fetch('/backfill/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved, denied }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Confirm failed');
+
+      document.getElementById('summaryScreen').style.display = 'none';
+      document.getElementById('doneScreen').style.display = 'block';
+      document.getElementById('cancelBar').style.display = 'none';
+      const skipped = (data.skipped_orders || 0) + (data.skipped_items || 0);
+      const base = `Added ${data.added} item${data.added !== 1 ? 's' : ''} to your purchase list.`;
+      document.getElementById('doneMessage').textContent = skipped
+        ? `${base} Skipped ${skipped} likely duplicate${skipped !== 1 ? 's' : ''}.`
+        : base;
+    } catch (e) {
+      showError('confirmError', e.message);
+      document.getElementById('confirmBtn').disabled = false;
+      document.getElementById('confirmBtn').textContent = '✓ Confirm & Add to Purchases';
+    }
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('reviewScreen').style.display === 'none') return;
+    if (e.key === 'ArrowRight') decide('approve');
+    if (e.key === 'ArrowLeft')  decide('deny');
+  });
+
+  function cancelBackfill(e) {
+    if (e) e.preventDefault();
+    const hasProgress = (approved.length + denied.length) > 0;
+    if (hasProgress) {
+      const ok = confirm(`Discard your review progress (${approved.length} adding, ${denied.length} skipped) and return to your Purchase List?`);
+      if (!ok) return;
+    }
+    window.location.href = "{{ url_for('views.purchased_list') }}";
+  }
+</script>
+{% endblock %}

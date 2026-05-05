@@ -5,14 +5,21 @@
 .DS_Store
 **/__pycache__
 
-# Do not track prod database as may contain sensitive data. Only track dev db.
+# Never commit databases — they contain user data and OAuth tokens
+# Only the blank schema template is tracked (no user data)
 instance/database_prod.db
+instance/database_dev.db
+instance/*.db
+!instance/database_template.db
 
 # Do not track test scripts made for dev purposes.
 BeautifulSoup_test.ipynb
 
 # Environment variables (contains secrets)
 .env
+
+# DB backups (timestamped copies, never commit)
+backups/
 
 # React Native / Expo
 mobile/node_modules
