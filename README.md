@@ -20,17 +20,16 @@ git clone <repo-url>
 pip install -r requirements.txt
 ```
 
-Copy `.env` and fill in the required keys:
+Copy `.env.example` to `.env` and fill in the values:
 
+```bash
+cp .env.example .env
 ```
-SECRET_KEY=...           # python -c "import secrets; print(secrets.token_hex(32))"
-JWT_SECRET_KEY=...       # same as above
-FLASK_ENV=development
-ANTHROPIC_API_KEY=...    # console.anthropic.com → API Keys
-GOOGLE_CLIENT_ID=...     # Google Cloud Console → Credentials (see ROADMAP.md)
-GOOGLE_CLIENT_SECRET=... # same as above
-GOOGLE_REDIRECT_URI=http://localhost:5001/connectors/gmail/callback
-```
+
+Required keys (see `.env.example` for full instructions):
+- `SECRET_KEY`, `JWT_SECRET_KEY` — generate with `python -c "import secrets; print(secrets.token_hex(32))"`
+- `ANTHROPIC_API_KEY` — from console.anthropic.com → API Keys
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — from Google Cloud Console (see ROADMAP.md)
 
 ## Running The App
 
@@ -79,8 +78,8 @@ FLASK_ENV=production flask --app main db upgrade -d migrations_prod
 
 See `ROADMAP.md` for full Google Cloud Console setup steps. Short version:
 1. Create a project at console.cloud.google.com, enable Gmail API
-2. Set up OAuth consent screen (External, add yourself as test user)
-3. Create OAuth 2.0 credentials (Web app), add redirect URI
+2. Set up OAuth consent screen (External, add yourself as test user, scopes: `gmail.readonly`)
+3. Create OAuth 2.0 credentials (Web app), add redirect URI `http://localhost:5001/connectors/gmail/callback` (and/or `:5000` for prod)
 4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `.env`
 5. Restart app → Settings → Connectors → Connect Gmail
 

@@ -18,6 +18,9 @@ BeautifulSoup_test.ipynb
 # Environment variables (contains secrets)
 .env
 
+# DB backups (timestamped copies, never commit)
+backups/
+
 # React Native / Expo
 mobile/node_modules
 mobile/.expo
