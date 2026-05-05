@@ -113,14 +113,12 @@
         {% set wish_period_seconds = purchased_item.wish_period.total_seconds() if purchased_item.wish_period is not none else 0 %}
         {% set wish_period_days = wish_period_seconds / 86400 %}
         {% set row_class = "" %}
-        {% if wish_period_days > 0 %}
-          {% if wish_period_days < 7 %}
-            {% set row_class = "table-danger" %}
-          {% elif wish_period_days < 28 %}
-            {% set row_class = "table-warning" %}
-          {% else %}
-            {% set row_class = "table-success" %}
-          {% endif %}
+        {% if wish_period_days < 7 %}
+          {% set row_class = "table-danger" %}
+        {% elif wish_period_days < 28 %}
+          {% set row_class = "table-warning" %}
+        {% else %}
+          {% set row_class = "table-success" %}
         {% endif %}
         <tr class="{{ row_class }}" data-wishitem-category="{{ purchased_item.category }}" data-wishitem-brand="{{ purchased_item.brand }}" data-purchase-date="{{ purchased_item.purchase_date.isoformat() if purchased_item.purchase_date is not none else (purchased_item.date.isoformat() if purchased_item.date is not none else '') }}">
           <th scope="row">{{count.value}}</th>
@@ -134,7 +132,11 @@
           <td> {{purchased_item.brand}} </td>
           <td> {{purchased_item.category}} </td>
           <td>
-            <a href="{{ purchased_item.link }}" target="_blank" style="color: blue; text-decoration: underline; font-size:11pt">{{purchased_item.name}}</a>
+            {% if purchased_item.backfilled or not purchased_item.link %}
+            <span style="font-size:11pt;">{{ purchased_item.name }}</span>
+            {% else %}
+            <a href="{{ purchased_item.link }}" target="_blank" style="color: blue; text-decoration: underline; font-size:11pt">{{ purchased_item.name }}</a>
+            {% endif %}
             {% if purchased_item.backfilled %}
             <span title="Imported from Gmail backfill" style="display:inline-block; font-size: 9pt; padding: 1px 6px; margin-left: 4px; background: #e7f3ff; color: #0967d2; border-radius: 8px; vertical-align: middle;">&#128231; Gmail</span>
             {% endif %}
@@ -143,7 +145,17 @@
               {{ purchased_item.description | format_description }}
             </span>
           </td>
-          <td> {{ (purchased_item.taxed_price|round(2)) | format_money }} </td>
+          <td class="editable-price"
+              contenteditable="true"
+              data-wishitem-id="{{ purchased_item.id }}"
+              data-pretax-price="{{ '%.2f'|format(purchased_item.price or 0) }}"
+              data-taxed-display="${{ (purchased_item.taxed_price|round(2) if purchased_item.taxed_price != None else 0) | format_money }}"
+              onfocus="onPriceFocus(this)"
+              onblur="finishPriceEdit(this)"
+              onkeydown="handlePriceKeyDown(event, this)"
+              title="Click to edit (enter pre-tax price)">
+            {{ (purchased_item.taxed_price|round(2) if purchased_item.taxed_price != None else 0) | format_money }}
+          </td>
           <td>
             {{(purchased_item.wish_period | format_time).replace("ago", "") }}
             {% if wish_period_days >= 100 %}
@@ -292,7 +304,93 @@
           return;
         }
       });
+
+      // ── Inline price editing for purchased items ──
+      // Cell shows the taxed price by default. On focus, swap to the pre-tax
+      // value so the user is editing the same number the server expects.
+      // On blur, POST to /save-table; the server applies the shared tax helper
+      // (state-aware, NYC clothing exemption) and we reload to render the
+      // recomputed taxed_price/total_price.
+      function onPriceFocus(cell) {
+        const preTax = parseFloat(cell.getAttribute('data-pretax-price') || '0');
+        cell.innerText = preTax.toFixed(2);
+        // Select the contents so the user can immediately type a replacement
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      function handlePriceKeyDown(event, cell) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          cell.blur();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          cell.innerText = cell.getAttribute('data-taxed-display').replace(/^\$/, '');
+          cell.blur();
+        }
+      }
+
+      function finishPriceEdit(cell) {
+        const wishitemId = cell.getAttribute('data-wishitem-id');
+        const originalPreTax = parseFloat(cell.getAttribute('data-pretax-price') || '0');
+        let priceValue = cell.innerText.trim().replace(/[$,]/g, '');
+
+        if (priceValue === '' || isNaN(priceValue)) {
+          // Bad input — revert to the displayed taxed value
+          cell.innerText = cell.getAttribute('data-taxed-display').replace(/^\$/, '');
+          return;
+        }
+        const newPreTax = parseFloat(priceValue);
+        if (newPreTax < 0) {
+          alert('Price cannot be negative.');
+          cell.innerText = cell.getAttribute('data-taxed-display').replace(/^\$/, '');
+          return;
+        }
+        if (Math.abs(newPreTax - originalPreTax) < 0.005) {
+          // No change — just revert display
+          cell.innerText = cell.getAttribute('data-taxed-display').replace(/^\$/, '');
+          return;
+        }
+
+        cell.style.opacity = '0.5';
+        fetch('/save-table', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wishItemId: Number(wishitemId), field: 'price', value: newPreTax })
+        }).then(r => r.json()).then(data => {
+          if (data && data.success) {
+            // Reload so the page reflects the recomputed taxed/total prices
+            window.location.reload();
+          } else {
+            cell.style.opacity = '1';
+            alert('Failed to update price: ' + ((data && data.error) || 'unknown error'));
+            cell.innerText = cell.getAttribute('data-taxed-display').replace(/^\$/, '');
+          }
+        }).catch(err => {
+          cell.style.opacity = '1';
+          alert('Network error: ' + err);
+          cell.innerText = cell.getAttribute('data-taxed-display').replace(/^\$/, '');
+        });
+      }
     </script>
+    <style>
+      .editable-price {
+        cursor: text;
+        border-bottom: 1px dotted transparent;
+      }
+      .editable-price:hover {
+        border-bottom-color: #6c757d;
+        background: #fff;
+      }
+      .editable-price:focus {
+        outline: 2px solid #0967d2;
+        outline-offset: -2px;
+        background: #fff;
+      }
+    </style>
 
   <br>
   </div>
