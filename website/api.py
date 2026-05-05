@@ -4,16 +4,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem
 from . import db
 from .url_extraction import ItemDetails, scrape_item
+from .tax import taxed_price
 import datetime
 
 api = Blueprint('api', __name__)
-
-TAX = {'11217': 0.0875, '15206': 0}
-NYC = ['10001', '10011', '11019', '10023', '10128',
-       '11201', '11211', '11217', '11231', '11238',
-       '11101', '11354', '11375', '11432', '11691',
-       '10451', '10452', '10463', '10467', '10469',
-       '10301', '10304', '10306', '10314']
 
 
 def _current_user():
@@ -30,8 +24,7 @@ def _get_item(item_id):
 
 
 def _calc_tax(zipcode, price):
-    tax_rate = 0 if (zipcode in NYC and price < 110.00) else TAX.get(zipcode, 0)
-    return price * (1 + tax_rate)
+    return taxed_price(zipcode, price)
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────

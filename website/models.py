@@ -34,6 +34,8 @@ class WishItem(db.Model):
     favorited = db.Column(db.Boolean, default=False)
     unhooked_date = db.Column(db.DateTime(timezone=True), default=None)
     image_url = db.Column(db.String(10000), nullable=True)
+    backfilled = db.Column(db.Boolean, default=False)
+    source_email_id = db.Column(db.String(200), nullable=True)
 
     def to_dict(self):
         return {
@@ -59,6 +61,25 @@ class WishItem(db.Model):
             'wish_period_seconds': int(self.wish_period.total_seconds()) if self.wish_period is not None else None,
         }
 
+class BackfillReview(db.Model):
+    """Audit row for every Gmail email reviewed in the backfill flow.
+
+    Persisting denials (not just approvals) prevents the same emails from
+    reappearing in subsequent scans after the user has already swiped ✕ on them.
+    Approvals are also recorded here as defense-in-depth; the WishItem.source_email_id
+    filter still applies for the import dedup itself.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    source_email_id = db.Column(db.String(200), nullable=False)
+    decision = db.Column(db.String(20), nullable=False)  # 'approved' | 'denied'
+    reviewed_at = db.Column(db.DateTime(timezone=True), default=datetime.datetime.now)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'source_email_id', name='uq_backfill_review_user_email'),
+    )
+
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True)
@@ -68,5 +89,7 @@ class User(db.Model, UserMixin):
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
     last_purchase_date = db.Column(db.DateTime(timezone=True), default=None)
-    # report_start = db.Column(db.DateTime(timezone=True), default=get_default_report_start())
-    # report_end = db.Column(db.DateTime(timezone=True), default=datetime.datetime.now())
+    gmail_access_token = db.Column(db.Text, nullable=True)
+    gmail_refresh_token = db.Column(db.Text, nullable=True)
+    gmail_token_expiry = db.Column(db.DateTime(timezone=True), nullable=True)
+    gmail_connected_email = db.Column(db.String(150), nullable=True)

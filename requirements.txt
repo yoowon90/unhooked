@@ -3,9 +3,13 @@ Flask-SQLAlchemy
 flask-login
 flask-migrate
 flask-jwt-extended
+flask-limiter
 python-dotenv
 matplotlib
 beautifulsoup4
 requests
 playwright
 notebook
+anthropic
+google-auth-oauthlib
+google-api-python-client

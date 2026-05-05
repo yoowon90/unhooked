@@ -52,6 +52,11 @@
     <br>
     <br>
     <a class="btn btn-primary" style="float: right;" href="{{ url_for('views.unhooked_list') }}">Go to my Unhooked List</a>
+    {% if user.gmail_connected_email %}
+    <a class="btn btn-outline-secondary btn-sm" style="float: left;" href="{{ url_for('backfill.backfill_page') }}">&#128241; Backfill Orders from Gmail</a>
+    {% else %}
+    <a class="btn btn-outline-secondary btn-sm" style="float: left;" href="{{ url_for('connectors.settings') }}" title="Connect Gmail to enable backfill">&#128231; Connect Gmail to backfill</a>
+    {% endif %}
   <br>
   {% set totalpurchasedprice = namespace(value=0.00) %}
   {% for wishitem in user.wishitems %}
@@ -129,7 +134,11 @@
           <td> {{purchased_item.brand}} </td>
           <td> {{purchased_item.category}} </td>
           <td>
-            <a href="{{ purchased_item.link }}" target="_blank" style="color: blue; text-decoration: underline; font-size:11pt">{{purchased_item.name}}</a> <br>
+            <a href="{{ purchased_item.link }}" target="_blank" style="color: blue; text-decoration: underline; font-size:11pt">{{purchased_item.name}}</a>
+            {% if purchased_item.backfilled %}
+            <span title="Imported from Gmail backfill" style="display:inline-block; font-size: 9pt; padding: 1px 6px; margin-left: 4px; background: #e7f3ff; color: #0967d2; border-radius: 8px; vertical-align: middle;">&#128231; Gmail</span>
+            {% endif %}
+            <br>
             <span style="font-size: smaller; color: grey; font-style: italic;">
               {{ purchased_item.description | format_description }}
             </span>
