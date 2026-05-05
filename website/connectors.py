@@ -1,22 +1,44 @@
 import os
+import re
+from urllib.parse import urlparse
 
 from flask import Blueprint, render_template, redirect, url_for, session, request, flash
 from flask_login import login_required, current_user
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from . import db
-
-# Allow OAuth over HTTP in development
-if os.getenv('FLASK_ENV') == 'development':
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+from .models import WishItem
+from .security import same_origin_required
+from .tax import state_for_zip, taxed_price
 
 connectors = Blueprint('connectors', __name__)
 
 GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
-REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5001/connectors/gmail/callback')
+
+LOCAL_HOSTS = {'localhost', '127.0.0.1', '::1'}
+
+
+def _redirect_uri():
+    """Build redirect URI from the current request so it always matches the running server."""
+    return url_for('connectors.gmail_callback', _external=True)
+
+
+def _maybe_allow_insecure_oauth(redirect_uri):
+    """Allow the OAuth lib to accept HTTP redirect URIs when we're targeting
+    localhost. Self-hosted personal deployments don't have TLS; real public
+    deployments behind a domain will have https URIs and this is a no-op.
+
+    Setting this per-request (as opposed to once at module import) means the
+    behavior follows the actual server binding, not FLASK_ENV.
+    """
+    parsed = urlparse(redirect_uri)
+    if parsed.scheme == 'http' and parsed.hostname in LOCAL_HOSTS:
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 
 def _build_flow():
+    redirect_uri = _redirect_uri()
+    _maybe_allow_insecure_oauth(redirect_uri)
     return Flow.from_client_config(
         {
             "web": {
@@ -24,11 +46,11 @@ def _build_flow():
                 "client_secret": os.getenv('GOOGLE_CLIENT_SECRET'),
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [REDIRECT_URI],
+                "redirect_uris": [redirect_uri],
             }
         },
         scopes=GMAIL_SCOPES,
-        redirect_uri=REDIRECT_URI,
+        redirect_uri=redirect_uri,
     )
 
 
@@ -51,18 +73,35 @@ def gmail_connect():
         include_granted_scopes='true',
     )
     session['gmail_oauth_state'] = state
+    # Persist PKCE code_verifier across the redirect if the library generated one
+    cv = getattr(flow, 'code_verifier', None)
+    if cv is None:
+        oauth_session = getattr(flow, 'oauth2session', None) or getattr(flow, '_oauth2session', None)
+        if oauth_session:
+            cv = getattr(oauth_session, 'code_verifier', None)
+    if cv:
+        session['gmail_code_verifier'] = cv
     return redirect(auth_url)
 
 
 @connectors.route('/connectors/gmail/callback')
 @login_required
 def gmail_callback():
-    if request.args.get('state') != session.pop('gmail_oauth_state', None):
+    expected_state = session.pop('gmail_oauth_state', None)
+    provided_state = request.args.get('state')
+    # Both must be present and equal — guards against session-fixation where
+    # neither side has a state and the comparison would otherwise pass.
+    if not expected_state or not provided_state or expected_state != provided_state:
+        session.pop('gmail_code_verifier', None)
         flash('OAuth state mismatch — please try connecting again.', 'error')
         return redirect(url_for('connectors.settings'))
 
     flow = _build_flow()
-    flow.fetch_token(authorization_response=request.url)
+    code_verifier = session.pop('gmail_code_verifier', None)
+    fetch_kwargs = dict(authorization_response=request.url)
+    if code_verifier:
+        fetch_kwargs['code_verifier'] = code_verifier
+    flow.fetch_token(**fetch_kwargs)
     credentials = flow.credentials
 
     service = build('gmail', 'v1', credentials=credentials)
@@ -78,8 +117,49 @@ def gmail_callback():
     return redirect(url_for('connectors.settings'))
 
 
+@connectors.route('/settings/zipcode', methods=['POST'])
+@login_required
+@same_origin_required
+def update_zipcode():
+    new_zip = (request.form.get('zipcode') or '').strip()
+    if not re.fullmatch(r'\d{5}', new_zip):
+        flash('Zipcode must be exactly 5 digits.', 'error')
+        return redirect(url_for('connectors.settings'))
+
+    if new_zip == current_user.zipcode:
+        flash('Zipcode unchanged.', 'success')
+        return redirect(url_for('connectors.settings'))
+
+    current_user.zipcode = new_zip
+
+    # Recalculate taxes for ACTIVE WISHLIST items only — never touch purchased
+    # or unhooked items, since those represent decisions already made at the
+    # tax rate that was in effect at the time.
+    wishlist_items = (WishItem.query
+                      .filter_by(user_id=current_user.id, purchased=False, unhooked=False)
+                      .all())
+    recalculated = 0
+    for item in wishlist_items:
+        new_taxed = taxed_price(new_zip, item.price or 0.0)
+        new_total = round(new_taxed + (item.delivery_fee or 0.0), 2)
+        if item.taxed_price != new_taxed or item.total_price != new_total:
+            item.taxed_price = new_taxed
+            item.total_price = new_total
+            recalculated += 1
+
+    db.session.commit()
+
+    state = state_for_zip(new_zip) or 'unknown region'
+    if recalculated:
+        flash(f'Zipcode updated to {new_zip} ({state}). Recalculated tax on {recalculated} wishlist item(s).', 'success')
+    else:
+        flash(f'Zipcode updated to {new_zip} ({state}).', 'success')
+    return redirect(url_for('connectors.settings'))
+
+
 @connectors.route('/connectors/gmail/disconnect', methods=['POST'])
 @login_required
+@same_origin_required
 def gmail_disconnect():
     current_user.gmail_access_token = None
     current_user.gmail_refresh_token = None

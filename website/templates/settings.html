@@ -42,6 +42,51 @@
 <div style="max-width: 720px; margin: 32px auto;">
   <h3 style="margin-bottom: 24px;">&#9881;&#65039; Settings</h3>
 
+  <!-- ── Account ── -->
+  <div class="settings-card">
+    <h5>&#128100; Account</h5>
+    <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 18px;">
+      Signed in as <strong>{{ user.email }}</strong>
+    </p>
+
+    <!-- Zipcode row -->
+    <div class="connector-row" style="border-bottom:none; padding-top:6px; align-items: flex-start;">
+      <div class="connector-info">
+        <div class="connector-icon">&#127968;</div>
+        <div style="flex:1;">
+          <div class="connector-title">Shipping zipcode</div>
+          <div class="connector-sub">
+            Used to estimate sales tax on wishlist items. Updating this recalculates taxes on items currently in your wishlist; <strong>purchased and unhooked items are never modified.</strong>
+          </div>
+        </div>
+      </div>
+      <form method="POST" action="{{ url_for('connectors.update_zipcode') }}" style="margin: 0; display:flex; gap:8px; align-items:center;">
+        <input
+          type="text"
+          name="zipcode"
+          value="{{ user.zipcode or '' }}"
+          maxlength="5"
+          pattern="\d{5}"
+          inputmode="numeric"
+          placeholder="00000"
+          required
+          style="width: 80px; padding: 4px 8px; border:1px solid #ced4da; border-radius:4px; font-family: monospace;"
+        />
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </form>
+    </div>
+
+    <div style="background:#f1f3f5; padding:10px 14px; margin-top:14px; border-radius:4px; font-size:0.78rem; color:#495057;">
+      <strong>Tax estimate notes:</strong>
+      <ul style="margin: 4px 0 0 18px; padding: 0;">
+        <li>NYC zipcodes: <strong>0% under $110, 8.75% at/above</strong> (NY clothing exemption).</li>
+        <li>Clothing fully exempt in <strong>PA, NJ, MN, RI, VT</strong> regardless of price.</li>
+        <li>Other states use the state base rate; <strong>local/county/city rates are not included</strong>, so big-city totals (Chicago, LA) will be undercounted.</li>
+        <li>Unknown zipcodes default to 0%.</li>
+      </ul>
+    </div>
+  </div>
+
   <!-- ── Connectors ── -->
   <div class="settings-card">
     <h5>&#128268; Connectors</h5>
@@ -64,6 +109,7 @@
       <div style="display: flex; align-items: center; gap: 10px;">
         {% if user.gmail_connected_email %}
           <span class="status-pill status-connected">Connected</span>
+          <a href="{{ url_for('backfill.backfill_page') }}" class="btn btn-success btn-sm">&#128241; Start Backfill</a>
           <form method="POST" action="{{ url_for('connectors.gmail_disconnect') }}" style="margin: 0;">
             <button type="submit" class="btn btn-outline-danger btn-sm">Disconnect</button>
           </form>
@@ -74,15 +120,13 @@
       </div>
     </div>
 
-  </div><!-- /settings-card -->
+    {% if not user.gmail_connected_email %}
+    <div style="background:#fff8e1; border-left:3px solid #ffc107; padding:10px 14px; margin-top:14px; border-radius:4px; font-size:0.82rem; color:#6c5d00;">
+      <strong>Before connecting:</strong> Gmail access is read-only. When you scan, the subject and first ~3,000 characters of each matched order email are sent to Anthropic's API to extract order details. See <a href="https://github.com/yoowon90/unhooked/blob/main/PRIVACY.md" target="_blank" rel="noopener">PRIVACY.md</a> for full details.
+    </div>
+    {% endif %}
 
-  <!-- ── Account (placeholder for future) ── -->
-  <div class="settings-card" style="opacity: 0.6;">
-    <h5>&#128100; Account</h5>
-    <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 0;">
-      Signed in as <strong>{{ user.email }}</strong>
-    </p>
-  </div>
+  </div><!-- /settings-card -->
 
 </div>
 {% endblock %}
