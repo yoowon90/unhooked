@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 from difflib import SequenceMatcher
+from email.utils import parsedate_to_datetime
 
 import anthropic
 from bs4 import BeautifulSoup
@@ -170,6 +171,39 @@ def _price_close(a, b):
     if a == 0 or b == 0:
         return False
     return abs(a - b) / max(a, b) <= DUP_PRICE_TOLERANCE
+
+
+def _resolve_purchase_date(order):
+    """Pick the most accurate purchase date for a parsed order.
+
+    Priority:
+      1. order.order_date — extracted by Claude from the email body, in
+         YYYY-MM-DD form. Most precise.
+      2. order.email_date — the email's RFC 2822 Date: header. Order
+         confirmation emails typically arrive within minutes of purchase,
+         so this is a close approximation when the body doesn't carry an
+         explicit order date.
+      3. datetime.now() — last-resort fallback.
+
+    Returns a naive datetime (timezone stripped) since WishItem.purchase_date
+    is stored without an attached tzinfo.
+    """
+    raw = order.get('order_date')
+    if raw:
+        try:
+            return datetime.datetime.strptime(raw, '%Y-%m-%d')
+        except ValueError:
+            pass
+
+    raw = order.get('email_date')
+    if raw:
+        try:
+            dt = parsedate_to_datetime(raw)
+            return dt.replace(tzinfo=None) if dt.tzinfo else dt
+        except (TypeError, ValueError):
+            pass
+
+    return datetime.datetime.now()
 
 
 def _existing_purchases_window(order_date_str, brand):
@@ -414,6 +448,7 @@ def scan_emails():
         parsed['email_id'] = msg['id']
         parsed['email_subject'] = subject
         parsed['email_sender'] = sender
+        parsed['email_date'] = date_str  # RFC 2822 from the email's Date: header
 
         if not items:
             parsed['items'] = [{
@@ -488,13 +523,7 @@ def confirm_backfill():
                 record_review(email_id, 'approved')
                 continue
 
-        purchase_date = None
-        if order.get('order_date'):
-            try:
-                purchase_date = datetime.datetime.strptime(order['order_date'], '%Y-%m-%d')
-            except ValueError:
-                pass
-        purchase_date = purchase_date or datetime.datetime.now()
+        purchase_date = _resolve_purchase_date(order)
 
         brand = order.get('brand') or ''
         candidates = _existing_purchases_window(order.get('order_date'), brand)

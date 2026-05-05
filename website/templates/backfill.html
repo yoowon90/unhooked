@@ -220,6 +220,13 @@
 
 <div class="backfill-wrap">
 
+  <!-- ── Cancel bar (hidden on Done screen) ── -->
+  <div id="cancelBar" style="text-align:right; margin-bottom:8px;">
+    <a href="#" onclick="cancelBackfill(event)" style="font-size:0.78rem; color:#6c757d; text-decoration:underline;">
+      &larr; Cancel and return to Purchase List
+    </a>
+  </div>
+
   <!-- ── SCAN SCREEN ── -->
   <div id="scanScreen">
     <div class="scan-card">
@@ -610,6 +617,7 @@
 
       document.getElementById('summaryScreen').style.display = 'none';
       document.getElementById('doneScreen').style.display = 'block';
+      document.getElementById('cancelBar').style.display = 'none';
       const skipped = (data.skipped_orders || 0) + (data.skipped_items || 0);
       const base = `Added ${data.added} item${data.added !== 1 ? 's' : ''} to your purchase list.`;
       document.getElementById('doneMessage').textContent = skipped
@@ -639,5 +647,15 @@
     if (e.key === 'ArrowRight') decide('approve');
     if (e.key === 'ArrowLeft')  decide('deny');
   });
+
+  function cancelBackfill(e) {
+    if (e) e.preventDefault();
+    const hasProgress = (approved.length + denied.length) > 0;
+    if (hasProgress) {
+      const ok = confirm(`Discard your review progress (${approved.length} adding, ${denied.length} skipped) and return to your Purchase List?`);
+      if (!ok) return;
+    }
+    window.location.href = "{{ url_for('views.purchased_list') }}";
+  }
 </script>
 {% endblock %}
