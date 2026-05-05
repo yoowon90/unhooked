@@ -9,9 +9,9 @@ and dumps:
   - within-order duplicate-line detection (same name+price appearing twice)
 
 Usage:
-    python scripts/debug_email_parse.py --user yoowon@airops.com --days 30
-    python scripts/debug_email_parse.py --user yoowon@airops.com --days 30 --limit 10
-    python scripts/debug_email_parse.py --user yoowon@airops.com --output /tmp/foo.json
+    python scripts/debug_email_parse.py --user <unhooked-account-email> --days 30
+    python scripts/debug_email_parse.py --user <unhooked-account-email> --days 30 --limit 10
+    python scripts/debug_email_parse.py --user <unhooked-account-email> --output /tmp/foo.json
 
 The full dump (every email body, every Claude response) is written to
 /tmp/email_parse_debug.json by default — never the repo.
