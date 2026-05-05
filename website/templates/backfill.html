@@ -98,6 +98,25 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .dup-pill {
+    display: inline-block;
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .card-items li.dup-item {
+    background: #fffaf0;
+  }
+  .card-items li.dup-item .name-flag {
+    color: #856404;
+    font-size: 0.7rem;
+    margin-left: 6px;
+  }
   .swipe-buttons {
     display: flex;
     justify-content: center;
@@ -136,10 +155,57 @@
     padding: 10px 12px;
     margin-bottom: 8px;
     font-size: 0.82rem;
+    position: relative;
+    transition: background 0.15s, opacity 0.15s, transform 0.1s;
+    cursor: grab;
+    user-select: none;
   }
-  .summary-mini-card .brand { font-weight: 600; }
+  .summary-mini-card:hover { background: #eef0f2; }
+  .summary-mini-card:active { cursor: grabbing; }
+  .summary-mini-card.dragging {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+  .summary-mini-card .brand { font-weight: 600; padding-right: 24px; }
   .summary-mini-card .items-preview { color: #6c757d; margin-top: 3px; font-size: 0.78rem; }
-  .summary-empty { color: #adb5bd; font-size: 0.83rem; text-align: center; padding: 12px 0; }
+  .summary-empty {
+    color: #adb5bd;
+    font-size: 0.83rem;
+    text-align: center;
+    padding: 18px 0;
+    border: 1px dashed #dee2e6;
+    border-radius: 6px;
+  }
+  .summary-col {
+    transition: background 0.18s, box-shadow 0.18s;
+  }
+  .summary-col.drag-over {
+    background: #e7f3ff;
+    box-shadow: 0 0 0 2px #0967d2 inset;
+  }
+  .move-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid #ced4da;
+    background: white;
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .move-btn:hover {
+    background: #343a40;
+    color: white;
+    border-color: #343a40;
+  }
 
   /* ── Done Screen ── */
   .done-card {
@@ -187,6 +253,7 @@
       <div class="progress mt-2" style="height:4px;">
         <div class="progress-bar bg-dark" id="progressBar" role="progressbar" style="width:0%"></div>
       </div>
+      <div id="mergedEmailsNote" style="display:none; font-size:0.75rem; color:#6c757d; margin-top:8px; font-style:italic;"></div>
     </div>
 
     <div class="card-stack" id="cardStack"></div>
@@ -204,14 +271,25 @@
   <div id="summaryScreen" style="display:none;">
     <h4 style="font-weight:700; text-align:center; margin-bottom:20px;">&#128203; Review Summary</h4>
     <div class="summary-cols">
-      <div class="summary-col">
+      <div class="summary-col"
+           data-side="approved"
+           ondragover="onColDragOver(event)"
+           ondragleave="onColDragLeave(event)"
+           ondrop="onColDrop(event, 'approved')">
         <h6 class="approved-head">&#10003; Adding <span id="approvedCount">0</span></h6>
         <div id="approvedList"></div>
       </div>
-      <div class="summary-col">
+      <div class="summary-col"
+           data-side="denied"
+           ondragover="onColDragOver(event)"
+           ondragleave="onColDragLeave(event)"
+           ondrop="onColDrop(event, 'denied')">
         <h6 class="denied-head">&#10005; Skipped <span id="deniedCount">0</span></h6>
         <div id="deniedList"></div>
       </div>
+    </div>
+    <div style="text-align:center; font-size:0.72rem; color:#adb5bd; margin-bottom:14px;">
+      Drag a card to swap columns, or click the &#8592;/&#8594; arrow.
     </div>
 
     <div style="text-align:center; display:flex; flex-direction:column; gap:10px;">
@@ -246,6 +324,7 @@
   let currentIndex = 0;
   let approved = [];
   let denied = [];
+  let isAnimating = false;
 
   function selectDays(el) {
     document.querySelectorAll('.day-pill').forEach(p => p.classList.remove('active'));
@@ -279,6 +358,24 @@
       denied = [];
       document.getElementById('scanScreen').style.display = 'none';
       document.getElementById('reviewScreen').style.display = 'block';
+      const mergedNote = document.getElementById('mergedEmailsNote');
+      if (mergedNote) {
+        const mergedCount = data.merged_email_count || 0;
+        const autoSkipped = data.auto_skipped_count || 0;
+        const parts = [];
+        if (mergedCount > 0) {
+          parts.push(`combined ${mergedCount} related email${mergedCount !== 1 ? 's' : ''}`);
+        }
+        if (autoSkipped > 0) {
+          parts.push(`auto-skipped ${autoSkipped} order${autoSkipped !== 1 ? 's' : ''} already in your purchase list`);
+        }
+        if (parts.length) {
+          mergedNote.textContent = parts.join(' · ');
+          mergedNote.style.display = 'block';
+        } else {
+          mergedNote.style.display = 'none';
+        }
+      }
       renderCards();
     } catch (e) {
       showError('scanError', e.message);
@@ -321,14 +418,26 @@
       const visible = order.items.slice(0, 5);
       const more = order.items.length - visible.length;
       itemsHtml = '<ul class="card-items">' +
-        visible.map(it => `<li><span>${esc(it.name)}</span><span>${it.price ? '$' + it.price.toFixed(2) : ''}</span></li>`).join('') +
+        visible.map(it => {
+          const dup = it._possible_duplicate ? ' class="dup-item"' : '';
+          const flag = it._possible_duplicate ? '<span class="name-flag">⚠ likely duplicate</span>' : '';
+          const qty = (it.quantity && it.quantity > 1) ? ` <span style="color:#6c757d; font-size:0.8em;">× ${it.quantity}</span>` : '';
+          const lineTotal = (it.quantity && it.quantity > 1 && it.price)
+            ? `<span>$${it.price.toFixed(2)} ea<br><span style="font-size:0.78em;color:#6c757d;">$${(it.price * it.quantity).toFixed(2)} total</span></span>`
+            : `<span>${it.price ? '$' + it.price.toFixed(2) : ''}</span>`;
+          return `<li${dup}><span>${esc(it.name)}${qty}${flag}</span>${lineTotal}</li>`;
+        }).join('') +
         (more > 0 ? `<li style="color:#adb5bd;">+ ${more} more item${more > 1 ? 's' : ''}</li>` : '') +
         '</ul>';
     }
 
     const total = order.order_total ? `<div class="card-total">Total: $${parseFloat(order.order_total).toFixed(2)}</div>` : '';
+    const dupPill = order.possible_duplicate
+      ? `<div><span class="dup-pill">⚠ Possible duplicate of an existing purchase — swipe left to skip</span></div>`
+      : '';
 
     card.innerHTML = `
+      ${dupPill}
       <div class="card-brand">${esc(order.brand || 'Unknown Store')}</div>
       <div class="card-meta">${date}${orderNum}</div>
       <div class="card-divider"></div>
@@ -340,12 +449,14 @@
   }
 
   function decide(action) {
+    if (isAnimating) return;
     if (currentIndex >= allOrders.length) return;
 
     const stack = document.getElementById('cardStack');
     const topCard = stack.querySelector('.depth-0');
     if (!topCard) return;
 
+    isAnimating = true;
     const order = allOrders[currentIndex];
     if (action === 'approve') {
       approved.push(order);
@@ -362,6 +473,7 @@
       } else {
         renderCards();
       }
+      isAnimating = false;
     }, 320);
   }
 
@@ -380,25 +492,96 @@
     document.getElementById('approvedCount').textContent = approved.length;
     document.getElementById('deniedCount').textContent = denied.length;
 
-    renderSummaryList('approvedList', approved);
-    renderSummaryList('deniedList', denied);
+    renderSummaryList('approvedList', approved, 'approved');
+    renderSummaryList('deniedList', denied, 'denied');
   }
 
-  function renderSummaryList(containerId, orders) {
+  function renderSummaryList(containerId, orders, side) {
     const el = document.getElementById(containerId);
     if (!orders.length) {
-      el.innerHTML = '<div class="summary-empty">None</div>';
+      el.innerHTML = '<div class="summary-empty">Drop here</div>';
       return;
     }
+    // 'approved' cards show → (move to Skipped); 'denied' cards show ← (move to Adding)
+    const arrow = side === 'approved' ? '→' : '←';
+    const tooltip = side === 'approved' ? 'Move to Skipped' : 'Move to Adding';
     el.innerHTML = orders.map(o => {
       const preview = (o.items || []).slice(0, 2).map(i => i.name).join(', ');
       const more = (o.items || []).length > 2 ? ` +${(o.items||[]).length-2} more` : '';
-      return `<div class="summary-mini-card">
+      const id = esc(o.email_id || '');
+      return `<div class="summary-mini-card"
+        draggable="true"
+        data-email-id="${id}"
+        ondragstart="onCardDragStart(event)"
+        ondragend="onCardDragEnd(event)">
+        <button type="button" class="move-btn" onclick="moveCard('${id}')" title="${tooltip}">${arrow}</button>
         <div class="brand">${esc(o.brand || 'Unknown')}</div>
         ${o.order_date ? `<div style="font-size:0.75rem;color:#6c757d;">${o.order_date}</div>` : ''}
         <div class="items-preview">${esc(preview)}${more}</div>
       </div>`;
     }).join('');
+  }
+
+  function rerenderSummary() {
+    document.getElementById('approvedCount').textContent = approved.length;
+    document.getElementById('deniedCount').textContent = denied.length;
+    renderSummaryList('approvedList', approved, 'approved');
+    renderSummaryList('deniedList', denied, 'denied');
+  }
+
+  function moveCard(emailId) {
+    if (!emailId) return;
+    const moveOne = (from, to) => {
+      const idx = from.findIndex(o => o.email_id === emailId);
+      if (idx === -1) return false;
+      to.push(from.splice(idx, 1)[0]);
+      return true;
+    };
+    if (!moveOne(approved, denied)) moveOne(denied, approved);
+    rerenderSummary();
+  }
+
+  // ── Drag-and-drop ─────────────────────────────────────────────
+  function onCardDragStart(e) {
+    const id = e.currentTarget.getAttribute('data-email-id') || '';
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    e.currentTarget.classList.add('dragging');
+  }
+
+  function onCardDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.summary-col.drag-over').forEach(c => c.classList.remove('drag-over'));
+  }
+
+  function onColDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over');
+  }
+
+  function onColDragLeave(e) {
+    // Only clear if leaving the column itself, not bubbling from a child
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    e.currentTarget.classList.remove('drag-over');
+  }
+
+  function onColDrop(e, targetSide) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    const emailId = e.dataTransfer.getData('text/plain');
+    if (!emailId) return;
+
+    const inApproved = approved.findIndex(o => o.email_id === emailId);
+    const inDenied = denied.findIndex(o => o.email_id === emailId);
+
+    if (targetSide === 'approved' && inApproved === -1 && inDenied !== -1) {
+      approved.push(denied.splice(inDenied, 1)[0]);
+    } else if (targetSide === 'denied' && inDenied === -1 && inApproved !== -1) {
+      denied.push(approved.splice(inApproved, 1)[0]);
+    }
+    // If targetSide matches current side, no-op (just a click+release in the same column)
+    rerenderSummary();
   }
 
   function goBackToReview() {
@@ -420,15 +603,18 @@
       const res = await fetch('/backfill/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved }),
+        body: JSON.stringify({ approved, denied }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Confirm failed');
 
       document.getElementById('summaryScreen').style.display = 'none';
       document.getElementById('doneScreen').style.display = 'block';
-      document.getElementById('doneMessage').textContent =
-        `Added ${data.added} item${data.added !== 1 ? 's' : ''} to your purchase list.`;
+      const skipped = (data.skipped_orders || 0) + (data.skipped_items || 0);
+      const base = `Added ${data.added} item${data.added !== 1 ? 's' : ''} to your purchase list.`;
+      document.getElementById('doneMessage').textContent = skipped
+        ? `${base} Skipped ${skipped} likely duplicate${skipped !== 1 ? 's' : ''}.`
+        : base;
     } catch (e) {
       showError('confirmError', e.message);
       document.getElementById('confirmBtn').disabled = false;
