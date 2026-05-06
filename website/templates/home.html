@@ -193,7 +193,7 @@
       <a class="stat-card" href="/unhooked-list">
         <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-saving-money.png') }}" alt="">
         <div class="stat-label">Total saved amount</div>
-        <div class="stat-value stat-value-saved">$<span id="total-saved-amount">{{ totalsavedprice.value | format_money }}</span></div>
+        <div class="stat-value{% if totalsavedprice.value > 0 %} stat-value-saved{% endif %}">$<span id="total-saved-amount">{{ totalsavedprice.value | format_money }}</span></div>
         <div class="stat-detail"><span id="date-range-text-saved">all time</span></div>
       </a>
 
@@ -872,6 +872,7 @@
                     success: function(response) {
           $('#total-purchase-amount').text(response.total_purchase_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
           $('#total-saved-amount').text(response.total_saved_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          $('#total-saved-amount').parent().toggleClass('stat-value-saved', response.total_saved_amount > 0);
           $('#unhooked-count').text(response.unhooked_count);
           $('#wishlist-added-count').text(response.wishlist_added_count);
           $('#purchased-count').text(response.purchased_count);
@@ -932,6 +933,7 @@
       const allTimePurchasedCount = getPurchasedItemsData().length;
       $('#total-purchase-amount').text(totalAllPurchases.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       $('#total-saved-amount').text(totalAllSaves.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      $('#total-saved-amount').parent().toggleClass('stat-value-saved', totalAllSaves > 0);
       $('#unhooked-count').text(allTimeUnhookedCount);
       $('#wishlist-added-count').text(allTimeWishlistAddedCount);
       $('#purchased-count').text(allTimePurchasedCount);
