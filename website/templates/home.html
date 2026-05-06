@@ -119,9 +119,9 @@
       <div class="stat-card">
         <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-thinking-hard.png') }}" alt="">
         <div class="stat-label">Last online purchase</div>
-        {% if user.last_purchase_date %}
-          {% set time_difference = current_time - user.last_purchase_date %}
-          <div class="stat-value">{{ user.last_purchase_date | format_last_purchase_date }}</div>
+        {% if last_purchase_date %}
+          {% set time_difference = current_time - last_purchase_date %}
+          <div class="stat-value">{{ last_purchase_date | format_last_purchase_date }}</div>
           <div class="stat-detail {% if time_difference >= ten_days %}alert-fine{% else %}alert-soon{% endif %}">
             {{ time_difference | format_time }}
           </div>
@@ -731,7 +731,7 @@
                 $('#brand-chart').attr('src', '/wishlist_brand.png');
                 $('#purchased-category-chart').attr('src', '/purchased_category.png');
                 $('#purchased-brand-chart').attr('src', '/purchased_brand.png');
-                updateSpendingChart('{{ user.last_purchase_date.strftime("%Y-%m-%d") if user.last_purchase_date else current_time.strftime("%Y-%m-%d") }}', '{{ current_time.strftime("%Y-%m-%d") }}');
+                updateSpendingChart('{{ last_purchase_date.strftime("%Y-%m-%d") if last_purchase_date else current_time.strftime("%Y-%m-%d") }}', '{{ current_time.strftime("%Y-%m-%d") }}');
       (function() {
         const allWishlistItems = getWishlistItemsData();
         if (allWishlistItems.length > 0) {

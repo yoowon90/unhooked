@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for, Response
 from flask_login import login_required, current_user
+from . import db
 from .models import WishItem
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -52,7 +53,11 @@ def home():
         # get current time
         current_time = datetime.datetime.now() # Get the current time
         ten_days = datetime.timedelta(days=10)
-        last_purchase_date = current_user.last_purchase_date
+        last_purchase_date = (
+            db.session.query(db.func.max(WishItem.purchase_date))
+            .filter_by(user_id=current_user.id, purchased=True)
+            .scalar()
+        )
         report_end = datetime.datetime.now()
         report_start = datetime.datetime(report_end.year, report_end.month, 1, 0, 0, 0) # 1st day of the month
         if report_end.day == report_start.day:
