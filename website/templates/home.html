@@ -107,9 +107,9 @@
     <div>
     <p><b> Welcome back to Unhooked. Here is your report. </b></p>
         <br>
-        {% if user.last_purchase_date %}
-        {% set time_difference = current_time - user.last_purchase_date %}
-        ⭐️ Your last online purchase date is {{ user.last_purchase_date | format_last_purchase_date }} which is
+        {% if last_purchase_date %}
+        {% set time_difference = current_time - last_purchase_date %}
+        ⭐️ Your last online purchase date is {{ last_purchase_date | format_last_purchase_date }} which is
         <span style="color: {% if time_difference >= ten_days %}blue{% else %}red{% endif %};">
       <b>{{ (time_difference) | format_time }}</b>
         </span>
@@ -718,7 +718,7 @@
                 $('#brand-chart').attr('src', '/wishlist_brand.png');
                 $('#purchased-category-chart').attr('src', '/purchased_category.png');
                 $('#purchased-brand-chart').attr('src', '/purchased_brand.png');
-                updateSpendingChart('{{ user.last_purchase_date.strftime("%Y-%m-%d") if user.last_purchase_date else current_time.strftime("%Y-%m-%d") }}', '{{ current_time.strftime("%Y-%m-%d") }}');
+                updateSpendingChart('{{ last_purchase_date.strftime("%Y-%m-%d") if last_purchase_date else current_time.strftime("%Y-%m-%d") }}', '{{ current_time.strftime("%Y-%m-%d") }}');
       (function() {
         const allWishlistItems = getWishlistItemsData();
         if (allWishlistItems.length > 0) {
