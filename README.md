@@ -45,8 +45,8 @@ It started with introspection — what emotions push me toward *Buy Now*, how lo
 - Gmail backfill: OAuth → Anthropic-extracted orders → Tinder-style swipe review before anything lands in the DB
 - Cleanup scripts decode HTML entities and merge plural/casing variants (`Top`/`tops`/`TOPS` → `Tops`)
 
-<!-- SCREENSHOT — Gmail backfill review UI (Tinder-style approve/deny).
-     ![Gmail backfill review](docs/screenshots/gmail-backfill.png) -->
+<img width="562" height="712" alt="image" src="https://github.com/user-attachments/assets/9c3a10dc-fdce-4de3-a72d-a7757856ad4a" />
+
 
 ### Web *and* mobile, one backend
 - Flask + Jinja + Chart.js on the web; React Native (Expo) iOS/Android in `mobile/`
