@@ -17,7 +17,7 @@ Track every online wish, every purchase, and — most importantly — every time
   <img alt="Gmail API" src="https://img.shields.io/badge/Gmail%20API-OAuth%202.0-EA4335?logo=gmail&logoColor=white" />
 </p>
 
-<img width="1105" height="697" alt="image" src="https://github.com/user-attachments/assets/2f17e1fa-1495-4e95-bfba-b89f7bbf976f" />
+<img width="1109" height="849" alt="image" src="https://github.com/user-attachments/assets/9de61531-ad8f-41f0-b0a6-05f7d5ad306e" />
 
 
 </div>
