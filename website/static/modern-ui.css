@@ -144,6 +144,9 @@
   color: #2c3338;
   line-height: 1.25;
 }
+.stat-card .stat-value-saved {
+  color: #28a745;
+}
 .stat-card .stat-detail {
   margin-top: 6px;
   font-size: 0.85rem;
@@ -156,6 +159,183 @@
 .stat-card .stat-detail.alert-fine {
   color: #2a82d4;
   font-weight: 600;
+}
+
+/* ─── Dashboard section card ───
+   Wraps each below-the-fold section (calendar, line graphs, pie charts)
+   so the watercolor background pattern doesn't bleed through the data. */
+.dashboard-card {
+  background-color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  padding: 22px 28px;
+  margin: 18px 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.dashboard-card-title {
+  text-align: center;
+  margin: 4px 0 18px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #6c757d;
+}
+
+/* ─── Page-level date-range filter bar ───
+   Sits near the top of /home and governs the stat cards, line graphs,
+   and pie charts below. Calendar and habits score are intentionally
+   independent (calendar = all-time browse, score = rolling 90 days). */
+.date-range-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 18px;
+  margin: 14px 0 18px;
+  background-color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.date-range-scope {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: #9aa0a6;
+  font-style: italic;
+}
+.date-range-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6c757d;
+}
+.date-range-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
+  padding: 8px 36px 8px 16px;
+  font-size: 0.9rem;
+  color: #2c3338;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 200px;
+}
+.date-range-select:hover {
+  border-color: #d4a5b3;
+}
+.date-range-select:focus {
+  outline: none;
+  border-color: #d97a8a;
+  box-shadow: 0 0 0 3px rgba(217, 122, 138, 0.15);
+}
+.custom-date-fields {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.date-range-input {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  color: #2c3338;
+  background: #fff;
+  width: 180px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.date-range-input:hover { border-color: #d4a5b3; }
+.date-range-input:focus {
+  outline: none;
+  border-color: #d97a8a;
+  box-shadow: 0 0 0 3px rgba(217, 122, 138, 0.15);
+}
+.date-range-input::placeholder { color: #adb5bd; }
+
+/* ─── FullCalendar 3 theme overrides ─── */
+.fc-toolbar.fc-header-toolbar { margin-bottom: 14px; }
+.fc-toolbar h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c3338;
+  letter-spacing: 0.3px;
+}
+.fc-button {
+  background-image: none !important;
+  background-color: #fff !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  color: #2c3338 !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  border-radius: 8px !important;
+  padding: 4px 12px !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+}
+.fc-button:hover {
+  background-color: #faf3f4 !important;
+  border-color: #d4a5b3 !important;
+}
+.fc-button.fc-state-active,
+.fc-button.fc-state-down {
+  background-color: #faf3f4 !important;
+  border-color: #d4a5b3 !important;
+  color: #d97a8a !important;
+}
+.fc-button.fc-state-disabled {
+  opacity: 0.45 !important;
+}
+.fc-day-header {
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #b08a8a !important; /* dusty rose */
+  padding: 8px 0 !important;
+  border-color: rgba(0, 0, 0, 0.04) !important;
+  background: transparent !important;
+}
+.fc-row,
+.fc-day,
+.fc-content-skeleton table,
+.fc-content-skeleton td,
+.fc-day-grid-container,
+.fc-widget-content,
+.fc-widget-header {
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+.fc-day-number {
+  color: #2c3338;
+  padding: 6px 8px !important;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+.fc-other-month .fc-day-number { color: #ccc; }
+.fc-today {
+  background: rgba(217, 122, 138, 0.08) !important; /* soft blush instead of yellow */
+}
+.fc-today .fc-day-number {
+  color: #d97a8a;
+  font-weight: 700;
+}
+/* Event chip — rounded pill instead of full-width bar */
+.fc-event {
+  border-radius: 12px !important;
+  padding: 2px 8px !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  border: none !important;
+  margin: 1px 4px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 /* ─── Shopping habits score hero banner ───

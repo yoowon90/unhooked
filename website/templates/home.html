@@ -8,51 +8,10 @@
         text-align: center;
         margin-bottom: 20px;
       }
-      .calendar-dropdown-container {
-        display: flex;
-        align-items: flex-start;
-        gap: 30px;
-        margin: 20px 0;
-      }
       #calendar {
-        max-width: 600px;
-        transform: scale(0.8);
-        transform-origin: top left;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 10px;
+        max-width: 640px;
+        margin: 0 auto;
       }
-      .date-selection-container {
-        flex: 1;
-        text-align: center;
-      }
-      .dropdown-container {
-        margin-bottom: 20px;
-      }
-      .dropdown-container label {
-        display: block;
-        margin-bottom: 10px;
-        font-weight: bold;
-      }
-      .dropdown-container select {
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 16px;
-        min-width: 200px;
-      }
-      .custom-date-container {
-        margin-top: 20px;
-        padding: 20px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background-color: #f9f9f9;
-      }
-            .date-fields {
-        display: flex;
-        gap: 10px;
-        }
       .report-headline {
           text-align: center;
           font-weight: bold;
@@ -63,18 +22,18 @@
           justify-content: center;
       }
       .pie-chart-container {
-        display: flex;
-        justify-content: space-around;
-        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
+        margin-top: 8px;
       }
       .pie-chart-container .item {
-        flex: 1;
         text-align: center;
-        margin: 0 10px;
       }
-      .pie-chart-container img {
-          max-width: 100%;
-          height: auto;
+      .pie-chart-canvas-wrap {
+        position: relative;
+        height: 240px;
+        width: 100%;
       }
 
       /* Home page background pattern */
@@ -106,6 +65,30 @@
     </div>
     <div>
     <p><b> Welcome back to Unhooked. Here is your report. </b></p>
+
+    {# Page-wide date-range filter. Governs the stat cards, line graphs,
+       and pie charts below. Calendar and habits score are intentionally
+       independent — calendar shows all-time, score is fixed rolling 90d. #}
+    <div class="date-range-bar">
+      <label for="dateRangeDropdown" class="date-range-label">Date range</label>
+      <select id="dateRangeDropdown" class="date-range-select">
+        <option value="">Choose a date range…</option>
+        <option value="last7days">Last 7 days</option>
+        <option value="last14days">Last 14 days</option>
+        <option value="last30days" selected>Last 30 days</option>
+        <option value="last60days">Last 60 days</option>
+        <option value="last90days">Last 90 days</option>
+        <option value="thisMonth">This Month</option>
+        <option value="thisYear">This Year</option>
+        <option value="last365days">Last 365 days</option>
+        <option value="specifyDate">Specify date…</option>
+      </select>
+      <div id="customDateContainer" class="custom-date-fields" style="display: none;">
+        <input type="text" id="start_date" name="start_date" placeholder="Start (YYYY-MM-DD)" class="date-range-input">
+        <input type="text" id="end_date" name="end_date" placeholder="End (YYYY-MM-DD)" class="date-range-input">
+      </div>
+      <span class="date-range-scope">applies to stat cards, graphs, and pie charts</span>
+    </div>
 
         {% set totalpurchasedprice = namespace(value=0.00) %}
         {% set totalsavedprice = namespace(value=0.00) %}
@@ -193,18 +176,11 @@
         <div class="stat-detail"><span id="date-range-text">all time</span></div>
       </a>
 
-      <a class="stat-card" href="/unhooked-list">
-        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-saving-money.png') }}" alt="">
-        <div class="stat-label">Total saved amount</div>
-        <div class="stat-value">$<span id="total-saved-amount">{{ totalsavedprice.value | format_money }}</span></div>
-        <div class="stat-detail"><span id="date-range-text-saved">all time</span></div>
-      </a>
-
-      <a class="stat-card" href="/unhooked-list">
-        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-with-money-bag.png') }}" alt="">
-        <div class="stat-label">Number of unhooked items</div>
-        <div class="stat-value"><span id="unhooked-count">{{ unhooked_count.value }}</span></div>
-        <div class="stat-detail"><span id="date-range-text-unhooked">all time</span></div>
+      <a class="stat-card" href="/purchased-list">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-tapping-card.png') }}" alt="">
+        <div class="stat-label">Number of items purchased</div>
+        <div class="stat-value"><span id="purchased-count">{{ purchased_count.value }}</span></div>
+        <div class="stat-detail"><span id="date-range-text-purchased">all time</span></div>
       </a>
 
       <a class="stat-card" href="/my-wishlist">
@@ -214,82 +190,62 @@
         <div class="stat-detail"><span id="date-range-text-wishlist-added">all time</span></div>
       </a>
 
-      <a class="stat-card" href="/purchased-list">
-        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-tapping-card.png') }}" alt="">
-        <div class="stat-label">Number of items purchased</div>
-        <div class="stat-value"><span id="purchased-count">{{ purchased_count.value }}</span></div>
-        <div class="stat-detail"><span id="date-range-text-purchased">all time</span></div>
+      <a class="stat-card" href="/unhooked-list">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-saving-money.png') }}" alt="">
+        <div class="stat-label">Total saved amount</div>
+        <div class="stat-value stat-value-saved">$<span id="total-saved-amount">{{ totalsavedprice.value | format_money }}</span></div>
+        <div class="stat-detail"><span id="date-range-text-saved">all time</span></div>
+      </a>
+
+      <a class="stat-card" href="/unhooked-list">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-with-money-bag.png') }}" alt="">
+        <div class="stat-label">Number of unhooked items</div>
+        <div class="stat-value"><span id="unhooked-count">{{ unhooked_count.value }}</span></div>
+        <div class="stat-detail"><span id="date-range-text-unhooked">all time</span></div>
       </a>
     </div>
-    <br>
-                <div class="calendar-dropdown-container">
-          <div id='calendar'></div>
-          <div class="date-selection-container">
-            <div class="dropdown-container">
-              <label for="dateRangeDropdown">Select Date Range:</label>
-              <select id="dateRangeDropdown" class="form-control">
-                <option value="">Choose a date range...</option>
-                <option value="last7days">Last 7 days</option>
-                <option value="last14days">Last 14 days</option>
-                <option value="last30days" selected>Last 30 days</option>
-                <option value="last60days">Last 60 days</option>
-                <option value="last90days">Last 90 days</option>
-                <option value="thisMonth">This Month</option>
-                <option value="thisYear">This Year</option>
-                <option value="last365days">Last 365 days</option>
-                <option value="specifyDate">Specify Date</option>
-              </select>
-            </div>
-            <div id="customDateContainer" class="custom-date-container" style="display: none;">
-              <div class="date-fields">
-                <div>
-                  <label for="start_date">Start Date (YYYY-MM-DD):</label>
-                  <input type="text" id="start_date" name="start_date" placeholder="YYYY-MM-DD">
-                </div>
-                <div>
-                  <label for="end_date">End Date (YYYY-MM-DD):</label>
-                  <input type="text" id="end_date" name="end_date" placeholder="YYYY-MM-DD">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="dashboard-card">
+      <div id='calendar'></div>
+    </div>
 
     <!-- Spending Line Graph -->
-    <div class="spending-graph-container">
-      <h5 style="text-align: center; margin: 20px 0;">Purchased Items Over Time</h5>
-      <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
-        <canvas id="spendingChart"></canvas>
+    <div class="dashboard-card">
+      <div class="spending-graph-container">
+        <h5 class="dashboard-card-title">Purchased Items Over Time</h5>
+        <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
+          <canvas id="spendingChart"></canvas>
+        </div>
       </div>
     </div>
 
     <!-- Wishlist Additions Line Graph -->
-    <div class="wishlist-graph-container">
-      <h5 style="text-align: center; margin: 20px 0;">Wishlist Additions Over Time</h5>
-      <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
-        <canvas id="wishlistChart"></canvas>
+    <div class="dashboard-card">
+      <div class="wishlist-graph-container">
+        <h5 class="dashboard-card-title">Wishlist Additions Over Time</h5>
+        <div style="position: relative; height: 400px; width: 100%; max-width: 800px; margin: 0 auto;">
+          <canvas id="wishlistChart"></canvas>
+        </div>
       </div>
     </div>
 
-    <div class="pie-chart-container">
-      <div class="item">
-        <h5>Wish List Category</h5>
-        <img id="category-chart" src="/wishlist_category.png" alt="Wish List Category Plot">
-      </div>
-      <div class="item">
-        <h5>Wish List Brand</h5>
-        <img id="brand-chart" src="/wishlist_brand.png" alt="Wish List Brand Plot">
-      </div>
-    </div>
-
-    <div class="pie-chart-container">
-      <div class="item">
-        <h5>Purchased Category</h5>
-        <img id="purchased-category-chart" src="/purchased_category.png" alt="Purchased Category Plot">
-      </div>
-      <div class="item">
-        <h5>Purchased Brand</h5>
-        <img id="purchased-brand-chart" src="/purchased_brand.png" alt="Purchased Brand Plot">
+    <div class="dashboard-card">
+      <div class="pie-chart-container">
+        <div class="item">
+          <h5 class="dashboard-card-title">Wish List · Category</h5>
+          <div class="pie-chart-canvas-wrap"><canvas id="wishCategoryChart"></canvas></div>
+        </div>
+        <div class="item">
+          <h5 class="dashboard-card-title">Wish List · Brand</h5>
+          <div class="pie-chart-canvas-wrap"><canvas id="wishBrandChart"></canvas></div>
+        </div>
+        <div class="item">
+          <h5 class="dashboard-card-title">Purchased · Category</h5>
+          <div class="pie-chart-canvas-wrap"><canvas id="purchasedCategoryChart"></canvas></div>
+        </div>
+        <div class="item">
+          <h5 class="dashboard-card-title">Purchased · Brand</h5>
+          <div class="pie-chart-canvas-wrap"><canvas id="purchasedBrandChart"></canvas></div>
+        </div>
       </div>
     </div>
   </div>
@@ -311,6 +267,151 @@
             let spendingChart = null;
     let currentTooltip = null;
     let wishlistChart = null;
+
+    // Soft watercolor palette for the line graphs (matches the bunny theme).
+    const CHART_COLORS = {
+      spending: '217, 122, 138',  // dusty rose
+      added:    '154, 139, 128',  // taupe
+      unhooked: '143, 182, 149'   // sage
+    };
+    function makeChartGradient(ctx, rgb) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+      gradient.addColorStop(0, 'rgba(' + rgb + ', 0.35)');
+      gradient.addColorStop(1, 'rgba(' + rgb + ', 0)');
+      return gradient;
+    }
+    const CHART_LEGEND = {
+      display: true,
+      position: 'top',
+      labels: {
+        usePointStyle: true,
+        pointStyle: 'circle',
+        boxWidth: 8,
+        padding: 14,
+        font: { size: 12, weight: '600' },
+        color: '#6c757d'
+      }
+    };
+
+    // Soft pastel palette for doughnut slices. Items past index 10 fall into "Others".
+    const PIE_PALETTE = [
+      '#f4c2c2', '#f5d491', '#c8d6b9', '#bcd4e6', '#dcc7e8',
+      '#f2d6c4', '#d4c5b9', '#e8d5d5', '#cce0d5', '#e6d6f0',
+      '#c0c0c0' // Others
+    ];
+
+    const pieCharts = {};
+
+    // Draws total count in the center of the doughnut hole.
+    const doughnutCenterText = {
+      id: 'doughnutCenterText',
+      afterDraw(chart) {
+        const total = chart.data.datasets[0].data.reduce((s, v) => s + v, 0);
+        if (!total) return;
+        const { ctx, chartArea } = chart;
+        const cx = (chartArea.left + chartArea.right) / 2;
+        const cy = (chartArea.top + chartArea.bottom) / 2;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#2c3338';
+        ctx.font = '700 22px sans-serif';
+        ctx.fillText(total, cx, cy - 6);
+        ctx.fillStyle = '#9aa0a6';
+        ctx.font = '400 11px sans-serif';
+        ctx.fillText('items', cx, cy + 14);
+        ctx.restore();
+      }
+    };
+
+    function drawDoughnut(canvasId, items, groupKey) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const counts = {};
+      items.forEach(item => {
+        const key = (item[groupKey] && String(item[groupKey]).trim()) || '(none)';
+        counts[key] = (counts[key] || 0) + 1;
+      });
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      let labels, data;
+      if (sorted.length > 10) {
+        const top10 = sorted.slice(0, 10);
+        const othersCount = sorted.slice(10).reduce((sum, [, c]) => sum + c, 0);
+        labels = top10.map(([k]) => k).concat(['Others']);
+        data = top10.map(([, c]) => c).concat([othersCount]);
+      } else {
+        labels = sorted.map(([k]) => k);
+        data = sorted.map(([, c]) => c);
+      }
+
+      if (pieCharts[canvasId]) pieCharts[canvasId].destroy();
+
+      const ctx = canvas.getContext('2d');
+      pieCharts[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: labels.map((_, i) => PIE_PALETTE[i % PIE_PALETTE.length]),
+            borderWidth: 2,
+            borderColor: '#fff',
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                usePointStyle: true,
+                pointStyle: 'circle',
+                boxWidth: 8,
+                padding: 8,
+                font: { size: 11, weight: '500' },
+                color: '#6c757d'
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(45, 45, 45, 0.96)',
+              padding: 10,
+              titleFont: { size: 12, weight: '600' },
+              bodyFont: { size: 12 },
+              callbacks: {
+                label: function(c) {
+                  const total = c.dataset.data.reduce((s, v) => s + v, 0);
+                  const pct = total ? ((c.parsed / total) * 100).toFixed(1) : '0.0';
+                  return c.label + ': ' + c.parsed + ' (' + pct + '%)';
+                }
+              }
+            }
+          }
+        },
+        plugins: [doughnutCenterText]
+      });
+    }
+
+    function inDateRange(dateStr, startDate, endDate) {
+      if (!startDate || !endDate) return true;
+      return dateStr >= startDate && dateStr <= endDate;
+    }
+
+    function updatePieCharts(startDate, endDate) {
+      const wlAll = getWishlistItemsData();
+      const purAll = getPurchasedItemsData();
+      // Wish List pies = items still on wishlist (not purchased, not unhooked) added in range.
+      const wishlistItems = wlAll.filter(i => !i.unhooked && !i.purchased && inDateRange(i.date, startDate, endDate));
+      // Purchased pies = items with purchase_date in range (data already filtered to purchased=True).
+      const purchasedItems = purAll.filter(i => inDateRange(i.date, startDate, endDate));
+
+      drawDoughnut('wishCategoryChart', wishlistItems, 'category');
+      drawDoughnut('wishBrandChart', wishlistItems, 'brand');
+      drawDoughnut('purchasedCategoryChart', purchasedItems, 'category');
+      drawDoughnut('purchasedBrandChart', purchasedItems, 'brand');
+    }
 
             function showCustomTooltip(event, dataIndex, spendingData, chartData, mouseX, mouseY, rect) {
                 if (currentTooltip) {
@@ -432,7 +533,9 @@
             name: '{{ wishitem.name }}',
             brand: '{{ wishitem.brand }}',
             category: '{{ wishitem.category }}',
-            description: '{{ wishitem.description }}'
+            description: '{{ wishitem.description }}',
+            unhooked: {{ 'true' if wishitem.unhooked else 'false' }},
+            purchased: {{ 'true' if wishitem.purchased else 'false' }}
           });
         {% endif %}
       {% endfor %}
@@ -571,28 +674,30 @@
             {
               label: 'Wishlist Items Added',
               data: countAdded,
-              borderColor: '#6c757d',
-              backgroundColor: 'rgba(108, 117, 125, 0.1)',
+              borderColor: 'rgb(' + CHART_COLORS.added + ')',
+              backgroundColor: makeChartGradient(ctx, CHART_COLORS.added),
               borderWidth: 2,
-              fill: false,
-              tension: 0.1,
+              fill: true,
+              tension: 0.25,
               pointRadius: pointRadiusAdded,
               pointHoverRadius: pointHoverRadiusAdded,
-              pointBackgroundColor: '#6c757d',
-              pointBorderColor: '#6c757d'
+              pointBackgroundColor: 'rgb(' + CHART_COLORS.added + ')',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 1.5
             },
             {
               label: 'Unhooked Items',
               data: countUnhooked,
-              borderColor: '#28a745',
-              backgroundColor: 'rgba(40, 167, 69, 0.1)',
+              borderColor: 'rgb(' + CHART_COLORS.unhooked + ')',
+              backgroundColor: makeChartGradient(ctx, CHART_COLORS.unhooked),
               borderWidth: 2,
-              fill: false,
-              tension: 0.1,
+              fill: true,
+              tension: 0.25,
               pointRadius: pointRadiusUnhooked,
               pointHoverRadius: pointHoverRadiusUnhooked,
-              pointBackgroundColor: '#28a745',
-              pointBorderColor: '#28a745'
+              pointBackgroundColor: 'rgb(' + CHART_COLORS.unhooked + ')',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 1.5
             }
           ]
         },
@@ -601,7 +706,7 @@
           maintainAspectRatio: false,
           interaction: { intersect: true, mode: 'nearest' },
           plugins: {
-            legend: { display: true, position: 'top' },
+            legend: CHART_LEGEND,
             tooltip: { enabled: false }
           },
           onHover: function(event, elements) {
@@ -703,15 +808,16 @@
                         datasets: [{
                             label: 'Total Daily Spending',
                             data: spendingData,
-                            borderColor: 'rgb(255, 99, 132)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            borderColor: 'rgb(' + CHART_COLORS.spending + ')',
+                            backgroundColor: makeChartGradient(ctx, CHART_COLORS.spending),
                             borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
+                            fill: true,
+                            tension: 0.25,
                             pointRadius: pointRadius,
                             pointHoverRadius: hoverRadius,
-                            pointBackgroundColor: 'rgb(255, 99, 132)',
-                            pointBorderColor: 'rgb(255, 99, 132)'
+                            pointBackgroundColor: 'rgb(' + CHART_COLORS.spending + ')',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 1.5
                         }]
                     },
                     options: {
@@ -719,7 +825,7 @@
                         maintainAspectRatio: false,
           interaction: { intersect: true, mode: 'nearest' },
                         plugins: {
-            legend: { display: true, position: 'top' },
+            legend: CHART_LEGEND,
             tooltip: { enabled: false }
                         },
                         onHover: function(event, elements) {
@@ -775,12 +881,9 @@
           $('#date-range-text-unhooked').text(rangeText);
           $('#date-range-text-wishlist-added').text(rangeText);
           $('#date-range-text-purchased').text(rangeText);
-                        $('#category-chart').attr('src', 'data:image/png;base64,' + response.category_chart);
-                        $('#brand-chart').attr('src', 'data:image/png;base64,' + response.brand_chart);
-                        $('#purchased-category-chart').attr('src', 'data:image/png;base64,' + response.purchased_category_chart);
-                        $('#purchased-brand-chart').attr('src', 'data:image/png;base64,' + response.purchased_brand_chart);
                         updateSpendingChart(response.start_date, response.end_date);
           updateWishlistChart(response.start_date, response.end_date);
+          updatePieCharts(response.start_date, response.end_date);
                     },
                     error: function(xhr) {
                         const response = xhr.responseJSON;
@@ -837,10 +940,7 @@
       $('#date-range-text-unhooked').text('all time');
       $('#date-range-text-wishlist-added').text('all time');
       $('#date-range-text-purchased').text('all time');
-                $('#category-chart').attr('src', '/wishlist_category.png');
-                $('#brand-chart').attr('src', '/wishlist_brand.png');
-                $('#purchased-category-chart').attr('src', '/purchased_category.png');
-                $('#purchased-brand-chart').attr('src', '/purchased_brand.png');
+      updatePieCharts(null, null);
                 updateSpendingChart('{{ last_purchase_date.strftime("%Y-%m-%d") if last_purchase_date else current_time.strftime("%Y-%m-%d") }}', '{{ current_time.strftime("%Y-%m-%d") }}');
       (function() {
         const allWishlistItems = getWishlistItemsData();
@@ -1003,6 +1103,7 @@
             if (defaultDateRange) {
                 updateSpendingChart(defaultDateRange.start, defaultDateRange.end);
       updateWishlistChart(defaultDateRange.start, defaultDateRange.end);
+      updatePieCharts(defaultDateRange.start, defaultDateRange.end);
             }
 
             const savedTimeRange = localStorage.getItem('selectedTimeRange');
