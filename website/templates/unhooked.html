@@ -37,7 +37,10 @@
   <!-- this is the same as base.html and overwrite any blocks -->
   <div class="unhooked-content-card">
   <br>
-  <h2 align="center">&#129693; Unhooked List &#128161;</h2>
+  <div class="page-header-mascot">
+    <img src="{{ url_for('static', filename='img/logo-saving-money.png') }}" alt="">
+    <h2>Unhooked List</h2>
+  </div>
   <a class="btn btn-warning" style="float: right;" href="{{ url_for('views.wishlist') }}">Go to Wish List</a>
   <br>
   <br>
@@ -52,7 +55,16 @@
   {% set totalprice.value =  totalprice.value|round(2) %}
   <b> &#128091; Total saved: <font color="green">${{ totalprice.value | format_money }} </font> </b>
 
-  <ul class="list-group list-group-flush" id="wishItems">
+  {% if not unhooked_items %}
+  <div class="empty-state">
+    <img src="{{ url_for('static', filename='img/logo-saving-money.png') }}" alt="">
+    <h3>Nothing unhooked yet</h3>
+    <p>When you decide not to buy something on your wishlist, hit "unhook" — it will land here so you can see how much you've saved.</p>
+    <a class="btn btn-warning" href="{{ url_for('views.wishlist') }}">Back to Wish List</a>
+  </div>
+  {% endif %}
+
+  <ul class="list-group list-group-flush" id="wishItems" {% if not unhooked_items %}style="display:none;"{% endif %}>
     <table id="unhookedlist-table" class="table table-sm">
       <thead>
         <tr>

@@ -47,7 +47,10 @@
   <div class="purchased-content-card">
   <!-- this is the same as base.html and overwrite any blocks -->
   <br>
-  <h2 align="center">&#129534; Purchase List &#129534;</h2>
+  <div class="page-header-mascot">
+    <img src="{{ url_for('static', filename='img/logo-shopping-bags.png') }}" alt="">
+    <h2>Purchase List</h2>
+  </div>
     <a class="btn btn-warning" style="float: right;" href="{{ url_for('views.wishlist') }}">Go to my Wish List</a>
     <br>
     <br>
@@ -68,7 +71,20 @@
   <div style="display: flex; justify-content: space-between;">
     <p> <b> &#128717; Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }} </b></font></p>
   </div>
-  <ul class="list-group list-group-flush" id="wishItems">
+  {% if not purchased_items %}
+  <div class="empty-state">
+    <img src="{{ url_for('static', filename='img/logo-reading-receipts.png') }}" alt="">
+    <h3>No purchases recorded yet</h3>
+    <p>When you decide to buy something on your wishlist, mark it as purchased and it will show up here. You can also backfill from Gmail.</p>
+    {% if user.gmail_connected_email %}
+    <a class="btn btn-dark" href="{{ url_for('backfill.backfill_page') }}">&#128241; Backfill from Gmail</a>
+    {% else %}
+    <a class="btn btn-outline-dark" href="{{ url_for('connectors.settings') }}">Connect Gmail to backfill</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <ul class="list-group list-group-flush" id="wishItems" {% if not purchased_items %}style="display:none;"{% endif %}>
     <table class="table table-sm" id="purchasedlist-table">
       <thead>
         <tr>
