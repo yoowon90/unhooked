@@ -59,28 +59,16 @@ It started with introspection — what emotions push me toward *Buy Now*, how lo
 
 ```mermaid
 flowchart LR
-  subgraph Clients
-    Web[Web app<br/>Flask + Jinja + Chart.js]
-    Mobile[Mobile app<br/>React Native + Expo]
-  end
-
-  subgraph Backend [Flask backend]
-    HTML[HTML routes<br/>session auth]
-    API[REST API<br/>/api/v1 · JWT]
-    Scraper[Per-brand scrapers<br/>BeautifulSoup]
-    Backfill[Gmail backfill<br/>OAuth + Anthropic]
-  end
-
-  Web --> HTML
-  Mobile --> API
-  HTML --> DB[(SQLite<br/>SQLAlchemy + Alembic)]
+  Web["Web app<br/>Flask + Jinja + Chart.js"] --> HTML["HTML routes<br/>session auth"]
+  Mobile["Mobile app<br/>React Native + Expo"] --> API["REST API<br/>/api/v1 (JWT)"]
+  HTML --> DB[("SQLite<br/>SQLAlchemy + Alembic")]
   API --> DB
-  HTML --> Scraper
+  HTML --> Scraper["Per-brand scrapers<br/>BeautifulSoup"]
   API --> Scraper
-  HTML --> Backfill
-  Backfill --> Anthropic[Anthropic API]
-  Backfill --> Gmail[Gmail API]
-  Scraper --> CSE[Google CSE<br/>image fallback]
+  HTML --> Backfill["Gmail backfill<br/>OAuth + Anthropic"]
+  Backfill --> Anthropic["Anthropic API"]
+  Backfill --> Gmail["Gmail API"]
+  Scraper --> CSE["Google CSE<br/>image fallback"]
 ```
 
 ## Engineering details I'm proud of
