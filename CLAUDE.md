@@ -61,6 +61,7 @@ FLASK_ENV=production flask --app main db upgrade
 - **Unhooked**: the app's name for "decided not to buy." Tracked with `unhooked_date`.
 - **Tax logic**: NYC zipcodes get 8.75% tax unless item is under $110 (NYC clothing exemption). Stored as `price` (pre-tax), `taxed_price`, `total_price` (taxed + delivery).
 - **URL extraction**: `url_extraction.py` has per-brand BeautifulSoup scrapers. Supported brands are in the `BRANDS` list at the top of that file. Falls back to `google_search_image_fallback` for images. Adding a new brand = add to `BRANDS` + add an `extract_<brandname>()` method.
+- **Shopping Habits Score**: 0-100 metric on `/home` reflecting purchase impulsiveness vs. unhook patience over a rolling 90-day window. Criteria, formula, and tier thresholds are documented in `docs/shopping_habits_score.md`; tweak constants via `SCORE_WEIGHTS` / `SCORE_TIERS` at the top of `website/reports.py`.
 
 ## Auth
 - Web: Flask-Login (session cookies). Existing HTML routes use `@login_required`.

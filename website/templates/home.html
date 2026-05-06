@@ -108,16 +108,71 @@
     <p><b> Welcome back to Unhooked. Here is your report. </b></p>
 
         {% set totalpurchasedprice = namespace(value=0.00) %}
+        {% set totalsavedprice = namespace(value=0.00) %}
+        {% set unhooked_count = namespace(value=0) %}
+        {% set purchased_count = namespace(value=0) %}
+        {% set wishlist_added_count = namespace(value=0) %}
         {% for wishitem in user.wishitems %}
         {% if not wishitem.unhooked and wishitem.purchased %}
         {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.taxed_price %}
+        {% set purchased_count.value = purchased_count.value + 1 %}
+        {% endif %}
+        {% if wishitem.unhooked %}
+        {% set totalsavedprice.value = totalsavedprice.value + wishitem.price %}
+        {% set unhooked_count.value = unhooked_count.value + 1 %}
+        {% endif %}
+        {% if wishitem.date %}
+        {% set wishlist_added_count.value = wishlist_added_count.value + 1 %}
         {% endif %}
         {% endfor %}
     {% set totalpurchasedprice.value = totalpurchasedprice.value|round(2) %}
+    {% set totalsavedprice.value = totalsavedprice.value|round(2) %}
+
+    {# ── Shopping Habits Score hero banner ── #}
+    {% if shopping_score and shopping_score.has_data %}
+      {% set tier_class = 'tier-' + shopping_score.tier|lower|replace(' ', '-') %}
+      {% set needle_rotation = (shopping_score.score - 50) * 1.8 %}
+    {% endif %}
+    <div class="score-hero">
+      <div class="score-hero-gauge">
+        <svg class="score-gauge-svg" viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg">
+          {# Colored tier bands. Cumulative score breakpoints: 0,40,60,80,100 → math angles 180,108,72,36,0. #}
+          <path d="M 20 100 A 80 80 0 0 1 75.28 23.93" stroke="#dc3545" stroke-width="14" fill="none"/>
+          <path d="M 75.28 23.93 A 80 80 0 0 1 124.72 23.93" stroke="#fd7e14" stroke-width="14" fill="none"/>
+          <path d="M 124.72 23.93 A 80 80 0 0 1 164.72 53.00" stroke="#f1c40f" stroke-width="14" fill="none"/>
+          <path d="M 164.72 53.00 A 80 80 0 0 1 180 100" stroke="#28a745" stroke-width="14" fill="none"/>
+          {# Range labels at endpoints. #}
+          <text x="20" y="120" font-size="11" fill="#6c757d" text-anchor="middle">0</text>
+          <text x="180" y="120" font-size="11" fill="#6c757d" text-anchor="middle">100</text>
+          {% if shopping_score and shopping_score.has_data %}
+            {# Needle pointing at the user's score; default polygon points straight up (0°). #}
+            <g transform="rotate({{ needle_rotation }} 100 100)">
+              <polygon points="100,28 95,100 105,100" fill="#2c3338"/>
+            </g>
+            <circle cx="100" cy="100" r="8" fill="#2c3338"/>
+            <circle cx="100" cy="100" r="3" fill="#fff"/>
+          {% else %}
+            <circle cx="100" cy="100" r="8" fill="#bbb"/>
+          {% endif %}
+        </svg>
+      </div>
+      <div class="score-hero-text">
+        <div class="score-hero-label">Shopping habits score<span class="info-icon" data-tooltip="Based on your last 90 days of decisions: how long you wait before each purchase, how patient you are before unhooking an item, and your balance of unhooks vs purchases. Higher = more mindful."><i class="fa fa-info-circle"></i></span></div>
+        {% if shopping_score and shopping_score.has_data %}
+          <div class="score-hero-number {{ tier_class }}">{{ shopping_score.score }}<span class="score-hero-denom">/ 100</span></div>
+          <div class="score-hero-tier {{ tier_class }}">{{ shopping_score.tier }}</div>
+          <div class="score-hero-meta">Last 90 days · {{ shopping_score.purchases }} purchase{{ '' if shopping_score.purchases == 1 else 's' }} · {{ shopping_score.unhooks }} unhook{{ '' if shopping_score.unhooks == 1 else 's' }}</div>
+        {% else %}
+          <div class="score-hero-number tier-empty">—</div>
+          <div class="score-hero-tier tier-empty">Not enough data</div>
+          <div class="score-hero-meta">No decisions logged in the last 90 days.</div>
+        {% endif %}
+      </div>
+    </div>
 
     <div class="stat-card-grid">
-      <div class="stat-card">
-        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-thinking-hard.png') }}" alt="">
+      <a class="stat-card" href="/purchased-list">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-reading-receipts.png') }}" alt="">
         <div class="stat-label">Last online purchase</div>
         {% if last_purchase_date %}
           {% set time_difference = current_time - last_purchase_date %}
@@ -129,14 +184,42 @@
           <div class="stat-value">—</div>
           <div class="stat-detail">No purchases recorded yet.</div>
         {% endif %}
-      </div>
+      </a>
 
-      <div class="stat-card">
+      <a class="stat-card" href="/purchased-list">
         <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-shopping-bags.png') }}" alt="">
         <div class="stat-label">Total purchase amount</div>
         <div class="stat-value">$<span id="total-purchase-amount">{{ totalpurchasedprice.value | format_money }}</span></div>
         <div class="stat-detail"><span id="date-range-text">all time</span></div>
-      </div>
+      </a>
+
+      <a class="stat-card" href="/unhooked-list">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-saving-money.png') }}" alt="">
+        <div class="stat-label">Total saved amount</div>
+        <div class="stat-value">$<span id="total-saved-amount">{{ totalsavedprice.value | format_money }}</span></div>
+        <div class="stat-detail"><span id="date-range-text-saved">all time</span></div>
+      </a>
+
+      <a class="stat-card" href="/unhooked-list">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-with-money-bag.png') }}" alt="">
+        <div class="stat-label">Number of unhooked items</div>
+        <div class="stat-value"><span id="unhooked-count">{{ unhooked_count.value }}</span></div>
+        <div class="stat-detail"><span id="date-range-text-unhooked">all time</span></div>
+      </a>
+
+      <a class="stat-card" href="/my-wishlist">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-shopping-right.png') }}" alt="">
+        <div class="stat-label">Number of wishlist items added</div>
+        <div class="stat-value"><span id="wishlist-added-count">{{ wishlist_added_count.value }}</span></div>
+        <div class="stat-detail"><span id="date-range-text-wishlist-added">all time</span></div>
+      </a>
+
+      <a class="stat-card" href="/purchased-list">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-tapping-card.png') }}" alt="">
+        <div class="stat-label">Number of items purchased</div>
+        <div class="stat-value"><span id="purchased-count">{{ purchased_count.value }}</span></div>
+        <div class="stat-detail"><span id="date-range-text-purchased">all time</span></div>
+      </a>
     </div>
     <br>
                 <div class="calendar-dropdown-container">
@@ -149,6 +232,8 @@
                 <option value="last7days">Last 7 days</option>
                 <option value="last14days">Last 14 days</option>
                 <option value="last30days" selected>Last 30 days</option>
+                <option value="last60days">Last 60 days</option>
+                <option value="last90days">Last 90 days</option>
                 <option value="thisMonth">This Month</option>
                 <option value="thisYear">This Year</option>
                 <option value="last365days">Last 365 days</option>
@@ -680,7 +765,16 @@
         data: JSON.stringify({ start_date: startDate, end_date: endDate }),
                     success: function(response) {
           $('#total-purchase-amount').text(response.total_purchase_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                        $('#date-range-text').text('from ' + response.start_date + ' to ' + response.end_date);
+          $('#total-saved-amount').text(response.total_saved_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          $('#unhooked-count').text(response.unhooked_count);
+          $('#wishlist-added-count').text(response.wishlist_added_count);
+          $('#purchased-count').text(response.purchased_count);
+          const rangeText = 'from ' + response.start_date + ' to ' + response.end_date;
+          $('#date-range-text').text(rangeText);
+          $('#date-range-text-saved').text(rangeText);
+          $('#date-range-text-unhooked').text(rangeText);
+          $('#date-range-text-wishlist-added').text(rangeText);
+          $('#date-range-text-purchased').text(rangeText);
                         $('#category-chart').attr('src', 'data:image/png;base64,' + response.category_chart);
                         $('#brand-chart').attr('src', 'data:image/png;base64,' + response.brand_chart);
                         $('#purchased-category-chart').attr('src', 'data:image/png;base64,' + response.purchased_category_chart);
@@ -725,8 +819,24 @@
                     const cleanAmount = parseFloat(amount.replace(/,/g, ''));
                     totalAllPurchases += cleanAmount;
                 });
+      let totalAllSaves = 0;
+      Object.values(saves).forEach(function(amount) {
+        const cleanAmount = parseFloat(amount.replace(/,/g, ''));
+        totalAllSaves += cleanAmount;
+      });
+      const allTimeUnhookedCount = getUnhookedItemsData().length;
+      const allTimeWishlistAddedCount = getWishlistItemsData().length;
+      const allTimePurchasedCount = getPurchasedItemsData().length;
       $('#total-purchase-amount').text(totalAllPurchases.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      $('#total-saved-amount').text(totalAllSaves.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+      $('#unhooked-count').text(allTimeUnhookedCount);
+      $('#wishlist-added-count').text(allTimeWishlistAddedCount);
+      $('#purchased-count').text(allTimePurchasedCount);
                 $('#date-range-text').text('all time');
+      $('#date-range-text-saved').text('all time');
+      $('#date-range-text-unhooked').text('all time');
+      $('#date-range-text-wishlist-added').text('all time');
+      $('#date-range-text-purchased').text('all time');
                 $('#category-chart').attr('src', '/wishlist_category.png');
                 $('#brand-chart').attr('src', '/wishlist_brand.png');
                 $('#purchased-category-chart').attr('src', '/purchased_category.png');
@@ -786,6 +896,12 @@
                     case 'last30days':
                         startDate.setDate(today.getDate() - 30);
                         break;
+                    case 'last60days':
+                        startDate.setDate(today.getDate() - 60);
+                        break;
+                    case 'last90days':
+                        startDate.setDate(today.getDate() - 90);
+                        break;
                     case 'thisMonth':
                         startDate = new Date(today.getFullYear(), today.getMonth(), 1);
                         break;
@@ -807,7 +923,81 @@
       return { title: '💰 ' + '+' + saves[date], start: date, color: 'lightgreen', textColor: 'green' };
     }));
 
-    $('#calendar').fullCalendar({ selectable: false, selectHelper: false, events: calendarEvents });
+    function showCalendarTooltip(isSpending, dateStr, items, mouseX, mouseY) {
+      if (currentTooltip) { currentTooltip.remove(); currentTooltip = null; }
+      const allTooltips = document.querySelectorAll('[id*="tooltip"], [class*="tooltip"]');
+      allTooltips.forEach(t => t.remove());
+
+      const total = items.reduce((s, i) => s + (Number(i.price) || 0), 0);
+      const headerColor = isSpending ? '#e74c3c' : '#28a745';
+      const bgColor = isSpending ? 'rgba(255, 228, 225, 0.95)' : 'rgba(212, 237, 218, 0.95)';
+      const borderColor = isSpending ? '#ffb6c1' : '#c3e6cb';
+      const labelText = isSpending ? 'Purchased' : 'Unhooked';
+
+      let html = '<strong style="color:' + headerColor + ';font-size:14px;">Date: ' + dateStr + '</strong><br>';
+      if (items.length > 0) {
+        html += labelText + ': ' + items.length + ' item' + (items.length > 1 ? 's' : '') + '<br>';
+        html += 'Total: $' + total.toFixed(2) + '<br>';
+        html += 'Items:<br>';
+        items.forEach((it, idx) => {
+          html += '  ' + (idx + 1) + '. ' + it.name + ' - $' + (Number(it.price) || 0).toFixed(2) + '<br>';
+        });
+      } else {
+        html += '(no item details available)';
+      }
+
+      currentTooltip = document.createElement('div');
+      currentTooltip.id = 'custom-tooltip';
+      currentTooltip.style.position = 'fixed';
+      currentTooltip.style.pointerEvents = 'none';
+      currentTooltip.style.zIndex = '9999';
+      currentTooltip.style.backgroundColor = bgColor;
+      currentTooltip.style.border = '1px solid ' + borderColor;
+      currentTooltip.style.borderRadius = '5px';
+      currentTooltip.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+      currentTooltip.style.fontFamily = 'Arial, sans-serif';
+      currentTooltip.style.fontSize = '12px';
+      currentTooltip.style.color = '#333';
+      currentTooltip.style.minWidth = '220px';
+      currentTooltip.style.padding = '10px';
+      document.body.appendChild(currentTooltip);
+      currentTooltip.innerHTML = html;
+
+      const tooltipWidth = currentTooltip.offsetWidth || 240;
+      const tooltipHeight = currentTooltip.offsetHeight || 120;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      let left = mouseX + 15;
+      let top = mouseY + 15;
+      if (left + tooltipWidth > viewportWidth) left = mouseX - tooltipWidth - 15;
+      if (top + tooltipHeight > viewportHeight) top = mouseY - tooltipHeight - 15;
+      if (left < 0) left = 15;
+      if (top < 0) top = 15;
+      currentTooltip.style.left = left + 'px';
+      currentTooltip.style.top = top + 'px';
+    }
+
+    const allPurchasedItemsForCalendar = getPurchasedItemsData();
+    const allUnhookedItemsForCalendar = getUnhookedItemsData();
+
+    $('#calendar').fullCalendar({
+      selectable: false,
+      selectHelper: false,
+      events: calendarEvents,
+      eventRender: function(event, element) {
+        const isSpending = event.title.indexOf('💸') !== -1;
+        const dateStr = event.start.format('YYYY-MM-DD');
+        const sourceList = isSpending ? allPurchasedItemsForCalendar : allUnhookedItemsForCalendar;
+        const itemsOnDate = sourceList.filter(i => i.date === dateStr);
+        element.css('cursor', 'pointer');
+        element.on('mousemove', function(e) {
+          showCalendarTooltip(isSpending, dateStr, itemsOnDate, e.clientX, e.clientY);
+        });
+        element.on('mouseleave', function() {
+          hideCustomTooltip();
+        });
+      }
+    });
 
             const defaultDateRange = getDateRange('last30days');
             if (defaultDateRange) {

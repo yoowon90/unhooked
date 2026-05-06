@@ -17,6 +17,30 @@
   width: auto;
 }
 
+/* ─── Navbar tabs ───
+   Spacing between tab names so the active-tab mascot has room
+   to sit on the left without crowding adjacent labels. */
+.navbar-nav .nav-link {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+/* Active tab: bolded label with bunny mascot on the left. */
+.navbar-nav .nav-link.active-tab {
+  font-weight: 700;
+  color: #fff !important;
+  display: inline-flex;
+  align-items: center;
+}
+.navbar-nav .nav-link.active-tab::before {
+  content: "\25B8"; /* ▸ small right-pointing triangle */
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.95em;
+  line-height: 1;
+  color: #fff;
+}
+
 /* ─── Page header with mascot ───
    Used at the top of list pages: wishlist, purchased, unhooked. */
 .page-header-mascot {
@@ -78,6 +102,7 @@
 }
 .stat-card {
   position: relative;
+  display: block;
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 14px;
@@ -86,10 +111,14 @@
   min-height: 130px;
   overflow: hidden;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  color: inherit;
+  text-decoration: none;
 }
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.1);
+  color: inherit;
+  text-decoration: none;
 }
 .stat-card .stat-mascot {
   position: absolute;
@@ -127,6 +156,116 @@
 .stat-card .stat-detail.alert-fine {
   color: #2a82d4;
   font-weight: 600;
+}
+
+/* ─── Shopping habits score hero banner ───
+   Credit-score-style gauge with colored tier bands + needle, paired with
+   a big score number and tier label on the right. */
+.score-hero {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 22px 28px;
+  margin: 18px 0 22px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+}
+.score-hero-gauge {
+  flex-shrink: 0;
+  width: 220px;
+}
+.score-gauge-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.score-hero-text {
+  flex: 1;
+  min-width: 220px;
+}
+.score-hero-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6c757d;
+  margin-bottom: 6px;
+}
+.score-hero-number {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #2c3338;
+}
+.score-hero-denom {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #6c757d;
+  margin-left: 6px;
+}
+.score-hero-tier {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 4px;
+  color: #2c3338;
+}
+.score-hero-meta {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+/* Tier color tokens (match the gauge band colors). */
+.tier-impulse-prone   { color: #dc3545; }
+.tier-mixed-habits    { color: #fd7e14; }
+.tier-getting-there   { color: #d4a017; } /* slightly darker yellow for legibility on white */
+.tier-mindful-shopper { color: #28a745; }
+.tier-empty           { color: #adb5bd; }
+
+.info-icon {
+  display: inline-block;
+  margin-left: 6px;
+  color: #999;
+  cursor: help;
+  position: relative;
+  font-size: 0.85em;
+  font-style: normal;
+  vertical-align: middle;
+}
+.info-icon:hover { color: #555; }
+.info-icon:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: rgba(45, 45, 45, 0.96);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  width: 240px;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.4;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.info-icon:hover::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(45, 45, 45, 0.96);
+  z-index: 1000;
+  pointer-events: none;
 }
 
 /* ─── Backfill hero mascot ─── */

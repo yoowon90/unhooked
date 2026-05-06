@@ -32,6 +32,108 @@ def format_money(money):
         money = add_commas(dollars) + "." + cents
         return money
 
+# Shopping Habits Score config — see docs/shopping_habits_score.md.
+# Buckets are (max_days_exclusive, points); the last bucket uses float('inf').
+SCORE_WEIGHTS = {
+    'window_days': 90,
+    'base_score': 50,
+    'purchase_buckets': [
+        (7, -3),
+        (30, 0),
+        (60, 1),
+        (float('inf'), 2),
+    ],
+    'unhook_buckets': [
+        (15, 0),
+        (30, 2),
+        (60, 3),
+        (90, 4),
+        (float('inf'), 5),
+    ],
+    # (min_ratio_inclusive, bonus). Iterated highest-min first.
+    'ratio_bonus': [
+        (1.0, 10),
+        (0.5, 5),
+        (0.25, 0),
+        (0.0, -5),
+    ],
+}
+
+# (min_score_inclusive, label). Iterated highest-min first.
+SCORE_TIERS = [
+    (80, 'Mindful Shopper'),
+    (60, 'Getting There'),
+    (40, 'Mixed Habits'),
+    (0, 'Impulse-prone'),
+]
+
+
+def _strip_tz(dt):
+    if dt is not None and dt.tzinfo is not None:
+        return dt.replace(tzinfo=None)
+    return dt
+
+
+def _bucket_points(days, buckets):
+    for max_days, points in buckets:
+        if days < max_days:
+            return points
+    return 0
+
+
+def _wait_days(item, decision_date):
+    if item.wish_period is not None:
+        return max(item.wish_period.days, 0)
+    item_date = _strip_tz(item.date)
+    decision_date = _strip_tz(decision_date)
+    if item_date is not None and decision_date is not None:
+        return max((decision_date - item_date).days, 0)
+    return 0
+
+
+def compute_shopping_habits_score(user):
+    """Returns a dict: {has_data, score, tier, purchases, unhooks}.
+
+    Score reflects the last `window_days` of purchase + unhook decisions.
+    `has_data` is False when there were zero decisions in the window — the
+    UI shows a placeholder rather than a misleading mid-pack 50.
+    """
+    now = datetime.datetime.now()
+    cutoff = now - datetime.timedelta(days=SCORE_WEIGHTS['window_days'])
+    purchase_count = 0
+    unhook_count = 0
+    total_points = 0
+    for item in user.wishitems:
+        if item.purchased and not item.unhooked:
+            decision_date = _strip_tz(item.purchase_date)
+            if decision_date is not None and decision_date >= cutoff:
+                days = _wait_days(item, decision_date)
+                total_points += _bucket_points(days, SCORE_WEIGHTS['purchase_buckets'])
+                purchase_count += 1
+        elif item.unhooked:
+            decision_date = _strip_tz(item.unhooked_date)
+            if decision_date is not None and decision_date >= cutoff:
+                days = _wait_days(item, decision_date)
+                total_points += _bucket_points(days, SCORE_WEIGHTS['unhook_buckets'])
+                unhook_count += 1
+
+    if purchase_count + unhook_count == 0:
+        return {'has_data': False, 'score': None, 'tier': None,
+                'purchases': 0, 'unhooks': 0}
+
+    if purchase_count == 0:
+        ratio_bonus = SCORE_WEIGHTS['ratio_bonus'][0][1]
+    else:
+        ratio = unhook_count / purchase_count
+        ratio_bonus = next(b for r, b in SCORE_WEIGHTS['ratio_bonus'] if ratio >= r)
+
+    raw = SCORE_WEIGHTS['base_score'] + total_points + ratio_bonus
+    score = max(0, min(100, raw))
+    tier = next(label for threshold, label in SCORE_TIERS if score >= threshold)
+    return {'has_data': True, 'score': score, 'tier': tier,
+            'purchases': purchase_count, 'unhooks': unhook_count}
+
+
 COLOR_SCHEME = [
         "#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9", "#BAE1FF",
         "#FFB3B3", "#FFCCB3", "#FFFFB3", "#B3FFB3", "#B3FFFF",
@@ -90,6 +192,8 @@ def home():
     saves = {date: format_money(save) for date, save in saves.items()}
 
 
+    shopping_score = compute_shopping_habits_score(current_user)
+
     return render_template("home.html",
                 user=current_user,
                 current_time=current_time,
@@ -98,7 +202,8 @@ def home():
                 default_report_start=report_start,
                 default_report_end=report_end,
                 spenditure=spenditure,
-                saves=saves
+                saves=saves,
+                shopping_score=shopping_score
                 )  # return html when we got root
 
 def create_figure(figure_type, figure_content, start_date=None, end_date=None):
@@ -228,8 +333,9 @@ def generate_report():
     except ValueError:
         return jsonify({'error': 'Invalid date format'}), 400
 
-    # Calculate total purchase amount for the date range
+    # Calculate total purchase amount and purchased count for the date range
     total_purchase_amount = 0
+    purchased_count = 0
     purchased_items = WishItem.query.filter_by(
         user_id=current_user.id,
         purchased=True,
@@ -239,6 +345,26 @@ def generate_report():
     for item in purchased_items:
         if item.purchase_date and start_date <= item.purchase_date <= end_date:
             total_purchase_amount += item.taxed_price
+            purchased_count += 1
+
+    # Calculate total saved amount and unhooked item count for the date range
+    total_saved_amount = 0
+    unhooked_count = 0
+    unhooked_items = WishItem.query.filter_by(
+        user_id=current_user.id,
+        unhooked=True
+    ).all()
+    for item in unhooked_items:
+        if item.unhooked_date and start_date <= item.unhooked_date <= end_date:
+            total_saved_amount += item.price or 0
+            unhooked_count += 1
+
+    # Count wishlist items added in the date range (any item with a creation date in range)
+    wishlist_added_count = 0
+    all_user_items = WishItem.query.filter_by(user_id=current_user.id).all()
+    for item in all_user_items:
+        if item.date and start_date <= item.date <= end_date:
+            wishlist_added_count += 1
 
     # Generate new pie charts with date filtering
     fig_category = create_figure('wishlist', 'category', start_date, end_date)
@@ -262,6 +388,10 @@ def generate_report():
 
     return jsonify({
         'total_purchase_amount': round(total_purchase_amount, 2),
+        'total_saved_amount': round(total_saved_amount, 2),
+        'unhooked_count': unhooked_count,
+        'purchased_count': purchased_count,
+        'wishlist_added_count': wishlist_added_count,
         'category_chart': category_chart,
         'brand_chart': brand_chart,
         'purchased_category_chart': purchased_category_chart,
