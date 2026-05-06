@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
-from .models import User, WishItem, normalize_category
+from .models import User, WishItem, normalize_category, clean_text
 from . import db
 from .url_extraction import ItemDetails, scrape_item
 from .tax import taxed_price
@@ -117,8 +117,8 @@ def create_wishitem():
     user = _current_user()
     data = request.get_json() or {}
 
-    name = data.get('name', '').strip()
-    brand = data.get('brand', '').strip()
+    name = clean_text(data.get('name', ''))
+    brand = clean_text(data.get('brand', ''))
     category = normalize_category(data.get('category'))
     link = data.get('link', '').strip()
 
@@ -145,8 +145,8 @@ def create_wishitem():
     if delivery_fee < 0:
         return jsonify({'error': 'Delivery fee cannot be negative'}), 400
 
-    tag = data.get('tag')
-    description = data.get('description', '')
+    tag = clean_text(data.get('tag'))
+    description = clean_text(data.get('description', ''))
     image_url = data.get('image_url')
 
     taxed_price = _calc_tax(user.zipcode, price)
@@ -200,7 +200,13 @@ def update_wishitem(item_id):
 
     for field in ('name', 'brand', 'category', 'tag', 'description', 'link', 'image_url'):
         if field in data:
-            value = normalize_category(data[field]) if field == 'category' else data[field]
+            raw = data[field]
+            if field == 'category':
+                value = normalize_category(raw)
+            elif field in ('name', 'brand', 'tag', 'description'):
+                value = clean_text(raw)
+            else:
+                value = raw
             setattr(item, field, value)
 
     if 'price' in data:

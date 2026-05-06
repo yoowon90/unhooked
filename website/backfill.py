@@ -15,7 +15,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from . import db, limiter
-from .models import BackfillReview, WishItem
+from .models import BackfillReview, WishItem, normalize_category, clean_text
 from .security import same_origin_required
 from .tax import taxed_price
 
@@ -333,7 +333,7 @@ def _filter_already_purchased(orders):
         if not items:
             kept.append(order)
             continue
-        brand = order.get('brand') or ''
+        brand = clean_text(order.get('brand') or '')
         candidates = _existing_purchases_window(order.get('order_date'), brand)
         all_match = all(_find_duplicate_item(item, brand, candidates) for item in items)
         if not all_match:
@@ -525,7 +525,7 @@ def confirm_backfill():
 
         purchase_date = _resolve_purchase_date(order)
 
-        brand = order.get('brand') or ''
+        brand = clean_text(order.get('brand') or '')
         candidates = _existing_purchases_window(order.get('order_date'), brand)
 
         for item in order.get('items', []):
@@ -544,9 +544,9 @@ def confirm_backfill():
             for _ in range(quantity):
                 wish_item = WishItem(
                     user_id=current_user.id,
-                    name=item.get('name') or 'Unknown item',
+                    name=clean_text(item.get('name') or 'Unknown item'),
                     brand=brand,
-                    category=item.get('category') or 'other',
+                    category=normalize_category(item.get('category') or 'other'),
                     price=raw_price,
                     taxed_price=taxed,
                     delivery_fee=0.0,

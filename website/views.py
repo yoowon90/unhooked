@@ -6,7 +6,7 @@ import datetime
 import json
 from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import current_user, login_required
-from .models import Note, WishItem, normalize_category
+from .models import Note, WishItem, normalize_category, clean_text
 from . import db
 from .url_extraction import scrape_item
 from .tax import taxed_price
@@ -72,17 +72,17 @@ def wishlist():
             print(f'Error: {e}')
 
         # format name
-        raw_name = request.form.get('name')
+        raw_name = clean_text(request.form.get('name'))
         raw_names = raw_name.split(' ')
         wish_item_name = ' '.join([raw_name.capitalize() for raw_name in raw_names])
 
         # grab other fields
         wish_item_delivery_fee = float(request.form.get('delivery-fee')) if request.form.get('delivery-fee') != "" else 0
         wish_item_category = normalize_category(request.form.get('category'))
-        wish_item_tag = request.form.get('tag')
-        wish_item_brand = request.form.get('brand')
+        wish_item_tag = clean_text(request.form.get('tag'))
+        wish_item_brand = clean_text(request.form.get('brand'))
         wish_item_link = request.form.get('link')
-        wish_item_description = request.form.get('description').replace("<br>", ". ").replace("<br/>", ". ")
+        wish_item_description = clean_text(request.form.get('description').replace("<br>", ". ").replace("<br/>", ". "))
         wish_item_image_url = request.form.get('image_url', None)  # Get image_url from form
         if wish_item_price < 0:
             flash('Price cannot be below zero!', category='error')
@@ -277,13 +277,13 @@ def save_table():
                     return jsonify({'error': 'Invalid price value'}), 400
             else:
                 # Handle other field updates (existing logic)
-                brand = data['Brand'].split('\n')[0].strip()
+                brand = clean_text(data['Brand'].split('\n')[0])
                 category_and_tag = data['Category_Tag']
                 category = normalize_category(category_and_tag.split('#')[0])
-                tag = category_and_tag.split('#')[1].strip() if '#' in category_and_tag else None
+                tag = clean_text(category_and_tag.split('#')[1]) if '#' in category_and_tag else None
                 name_and_desc = data['Name_Description']
-                name = name_and_desc.split('\n')[0].strip()
-                desc = name_and_desc.split('\n')[1].strip() if '\n' in name_and_desc else None
+                name = clean_text(name_and_desc.split('\n')[0])
+                desc = clean_text(name_and_desc.split('\n')[1]) if '\n' in name_and_desc else None
                 wishitem.brand = brand
                 wishitem.category = category
                 wishitem.tag = tag

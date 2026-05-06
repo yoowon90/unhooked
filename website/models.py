@@ -1,7 +1,17 @@
 from . import db
 from flask_login import UserMixin
 import datetime
+import html
 from pytz import timezone
+
+
+def clean_text(s):
+    """Decode HTML entities (e.g. '&amp;' -> '&') and strip whitespace.
+    Safe to apply to any text field stored in the DB. Some scraping/backfill
+    paths leave entities encoded; this brings them back to display form."""
+    if s is None:
+        return s
+    return html.unescape(s).strip()
 
 
 # Words that should pass through normalize_category unchanged.
@@ -64,9 +74,7 @@ def normalize_category(s):
       converge ('Top'/'tops'/'TOPS' -> 'Tops', 'Accessory' -> 'Accessories').
       PROTECTED_CATEGORIES (Pants, Beauty, Outerwear, ...) pass through.
     Returns None / empty for None / blank input."""
-    if s is None:
-        return s
-    s = s.strip()
+    s = clean_text(s)
     if not s:
         return s
     if s.isupper():
