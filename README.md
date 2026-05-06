@@ -37,8 +37,8 @@ It started with introspection — what emotions push me toward *Buy Now*, how lo
 - Calendar with hover details for every spend/save day
 - Page-wide date-range filter governing the cards/graphs/pies (calendar and score are intentionally independent)
 
-<!-- SCREENSHOT — calendar + line graphs + pie doughnuts on a card-wrapped page.
-     ![Calendar and charts](docs/screenshots/calendar-and-charts.png) -->
+<img width="755" height="715" alt="image" src="https://github.com/user-attachments/assets/fb2066f5-2f92-4d0f-82ef-381e8b1c524a" />
+
 
 ### Real data, not toy data
 - Per-retailer URL scrapers (Zara, Reformation, Bloomingdale's, ba&sh, …) with Google CSE image fallback
