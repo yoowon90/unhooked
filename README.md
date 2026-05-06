@@ -17,11 +17,8 @@ Track every online wish, every purchase, and — most importantly — every time
   <img alt="Gmail API" src="https://img.shields.io/badge/Gmail%20API-OAuth%202.0-EA4335?logo=gmail&logoColor=white" />
 </p>
 
-<!-- HERO SCREENSHOT
-     Suggested: a wide /home shot showing the welcome line, the credit-score-style
-     Shopping Habits Score gauge, the stat cards, and the calendar peeking in below.
-     Width ~1100px renders well in GitHub. -->
-<!-- ![Unhooked home dashboard](docs/screenshots/home-hero.png) -->
+<img width="1105" height="697" alt="image" src="https://github.com/user-attachments/assets/2f17e1fa-1495-4e95-bfba-b89f7bbf976f" />
+
 
 </div>
 
