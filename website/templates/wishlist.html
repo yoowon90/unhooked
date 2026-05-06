@@ -116,7 +116,10 @@
   </script>
   <div class="wishlist-content-card">
   <br>
-  <h2 align="center">&#128722; Wish List &#128722;</h2>
+  <div class="page-header-mascot">
+    <img src="{{ url_for('static', filename='img/logo-thinking-hard.png') }}" alt="">
+    <h2>Wish List</h2>
+  </div>
   <a class="btn btn-primary" style="float: right;" href="{{ url_for('views.unhooked_list') }}">Go to my Unhooked List</a>
   <br>
   <br>
@@ -409,7 +412,15 @@
     </b></font></p>
   </div>
 
-  <ul class="list-group list-group-flush" id="wishItems">
+  {% if not wishitems %}
+  <div class="empty-state">
+    <img src="{{ url_for('static', filename='img/logo-shopping-right.png') }}" alt="">
+    <h3>Nothing on the wishlist yet</h3>
+    <p>Paste a product URL above and Unhooked will pull the details for you. Sit on it for a few days before deciding.</p>
+  </div>
+  {% endif %}
+
+  <ul class="list-group list-group-flush" id="wishItems" {% if not wishitems %}style="display:none;"{% endif %}>
     <table id="wishlist-table" class="table table-sm">
       <thead>
         <tr>

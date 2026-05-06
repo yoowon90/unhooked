@@ -1,0 +1,138 @@
+/* Reusable UI components for Unhooked illustrations.
+   Page-header mascot, empty states, and home stat cards. */
+
+/* ─── Navbar brand mark ─── */
+.navbar-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #fff !important;
+  text-decoration: none !important;
+}
+.navbar-brand-logo img {
+  height: 32px;
+  width: auto;
+}
+
+/* ─── Page header with mascot ───
+   Used at the top of list pages: wishlist, purchased, unhooked. */
+.page-header-mascot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 8px 0 18px;
+  flex-wrap: wrap;
+}
+.page-header-mascot img {
+  height: 90px;
+  width: auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));
+}
+.page-header-mascot h2 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ─── Empty state ───
+   Shown when a list has no items. */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px 56px;
+  margin: 24px auto;
+  max-width: 480px;
+}
+.empty-state img {
+  max-width: 220px;
+  width: 60%;
+  height: auto;
+  margin-bottom: 18px;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.1));
+}
+.empty-state h3 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #2c3338;
+}
+.empty-state p {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.empty-state .btn {
+  margin-top: 4px;
+}
+
+/* ─── Home page stat cards ─── */
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  margin: 18px 0 28px;
+}
+.stat-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  padding: 20px 22px 20px 130px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  min-height: 130px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.1);
+}
+.stat-card .stat-mascot {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 100px;
+  width: 100px;
+  object-fit: contain;
+  opacity: 0.95;
+}
+.stat-card .stat-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6c757d;
+  margin-bottom: 6px;
+}
+.stat-card .stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3338;
+  line-height: 1.25;
+}
+.stat-card .stat-detail {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+.stat-card .stat-detail.alert-soon {
+  color: #d33;
+  font-weight: 600;
+}
+.stat-card .stat-detail.alert-fine {
+  color: #2a82d4;
+  font-weight: 600;
+}
+
+/* ─── Backfill hero mascot ─── */
+.backfill-hero-mascot {
+  height: 84px;
+  width: auto;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));
+}

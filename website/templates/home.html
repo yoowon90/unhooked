@@ -106,17 +106,7 @@
     </div>
     <div>
     <p><b> Welcome back to Unhooked. Here is your report. </b></p>
-        <br>
-        {% if user.last_purchase_date %}
-        {% set time_difference = current_time - user.last_purchase_date %}
-        ⭐️ Your last online purchase date is {{ user.last_purchase_date | format_last_purchase_date }} which is
-        <span style="color: {% if time_difference >= ten_days %}blue{% else %}red{% endif %};">
-      <b>{{ (time_difference) | format_time }}</b>
-        </span>
-        {% else %}
-        ⭐️ No purchases recorded yet.
-        {% endif %}
-        .
+
         {% set totalpurchasedprice = namespace(value=0.00) %}
         {% for wishitem in user.wishitems %}
         {% if not wishitem.unhooked and wishitem.purchased %}
@@ -124,8 +114,31 @@
         {% endif %}
         {% endfor %}
     {% set totalpurchasedprice.value = totalpurchasedprice.value|round(2) %}
-    <p> ⭐️ Your total purchase amount is <b>$<span id="total-purchase-amount">{{ totalpurchasedprice.value | format_money }}</span></b> <span id="date-range-text">.</span></p>
-        <br>
+
+    <div class="stat-card-grid">
+      <div class="stat-card">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-thinking-hard.png') }}" alt="">
+        <div class="stat-label">Last online purchase</div>
+        {% if user.last_purchase_date %}
+          {% set time_difference = current_time - user.last_purchase_date %}
+          <div class="stat-value">{{ user.last_purchase_date | format_last_purchase_date }}</div>
+          <div class="stat-detail {% if time_difference >= ten_days %}alert-fine{% else %}alert-soon{% endif %}">
+            {{ time_difference | format_time }}
+          </div>
+        {% else %}
+          <div class="stat-value">—</div>
+          <div class="stat-detail">No purchases recorded yet.</div>
+        {% endif %}
+      </div>
+
+      <div class="stat-card">
+        <img class="stat-mascot" src="{{ url_for('static', filename='img/logo-shopping-bags.png') }}" alt="">
+        <div class="stat-label">Total purchase amount</div>
+        <div class="stat-value">$<span id="total-purchase-amount">{{ totalpurchasedprice.value | format_money }}</span></div>
+        <div class="stat-detail"><span id="date-range-text">all time</span></div>
+      </div>
+    </div>
+    <br>
                 <div class="calendar-dropdown-container">
           <div id='calendar'></div>
           <div class="date-selection-container">
@@ -667,7 +680,7 @@
         data: JSON.stringify({ start_date: startDate, end_date: endDate }),
                     success: function(response) {
           $('#total-purchase-amount').text(response.total_purchase_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                        $('#date-range-text').text('from ' + response.start_date + ' to ' + response.end_date + '.');
+                        $('#date-range-text').text('from ' + response.start_date + ' to ' + response.end_date);
                         $('#category-chart').attr('src', 'data:image/png;base64,' + response.category_chart);
                         $('#brand-chart').attr('src', 'data:image/png;base64,' + response.brand_chart);
                         $('#purchased-category-chart').attr('src', 'data:image/png;base64,' + response.purchased_category_chart);
@@ -713,7 +726,7 @@
                     totalAllPurchases += cleanAmount;
                 });
       $('#total-purchase-amount').text(totalAllPurchases.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                $('#date-range-text').text('.');
+                $('#date-range-text').text('all time');
                 $('#category-chart').attr('src', '/wishlist_category.png');
                 $('#brand-chart').attr('src', '/wishlist_brand.png');
                 $('#purchased-category-chart').attr('src', '/purchased_category.png');

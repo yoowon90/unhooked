@@ -16,10 +16,16 @@
       href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
       crossorigin="anonymous"
     />
+    <link rel="stylesheet" href="{{ url_for('static', filename='modern-ui.css') }}" />
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}" />
     <title>{% block title %}Home{% endblock %}</title>  <!-- write python like for loop for block. base template that can be overwritten in child template -->
   </head>
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">  <!-- bootstrap classess. check bootstrap website to create navbar. change color. -->
+      <a class="navbar-brand-logo" href="/">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Unhooked logo">
+        <span>Unhooked</span>
+      </a>
       <!-- expand navbar to see all options on mobile device -->
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar">
         <span class="navbar-toggler-icon"></span>  <!-- load  when press icon -->
