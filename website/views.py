@@ -6,7 +6,7 @@ import datetime
 import json
 from flask import Blueprint, render_template, request, flash, jsonify
 from flask_login import current_user, login_required
-from .models import Note, WishItem
+from .models import Note, WishItem, normalize_category
 from . import db
 from .url_extraction import scrape_item
 from .tax import taxed_price
@@ -78,7 +78,7 @@ def wishlist():
 
         # grab other fields
         wish_item_delivery_fee = float(request.form.get('delivery-fee')) if request.form.get('delivery-fee') != "" else 0
-        wish_item_category = request.form.get('category')
+        wish_item_category = normalize_category(request.form.get('category'))
         wish_item_tag = request.form.get('tag')
         wish_item_brand = request.form.get('brand')
         wish_item_link = request.form.get('link')
@@ -279,7 +279,7 @@ def save_table():
                 # Handle other field updates (existing logic)
                 brand = data['Brand'].split('\n')[0].strip()
                 category_and_tag = data['Category_Tag']
-                category = category_and_tag.split('#')[0].strip()
+                category = normalize_category(category_and_tag.split('#')[0])
                 tag = category_and_tag.split('#')[1].strip() if '#' in category_and_tag else None
                 name_and_desc = data['Name_Description']
                 name = name_and_desc.split('\n')[0].strip()

@@ -4,6 +4,81 @@ import datetime
 from pytz import timezone
 
 
+# Words that should pass through normalize_category unchanged.
+# Two flavors:
+#   1. Plural-only fashion staples that don't have a sensible singular form.
+#   2. Uncountable nouns where a forced plural reads awkwardly.
+# Compared lowercased; only the trailing word is checked for multi-word categories.
+PROTECTED_CATEGORIES = {
+    # plural-only fashion staples
+    'pants', 'jeans', 'shorts', 'leggings', 'tights', 'bottoms',
+    'glasses', 'sunglasses', 'pajamas', 'pyjamas', 'overalls',
+    # uncountable shopping categories
+    'beauty', 'outerwear', 'footwear', 'underwear', 'swimwear',
+    'sleepwear', 'loungewear', 'activewear', 'athleisure',
+    'jewelry', 'makeup', 'skincare', 'haircare', 'fragrance',
+    'lingerie',
+}
+
+
+def _pluralize_word(word):
+    """Pluralize a word to its canonical plural form. Already-plural words and
+    PROTECTED_CATEGORIES pass through unchanged."""
+    if not word:
+        return word
+    lower = word.lower()
+    if lower in PROTECTED_CATEGORIES:
+        return word
+
+    # Already-plural detection.
+    # accessories, batteries
+    if lower.endswith('ies'):
+        return word
+    # dresses, watches, boxes, dishes, buzzes
+    if (lower.endswith('sses') or lower.endswith('shes') or lower.endswith('ches')
+            or lower.endswith('xes') or lower.endswith('zes')):
+        return word
+    # tops, rings — bare trailing -s on a stem that isn't a typical singular ending
+    if (lower.endswith('s') and not lower.endswith('ss')
+            and not lower.endswith('us') and not lower.endswith('is')):
+        return word
+
+    # Singular -> pluralize
+    # consonant + y -> -ies (Accessory -> Accessories, Berry -> Berries)
+    if len(word) > 1 and lower.endswith('y') and word[-2].lower() not in 'aeiou':
+        return word[:-1] + ('IES' if word[-1].isupper() else 'ies')
+    # sibilant endings -> -es (Dress -> Dresses, Watch -> Watches, Box -> Boxes)
+    if (lower.endswith('s') or lower.endswith('x') or lower.endswith('z')
+            or lower.endswith('ch') or lower.endswith('sh')):
+        return word + ('ES' if word[-1].isupper() else 'es')
+    # default -> -s (Top -> Tops, Shoe -> Shoes, Earring -> Earrings)
+    return word + ('S' if word[-1].isupper() else 's')
+
+
+def normalize_category(s):
+    """Normalize a category for storage and grouping.
+    - All-caps inputs are downcased to title case ('TOPS' -> 'Tops').
+    - Otherwise the first character is capitalized; the rest is left as-is
+      (so 'iPhone', 'T-shirt' survive).
+    - The trailing word is pluralized so casing and singular/plural variants
+      converge ('Top'/'tops'/'TOPS' -> 'Tops', 'Accessory' -> 'Accessories').
+      PROTECTED_CATEGORIES (Pants, Beauty, Outerwear, ...) pass through.
+    Returns None / empty for None / blank input."""
+    if s is None:
+        return s
+    s = s.strip()
+    if not s:
+        return s
+    if s.isupper():
+        s = s[0] + s[1:].lower()
+    else:
+        s = s[0].upper() + s[1:]
+    if ' ' in s:
+        prefix, last = s.rsplit(' ', 1)
+        return prefix + ' ' + _pluralize_word(last)
+    return _pluralize_word(s)
+
+
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.String(10000))

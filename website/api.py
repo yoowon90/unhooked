@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
-from .models import User, WishItem
+from .models import User, WishItem, normalize_category
 from . import db
 from .url_extraction import ItemDetails, scrape_item
 from .tax import taxed_price
@@ -119,7 +119,7 @@ def create_wishitem():
 
     name = data.get('name', '').strip()
     brand = data.get('brand', '').strip()
-    category = data.get('category', '').strip()
+    category = normalize_category(data.get('category'))
     link = data.get('link', '').strip()
 
     if not name:
@@ -200,7 +200,8 @@ def update_wishitem(item_id):
 
     for field in ('name', 'brand', 'category', 'tag', 'description', 'link', 'image_url'):
         if field in data:
-            setattr(item, field, data[field])
+            value = normalize_category(data[field]) if field == 'category' else data[field]
+            setattr(item, field, value)
 
     if 'price' in data:
         try:
