@@ -496,10 +496,10 @@
                         purchasedItems.push({
                             date: '{{ wishitem.purchase_date.strftime("%Y-%m-%d") }}',
                             price: {{ wishitem.price }},
-                            name: '{{ wishitem.name }}',
-                            brand: '{{ wishitem.brand }}',
-                            category: '{{ wishitem.category }}',
-                            description: '{{ wishitem.description }}'
+                            name: {{ (wishitem.name or '') | tojson }},
+                            brand: {{ (wishitem.brand or '') | tojson }},
+                            category: {{ (wishitem.category or '') | tojson }},
+                            description: {{ (wishitem.description or '') | tojson }}
                         });
                     {% endif %}
                 {% endfor %}
@@ -513,10 +513,10 @@
                         unhookedItems.push({
                             date: '{{ wishitem.unhooked_date.strftime("%Y-%m-%d") }}',
                             price: {{ wishitem.price }},
-                            name: '{{ wishitem.name }}',
-                            brand: '{{ wishitem.brand }}',
-                            category: '{{ wishitem.category }}',
-                            description: '{{ wishitem.description }}'
+                            name: {{ (wishitem.name or '') | tojson }},
+                            brand: {{ (wishitem.brand or '') | tojson }},
+                            category: {{ (wishitem.category or '') | tojson }},
+                            description: {{ (wishitem.description or '') | tojson }}
                         });
                     {% endif %}
                 {% endfor %}
@@ -530,10 +530,10 @@
           wishlistItems.push({
             date: '{{ wishitem.date.strftime("%Y-%m-%d") }}',
             price: {{ wishitem.price if wishitem.price else 0 }},
-            name: '{{ wishitem.name }}',
-            brand: '{{ wishitem.brand }}',
-            category: '{{ wishitem.category }}',
-            description: '{{ wishitem.description }}',
+            name: {{ (wishitem.name or '') | tojson }},
+            brand: {{ (wishitem.brand or '') | tojson }},
+            category: {{ (wishitem.category or '') | tojson }},
+            description: {{ (wishitem.description or '') | tojson }},
             unhooked: {{ 'true' if wishitem.unhooked else 'false' }},
             purchased: {{ 'true' if wishitem.purchased else 'false' }}
           });
