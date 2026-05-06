@@ -147,6 +147,56 @@ COLOR_SCHEME = [
         "#B3CCFF", "#B3E6FF", "#B3FFFF", "#B3FFE6", "#B3FFCC"
         ]
 
+def _summarize_decisions(items, window_start, window_end):
+    """Aggregates purchases and unhooks decided within [window_start, window_end).
+    Returns counts, totals, and avg wait days. Used by the hero card to compute
+    both the current and prior window so we can show period-over-period deltas."""
+    saved = 0.0
+    unhooks = 0
+    purchased = 0.0
+    purchases = 0
+    purchase_wait_days = 0
+    for item in items:
+        if item.purchased and not item.unhooked:
+            pdate = _strip_tz(item.purchase_date)
+            if pdate is not None and window_start <= pdate < window_end:
+                purchased += item.taxed_price or 0
+                purchases += 1
+                purchase_wait_days += _wait_days(item, pdate)
+        elif item.unhooked:
+            udate = _strip_tz(item.unhooked_date)
+            if udate is not None and window_start <= udate < window_end:
+                saved += item.price or 0
+                unhooks += 1
+    avg_buy_wait = round(purchase_wait_days / purchases) if purchases > 0 else None
+    return {
+        'saved': round(saved, 2),
+        'unhooks': unhooks,
+        'purchased': round(purchased, 2),
+        'purchases': purchases,
+        'avg_buy_wait_days': avg_buy_wait,
+    }
+
+
+def _delta(current, prior, good_direction):
+    """Builds a delta dict for hero tiles. `good_direction` is 'up' or 'down' —
+    whichever direction should render green. Returns None if either side is
+    None (so the template can hide the indicator on first-month users)."""
+    if current is None or prior is None:
+        return None
+    diff = current - prior
+    if diff > 0:
+        arrow = 'up'
+        tone = 'good' if good_direction == 'up' else 'bad'
+    elif diff < 0:
+        arrow = 'down'
+        tone = 'good' if good_direction == 'down' else 'bad'
+    else:
+        arrow = 'flat'
+        tone = 'flat'
+    return {'arrow': arrow, 'tone': tone, 'value': abs(diff)}
+
+
 @reports.route('/', methods=['GET', 'POST'])  # url (homepage). run function when opening root.
 @login_required
 def home():
@@ -194,6 +244,43 @@ def home():
 
     shopping_score = compute_shopping_habits_score(current_user)
 
+    # ── Stat-forward hero: time-of-day greeting + last-30-day totals ──
+    # Hero stats are fixed to a rolling 30-day window (rather than the
+    # current calendar month) so early-month views aren't dominated by
+    # near-empty tiles. The page-wide date-range bar below the hero still
+    # governs the stat cards / graphs / pies independently.
+    hour = current_time.hour
+    if 5 <= hour < 12:
+        greeting_phrase = "Good morning"
+    elif 12 <= hour < 17:
+        greeting_phrase = "Good afternoon"
+    else:
+        greeting_phrase = "Good evening"
+
+    HERO_WINDOW_DAYS = 30
+    cur_end = current_time
+    cur_start = cur_end - datetime.timedelta(days=HERO_WINDOW_DAYS)
+    prior_end = cur_start
+    prior_start = prior_end - datetime.timedelta(days=HERO_WINDOW_DAYS)
+
+    cur = _summarize_decisions(current_user.wishitems, cur_start, cur_end)
+    prior = _summarize_decisions(current_user.wishitems, prior_start, prior_end)
+
+    # Delta directions: each tile's "good" direction (the one rendered green).
+    # Saved/unhooks more = good, purchases more = bad, patience longer = good.
+    hero_stats = {
+        'greeting': greeting_phrase,
+        'window_label': f'last {HERO_WINDOW_DAYS} days',
+        'saved': cur['saved'],
+        'unhooks': cur['unhooks'],
+        'purchased': cur['purchased'],
+        'purchases': cur['purchases'],
+        'avg_buy_wait_days': cur['avg_buy_wait_days'],
+        'unhooks_delta': _delta(cur['unhooks'], prior['unhooks'], good_direction='up'),
+        'purchases_delta': _delta(cur['purchases'], prior['purchases'], good_direction='down'),
+        'buy_wait_delta': _delta(cur['avg_buy_wait_days'], prior['avg_buy_wait_days'], good_direction='up'),
+    }
+
     return render_template("home.html",
                 user=current_user,
                 current_time=current_time,
@@ -203,7 +290,8 @@ def home():
                 default_report_end=report_end,
                 spenditure=spenditure,
                 saves=saves,
-                shopping_score=shopping_score
+                shopping_score=shopping_score,
+                hero_stats=hero_stats
                 )  # return html when we got root
 
 def create_figure(figure_type, figure_content, start_date=None, end_date=None):
