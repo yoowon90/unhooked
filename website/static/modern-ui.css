@@ -338,6 +338,100 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
+/* ─── Stat-forward greeting hero ───
+   Top-of-page card: time-of-day greeting on the left, three at-a-glance
+   tiles on the right (this-month-so-far totals). The score hero below
+   stays its own card so the existing gauge UI is untouched. */
+.greeting-hero {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 24px 30px;
+  margin: 8px 0 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+}
+.greeting-hero-text {
+  flex: 1 1 260px;
+  min-width: 240px;
+}
+.greeting-hero-title {
+  font-size: 1.85rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #2c3338;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.greeting-hero-sub {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6c757d;
+}
+.greeting-hero-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  flex: 1 1 380px;
+  min-width: 320px;
+}
+.greeting-tile {
+  display: block;
+  background: #faf8f6;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.greeting-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+}
+.greeting-tile-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6c757d;
+  margin-bottom: 4px;
+}
+.greeting-tile-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #2c3338;
+  line-height: 1.15;
+}
+.greeting-tile-value-saved { color: #28a745; }
+.delta {
+  display: inline-block;
+  margin-left: 6px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.delta-good { color: #28a745; }
+.delta-bad  { color: #d04050; }
+.delta-flat { color: #adb5bd; }
+.greeting-tile-meta {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: #9aa0a6;
+}
+@media (max-width: 640px) {
+  .greeting-hero-title { font-size: 1.5rem; }
+  .greeting-hero-tiles { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .greeting-tile { padding: 10px 12px; }
+  .greeting-tile-value { font-size: 1.15rem; }
+}
+
 /* ─── Shopping habits score hero banner ───
    Credit-score-style gauge with colored tier bands + needle, paired with
    a big score number and tier label on the right. */

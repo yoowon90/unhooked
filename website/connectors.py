@@ -117,6 +117,27 @@ def gmail_callback():
     return redirect(url_for('connectors.settings'))
 
 
+@connectors.route('/settings/display-name', methods=['POST'])
+@login_required
+@same_origin_required
+def update_display_name():
+    new_name = (request.form.get('first_name') or '').strip()
+    if not new_name:
+        flash('Display name cannot be empty.', 'error')
+        return redirect(url_for('connectors.settings'))
+    if len(new_name) > 150:
+        flash('Display name is too long (max 150 characters).', 'error')
+        return redirect(url_for('connectors.settings'))
+    if new_name == current_user.first_name:
+        flash('Display name unchanged.', 'success')
+        return redirect(url_for('connectors.settings'))
+
+    current_user.first_name = new_name
+    db.session.commit()
+    flash(f'Display name updated to {new_name}.', 'success')
+    return redirect(url_for('connectors.settings'))
+
+
 @connectors.route('/settings/zipcode', methods=['POST'])
 @login_required
 @same_origin_required

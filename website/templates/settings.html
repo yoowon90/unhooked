@@ -49,6 +49,31 @@
       Signed in as <strong>{{ user.email }}</strong>
     </p>
 
+    <!-- Display name row -->
+    <div class="connector-row" style="align-items: flex-start;">
+      <div class="connector-info">
+        <div class="connector-icon">&#128276;</div>
+        <div style="flex:1;">
+          <div class="connector-title">Display name</div>
+          <div class="connector-sub">
+            Shown in the greeting on your home page (e.g. <em>Good evening, {{ user.first_name }}</em>).
+          </div>
+        </div>
+      </div>
+      <form method="POST" action="{{ url_for('connectors.update_display_name') }}" style="margin: 0; display:flex; gap:8px; align-items:center;">
+        <input
+          type="text"
+          name="first_name"
+          value="{{ user.first_name or '' }}"
+          maxlength="150"
+          required
+          placeholder="Your name"
+          style="width: 160px; padding: 4px 8px; border:1px solid #ced4da; border-radius:4px;"
+        />
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </form>
+    </div>
+
     <!-- Zipcode row -->
     <div class="connector-row" style="border-bottom:none; padding-top:6px; align-items: flex-start;">
       <div class="connector-info">

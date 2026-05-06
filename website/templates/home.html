@@ -59,59 +59,47 @@
     </style>
 
   <div class="home-content-card">
-    <div class="title">
-        <br>
-        <h1>Hello {{ user.first_name }} !</h1>
-    </div>
-    <div>
-    <p><b> Welcome back to Unhooked. Here is your report. </b></p>
-
-    {# Page-wide date-range filter. Governs the stat cards, line graphs,
-       and pie charts below. Calendar and habits score are intentionally
-       independent — calendar shows all-time, score is fixed rolling 90d. #}
-    <div class="date-range-bar">
-      <label for="dateRangeDropdown" class="date-range-label">Date range</label>
-      <select id="dateRangeDropdown" class="date-range-select">
-        <option value="">Choose a date range…</option>
-        <option value="last7days">Last 7 days</option>
-        <option value="last14days">Last 14 days</option>
-        <option value="last30days" selected>Last 30 days</option>
-        <option value="last60days">Last 60 days</option>
-        <option value="last90days">Last 90 days</option>
-        <option value="thisMonth">This Month</option>
-        <option value="thisYear">This Year</option>
-        <option value="last365days">Last 365 days</option>
-        <option value="specifyDate">Specify date…</option>
-      </select>
-      <div id="customDateContainer" class="custom-date-fields" style="display: none;">
-        <input type="text" id="start_date" name="start_date" placeholder="Start (YYYY-MM-DD)" class="date-range-input">
-        <input type="text" id="end_date" name="end_date" placeholder="End (YYYY-MM-DD)" class="date-range-input">
+    {# ── Stat-forward greeting hero ──
+       Greeting + month label on the left; three at-a-glance tiles on the right
+       (this-month-so-far totals). The score-hero block below stays its own card. #}
+    <div class="greeting-hero">
+      <div class="greeting-hero-text">
+        <h1 class="greeting-hero-title">{{ hero_stats.greeting }}, {{ user.first_name }}.</h1>
+        <p class="greeting-hero-sub">Here's your {{ hero_stats.window_label }} at a glance.</p>
       </div>
-      <span class="date-range-scope">applies to stat cards, graphs, and pie charts</span>
+      <div class="greeting-hero-tiles">
+        <a class="greeting-tile" href="/unhooked-list">
+          <div class="greeting-tile-label">Saved</div>
+          <div class="greeting-tile-value greeting-tile-value-saved">${{ hero_stats.saved | format_money }}</div>
+          <div class="greeting-tile-meta">
+            {{ hero_stats.unhooks }} unhook{{ '' if hero_stats.unhooks == 1 else 's' }}
+            {% if hero_stats.unhooks_delta %}<span class="delta delta-{{ hero_stats.unhooks_delta.tone }}" title="vs. prior 30 days">{% if hero_stats.unhooks_delta.arrow == 'up' %}↑ {{ hero_stats.unhooks_delta.value }}{% elif hero_stats.unhooks_delta.arrow == 'down' %}↓ {{ hero_stats.unhooks_delta.value }}{% else %}—{% endif %}</span>{% endif %}
+          </div>
+        </a>
+        <a class="greeting-tile" href="/purchased-list">
+          <div class="greeting-tile-label">Purchased</div>
+          <div class="greeting-tile-value">${{ hero_stats.purchased | format_money }}</div>
+          <div class="greeting-tile-meta">
+            {{ hero_stats.purchases }} purchase{{ '' if hero_stats.purchases == 1 else 's' }}
+            {% if hero_stats.purchases_delta %}<span class="delta delta-{{ hero_stats.purchases_delta.tone }}" title="vs. prior 30 days">{% if hero_stats.purchases_delta.arrow == 'up' %}↑ {{ hero_stats.purchases_delta.value }}{% elif hero_stats.purchases_delta.arrow == 'down' %}↓ {{ hero_stats.purchases_delta.value }}{% else %}—{% endif %}</span>{% endif %}
+          </div>
+        </a>
+        <a class="greeting-tile" href="/purchased-list">
+          <div class="greeting-tile-label">Avg wait</div>
+          {% if hero_stats.avg_buy_wait_days is none %}
+            <div class="greeting-tile-value">—</div>
+            <div class="greeting-tile-meta">no purchases yet</div>
+          {% else %}
+            <div class="greeting-tile-value">{{ hero_stats.avg_buy_wait_days }} day{{ '' if hero_stats.avg_buy_wait_days == 1 else 's' }}</div>
+            <div class="greeting-tile-meta">
+              before each purchase
+              {% if hero_stats.buy_wait_delta %}<span class="delta delta-{{ hero_stats.buy_wait_delta.tone }}" title="vs. prior 30 days">{% if hero_stats.buy_wait_delta.arrow == 'up' %}↑ {{ hero_stats.buy_wait_delta.value }}d{% elif hero_stats.buy_wait_delta.arrow == 'down' %}↓ {{ hero_stats.buy_wait_delta.value }}d{% else %}—{% endif %}</span>{% endif %}
+            </div>
+          {% endif %}
+        </a>
+      </div>
     </div>
-
-        {% set totalpurchasedprice = namespace(value=0.00) %}
-        {% set totalsavedprice = namespace(value=0.00) %}
-        {% set unhooked_count = namespace(value=0) %}
-        {% set purchased_count = namespace(value=0) %}
-        {% set wishlist_added_count = namespace(value=0) %}
-        {% for wishitem in user.wishitems %}
-        {% if not wishitem.unhooked and wishitem.purchased %}
-        {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.taxed_price %}
-        {% set purchased_count.value = purchased_count.value + 1 %}
-        {% endif %}
-        {% if wishitem.unhooked %}
-        {% set totalsavedprice.value = totalsavedprice.value + wishitem.price %}
-        {% set unhooked_count.value = unhooked_count.value + 1 %}
-        {% endif %}
-        {% if wishitem.date %}
-        {% set wishlist_added_count.value = wishlist_added_count.value + 1 %}
-        {% endif %}
-        {% endfor %}
-    {% set totalpurchasedprice.value = totalpurchasedprice.value|round(2) %}
-    {% set totalsavedprice.value = totalsavedprice.value|round(2) %}
-
-    {# ── Shopping Habits Score hero banner ── #}
+    {# ── Shopping Habits Score (sits right under the hero) ── #}
     {% if shopping_score and shopping_score.has_data %}
       {% set tier_class = 'tier-' + shopping_score.tier|lower|replace(' ', '-') %}
       {% set needle_rotation = (shopping_score.score - 50) * 1.8 %}
@@ -151,6 +139,50 @@
           <div class="score-hero-meta">No decisions logged in the last 90 days.</div>
         {% endif %}
       </div>
+    </div>
+
+    {# Aggregate totals for the stat-card grid below. #}
+    {% set totalpurchasedprice = namespace(value=0.00) %}
+    {% set totalsavedprice = namespace(value=0.00) %}
+    {% set unhooked_count = namespace(value=0) %}
+    {% set purchased_count = namespace(value=0) %}
+    {% set wishlist_added_count = namespace(value=0) %}
+    {% for wishitem in user.wishitems %}
+      {% if not wishitem.unhooked and wishitem.purchased %}
+        {% set totalpurchasedprice.value = totalpurchasedprice.value + wishitem.taxed_price %}
+        {% set purchased_count.value = purchased_count.value + 1 %}
+      {% endif %}
+      {% if wishitem.unhooked %}
+        {% set totalsavedprice.value = totalsavedprice.value + wishitem.price %}
+        {% set unhooked_count.value = unhooked_count.value + 1 %}
+      {% endif %}
+      {% if wishitem.date %}
+        {% set wishlist_added_count.value = wishlist_added_count.value + 1 %}
+      {% endif %}
+    {% endfor %}
+    {% set totalpurchasedprice.value = totalpurchasedprice.value|round(2) %}
+    {% set totalsavedprice.value = totalsavedprice.value|round(2) %}
+
+    {# Page-wide date-range filter — sits right above the cards/graphs/pies it actually controls. #}
+    <div class="date-range-bar">
+      <label for="dateRangeDropdown" class="date-range-label">Date range</label>
+      <select id="dateRangeDropdown" class="date-range-select">
+        <option value="">Choose a date range…</option>
+        <option value="last7days">Last 7 days</option>
+        <option value="last14days">Last 14 days</option>
+        <option value="last30days" selected>Last 30 days</option>
+        <option value="last60days">Last 60 days</option>
+        <option value="last90days">Last 90 days</option>
+        <option value="thisMonth">This Month</option>
+        <option value="thisYear">This Year</option>
+        <option value="last365days">Last 365 days</option>
+        <option value="specifyDate">Specify date…</option>
+      </select>
+      <div id="customDateContainer" class="custom-date-fields" style="display: none;">
+        <input type="text" id="start_date" name="start_date" placeholder="Start (YYYY-MM-DD)" class="date-range-input">
+        <input type="text" id="end_date" name="end_date" placeholder="End (YYYY-MM-DD)" class="date-range-input">
+      </div>
+      <span class="date-range-scope">applies to stat cards, graphs, and pie charts</span>
     </div>
 
     <div class="stat-card-grid">
@@ -248,7 +280,6 @@
         </div>
       </div>
     </div>
-  </div>
   </div>
 {% endblock %}
 
