@@ -68,7 +68,7 @@
   {% endif %}
   {% endfor %}
   {% set totalpurchasedprice.value =  totalpurchasedprice.value|round(2) %}
-  <div style="display: flex; justify-content: space-between;">
+  <div style="display: flex; justify-content: space-between; clear: both; margin-top: 18px;">
     <p> <b> &#128717; Total purchased: <font color="#ff0000"> ${{ totalpurchasedprice.value | format_money }} </b></font></p>
   </div>
   {% if not purchased_items %}
