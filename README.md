@@ -117,7 +117,7 @@ npm install
 npm start          # then press 'i' for iOS sim, or scan QR with Expo Go
 ```
 
-> Physical-device testing: change `BASE_URL` in `mobile/services/api.ts` to your Mac's local IP (`ifconfig | grep "inet "`).
+See [`mobile/README.md`](mobile/README.md) for full setup — Xcode/iOS Simulator path, Expo Go on a physical phone, and how to point the app at your Mac's IP.
 
 ## Project structure
 
