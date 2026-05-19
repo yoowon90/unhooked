@@ -78,7 +78,7 @@ flowchart LR
 - **AI-assisted backfill with a human in the loop.** Gmail emails go to the Anthropic API for structured extraction, but every imported item passes through a swipe-style approval screen first. Audit rows in `BackfillReview` mean denials stick across scans.
 - **Documented scoring criteria.** The Shopping Habits Score's buckets, weights, and tier thresholds live in `docs/shopping_habits_score.md` and the `SCORE_WEIGHTS` constant in `website/reports.py`. Tweaking weights doesn't require code archaeology.
 - **Real-world data hygiene.** Scraped/backfilled text gets HTML-entity decoded and trimmed at every write site. Plural and casing variants of categories are normalized with a hand-curated protected set so `Pants` stays plural and `Beauty` doesn't become `Beauties`.
-- **Two databases, two migration trees.** `database_dev.db` and `database_prod.db` with separate `migrations_dev/` and `migrations_prod/` so the dev/prod separation isn't just a port number.
+- **Split storage by environment.** Dev runs on a local SQLite file (`database_dev.db`); prod runs on hosted Supabase Postgres via `DATABASE_URL`. Separate `migrations_dev/` and `migrations_prod/` Alembic trees keep schema history clean per environment.
 
 ## Tech stack
 
@@ -86,7 +86,7 @@ flowchart LR
 - **Frontend (web):** Jinja2, Bootstrap 4, Chart.js, FullCalendar, custom CSS theme
 - **Frontend (mobile):** React Native, Expo Router, TypeScript, Expo SecureStore
 - **Integrations:** Anthropic API (structured email extraction), Gmail API (OAuth 2.0), Google Custom Search (image fallback), BeautifulSoup4 (per-brand HTML scraping)
-- **Storage:** SQLite (dev + prod), separate Alembic migration trees per environment
+- **Storage:** SQLite (dev) + Supabase Postgres (prod), separate Alembic migration trees per environment
 
 ## Quick start
 
@@ -101,12 +101,13 @@ Required env keys (see `.env.example`):
 - `SECRET_KEY`, `JWT_SECRET_KEY` — generate with `python -c "import secrets; print(secrets.token_hex(32))"`
 - `ANTHROPIC_API_KEY` — from console.anthropic.com → API Keys
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — from Google Cloud Console (see [`ROADMAP.md`](ROADMAP.md))
+- `DATABASE_URL` (prod only) — Supabase Postgres connection string from **Project Settings → Database → Connection string (URI)**. Falls back to SQLite if unset, but the canonical prod store is Supabase.
 
 Run:
 
 ```bash
-FLASK_ENV=development python main.py   # → http://127.0.0.1:5001  (database_dev.db)
-FLASK_ENV=production  python main.py   # → http://127.0.0.1:5000  (database_prod.db)
+FLASK_ENV=development python main.py   # → http://127.0.0.1:5001  (local SQLite database_dev.db)
+FLASK_ENV=production  python main.py   # → http://127.0.0.1:5000  (Supabase Postgres via DATABASE_URL)
 ```
 
 Mobile app:
@@ -144,15 +145,16 @@ mobile/
 docs/
   shopping_habits_score.md
 scripts/
-  backup_db.sh
+  backup_db.sh                       # dev SQLite backup (prod is on Supabase, auto-backed-up)
+  migrate_sqlite_to_postgres.py      # one-shot importer used during the SQLite → Supabase cutover
   normalize_categories.py
   fix_html_entities.py
-migrations_dev/
-migrations_prod/
+migrations_dev/                       # Alembic — dev SQLite
+migrations_prod/                      # Alembic — prod Supabase Postgres
 instance/
   database_template.db    # schema-only template (committed)
   database_dev.db         # local dev data (gitignored)
-  database_prod.db        # local prod data (gitignored)
+  database_prod.db        # legacy SQLite snapshot pre-Supabase cutover (gitignored)
 ```
 
 </details>

@@ -3,23 +3,29 @@
 ## What this is
 A Flask web app for tracking personal online shopping habits. Users maintain a wishlist, mark items as purchased or "unhooked" (decided not to buy), and view spending/savings reports.
 
-## DB backup — ask first
+## Databases
 
-**Before starting the app**, ask the user: "Do you want to back up the databases before starting?"
+- **Prod** runs on Supabase Postgres. Connection string lives in `.env` as `DATABASE_URL`. Backups are handled automatically by Supabase (daily snapshots on the free tier).
+- **Dev** still uses local SQLite (`instance/database_dev.db`). Back up before risky git ops with `bash scripts/backup_db.sh`.
+- The free Supabase project pauses after ~1 week of inactivity — the next request after a pause has a few seconds of cold-start delay.
+
+## DB backup (dev only) — ask first
+
+**Before starting the dev app**, ask the user: "Do you want to back up the dev database before starting?"
 If yes, run:
 ```bash
 bash scripts/backup_db.sh
 ```
-Timestamped copies land in `backups/` (gitignored). This protects against accidental data loss (e.g. from git operations that rewrite history).
+Timestamped copies land in `backups/` (gitignored). Prod no longer needs this — Supabase handles it.
 
 ## How to run
 
 ```bash
-FLASK_ENV=production python main.py   # port 5000, database_prod.db
-FLASK_ENV=development python main.py  # port 5001, database_dev.db
+FLASK_ENV=production python main.py   # port 5000, Supabase Postgres via DATABASE_URL
+FLASK_ENV=development python main.py  # port 5001, database_dev.db (SQLite)
 ```
 
-Environment variables are loaded from `.env` (never committed). See `.env` for required keys: `SECRET_KEY`, `JWT_SECRET_KEY`, `FLASK_ENV`.
+Environment variables are loaded from `.env` (never committed). Required keys: `SECRET_KEY`, `JWT_SECRET_KEY`, `FLASK_ENV`, `DATABASE_URL` (prod only).
 
 ## Project structure
 
@@ -37,23 +43,27 @@ website/
   static/                # index.js, pattern images
   templates/             # Jinja2 HTML templates
 instance/
-  database_prod.db       # production SQLite (not committed)
+  database_prod.db       # legacy SQLite, kept as a local snapshot only; prod now lives on Supabase
   database_dev.db        # dev SQLite
-migrations_prod/         # Alembic migrations for prod db
-migrations_dev/          # Alembic migrations for dev db
+migrations_prod/         # Alembic migrations for prod db (Supabase Postgres)
+migrations_dev/          # Alembic migrations for dev db (SQLite)
+scripts/
+  migrate_sqlite_to_postgres.py  # one-shot import used during the initial migration; safe to leave in tree
 ```
 
 ## Database migrations
 
 ```bash
-# dev
-FLASK_ENV=development flask --app main db migrate -m "description"
-FLASK_ENV=development flask --app main db upgrade
+# dev (SQLite)
+FLASK_ENV=development flask --app main db migrate -m "description" --directory migrations_dev
+FLASK_ENV=development flask --app main db upgrade --directory migrations_dev
 
-# prod
-FLASK_ENV=production flask --app main db migrate -m "description"
-FLASK_ENV=production flask --app main db upgrade
+# prod (Supabase Postgres — requires DATABASE_URL in .env)
+FLASK_ENV=production flask --app main db migrate -m "description" --directory migrations_prod
+FLASK_ENV=production flask --app main db upgrade --directory migrations_prod
 ```
+
+Prod was stamped at the head revision (`g0a1b2c3d4e5`) right after the Postgres cutover, so new migrations layer cleanly on top.
 
 ## Key domain concepts
 

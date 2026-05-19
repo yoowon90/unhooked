@@ -90,32 +90,32 @@ def normalize_category(s):
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     data = db.Column(db.String(10000))
-    date = db.Column(db.DateTime(timezone=True), default=datetime.datetime.now())
+    date = db.Column(db.DateTime, default=datetime.datetime.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # allow associate (relationship) note to user
 
 
 class WishItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.DateTime(timezone=True),default=datetime.datetime.now())
+    date = db.Column(db.DateTime,default=datetime.datetime.now())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # referencing another column in the db. one to many relationship.
     category = db.Column(db.String(10000))  # dress, bag, skirt, jeans, non-denim pants, shoes, accessories, etc.
     brand = db.Column(db.String(10000))
     name = db.Column(db.String(10000))
-    price = db.Column(db.Float(1000000.00))
-    taxed_price = db.Column(db.Float(1000000.00))
+    price = db.Column(db.Float)
+    taxed_price = db.Column(db.Float)
     link = db.Column(db.String(10000))
     heightened_interest = db.Column(db.String(10000), default=False)
     unhooked = db.Column(db.Boolean, default=False)
     ineligible = db.Column(db.Boolean, default=True)
     purchased = db.Column(db.Boolean, default=False)
-    purchase_date = db.Column(db.DateTime(timezone=True), default=None, nullable=True)
-    delivery_fee = db.Column(db.Float(100.00), default=0.00, nullable=True)  # adding nullable to avoid migration error
-    total_price = db.Column(db.Float(100.00), default=0.00)
+    purchase_date = db.Column(db.DateTime, default=None, nullable=True)
+    delivery_fee = db.Column(db.Float, default=0.00, nullable=True)  # adding nullable to avoid migration error
+    total_price = db.Column(db.Float, default=0.00)
     description = db.Column(db.String(10000), default="")  # free note to store promo code, sale, etc
     wish_period = db.Column(db.Interval)
     tag = db.Column(db.String(10000), nullable=True)
     favorited = db.Column(db.Boolean, default=False)
-    unhooked_date = db.Column(db.DateTime(timezone=True), default=None)
+    unhooked_date = db.Column(db.DateTime, default=None)
     image_url = db.Column(db.String(10000), nullable=True)
     backfilled = db.Column(db.Boolean, default=False)
     source_email_id = db.Column(db.String(200), nullable=True)
@@ -156,7 +156,7 @@ class BackfillReview(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     source_email_id = db.Column(db.String(200), nullable=False)
     decision = db.Column(db.String(20), nullable=False)  # 'approved' | 'denied'
-    reviewed_at = db.Column(db.DateTime(timezone=True), default=datetime.datetime.now)
+    reviewed_at = db.Column(db.DateTime, default=datetime.datetime.now)
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'source_email_id', name='uq_backfill_review_user_email'),
@@ -171,8 +171,8 @@ class User(db.Model, UserMixin):
     zipcode = db.Column(db.String(5))
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
-    last_purchase_date = db.Column(db.DateTime(timezone=True), default=None)
+    last_purchase_date = db.Column(db.DateTime, default=None)
     gmail_access_token = db.Column(db.Text, nullable=True)
     gmail_refresh_token = db.Column(db.Text, nullable=True)
-    gmail_token_expiry = db.Column(db.DateTime(timezone=True), nullable=True)
+    gmail_token_expiry = db.Column(db.DateTime, nullable=True)
     gmail_connected_email = db.Column(db.String(150), nullable=True)

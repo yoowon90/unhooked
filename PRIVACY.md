@@ -26,7 +26,12 @@ No other email content is shared with third parties.
 
 ## Data storage
 
-All data is stored locally in a SQLite database on the machine running the app. Gmail OAuth tokens are stored as plaintext in this database. Keep the database file secure and do not expose it publicly.
+The default deployment uses two databases depending on environment:
+
+- **Development** stores data in a local SQLite file (`instance/database_dev.db`) on the machine running the app.
+- **Production** stores data in a managed Postgres instance on Supabase, accessed via a connection string in `.env` (`DATABASE_URL`). Supabase is a third-party provider; their data handling is governed by [supabase.com/privacy](https://supabase.com/privacy).
+
+Gmail OAuth tokens are stored as plaintext in whichever database is active. Keep the database file (dev) and `DATABASE_URL` credentials (prod) secure and do not expose them publicly.
 
 ## Self-hosted disclaimer
 
