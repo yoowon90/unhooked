@@ -168,6 +168,7 @@
       <label for="dateRangeDropdown" class="date-range-label">Date range</label>
       <select id="dateRangeDropdown" class="date-range-select">
         <option value="">Choose a date range…</option>
+        <option value="today">Today</option>
         <option value="last7days">Last 7 days</option>
         <option value="last14days">Last 14 days</option>
         <option value="last30days" selected>Last 30 days</option>
@@ -178,9 +179,11 @@
         <option value="last365days">Last 365 days</option>
         <option value="specifyDate">Specify date…</option>
       </select>
-      <div id="customDateContainer" class="custom-date-fields" style="display: none;">
-        <input type="text" id="start_date" name="start_date" placeholder="Start (YYYY-MM-DD)" class="date-range-input">
-        <input type="text" id="end_date" name="end_date" placeholder="End (YYYY-MM-DD)" class="date-range-input">
+      <div id="customDateContainer" class="custom-date-fields">
+        <label for="start_date" class="date-range-label">Start date</label>
+        <input type="date" id="start_date" name="start_date" class="date-range-input">
+        <label for="end_date" class="date-range-label">End date</label>
+        <input type="date" id="end_date" name="end_date" class="date-range-input">
       </div>
       <span class="date-range-scope">applies to stat cards, graphs, and pie charts</span>
     </div>
@@ -927,22 +930,21 @@
             $('#dateRangeDropdown').change(function() {
                 const selectedOption = $(this).val();
                 if (selectedOption === 'specifyDate') {
-                    $('#customDateContainer').show();
-                    $('#start_date').val('').focus();
-                    $('#end_date').val('');
-                    resetToAllPurchases();
+                    // Keep whatever dates are already in the inputs; let the user edit them.
+                    $('#start_date').focus();
                     localStorage.setItem('selectedTimeRange', selectedOption);
                 } else if (selectedOption) {
-                    $('#customDateContainer').hide();
                     const dateRange = getDateRange(selectedOption);
                     if (dateRange) {
+                        // Reflect the preset's dates in the always-visible inputs.
+                        $('#start_date').val(dateRange.start);
+                        $('#end_date').val(dateRange.end);
                         generateReport(dateRange.start, dateRange.end);
                         updateSpendingChart(dateRange.start, dateRange.end);
-          updateWishlistChart(dateRange.start, dateRange.end);
+                        updateWishlistChart(dateRange.start, dateRange.end);
                     }
                     localStorage.setItem('selectedTimeRange', selectedOption);
                 } else {
-                    $('#customDateContainer').hide();
                     resetToAllPurchases();
                     localStorage.setItem('selectedTimeRange', '');
                 }
@@ -987,31 +989,19 @@
       })();
     }
 
-            $('#end_date').on('input', function() {
+            // Either input being edited directly switches the dropdown to "Specify date".
+            $('#start_date, #end_date').on('input', function() {
                 const startDate = $('#start_date').val();
-                const endDate = $(this).val();
+                const endDate = $('#end_date').val();
                 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
                 if (startDate && endDate && dateRegex.test(startDate) && dateRegex.test(endDate)) {
+                    $('#dateRangeDropdown').val('specifyDate');
                     generateReport(startDate, endDate);
                     updateSpendingChart(startDate, endDate);
-        updateWishlistChart(startDate, endDate);
+                    updateWishlistChart(startDate, endDate);
                     localStorage.setItem('selectedTimeRange', 'specifyDate');
                     localStorage.setItem('customStartDate', startDate);
                     localStorage.setItem('customEndDate', endDate);
-                } else if (!startDate || !endDate) {
-                    resetToAllPurchases();
-                    localStorage.removeItem('customStartDate');
-                    localStorage.removeItem('customEndDate');
-                }
-            });
-
-            $('#start_date').on('input', function() {
-                const startDate = $(this).val();
-                const endDate = $('#end_date').val();
-                if (!startDate || !endDate) {
-                    resetToAllPurchases();
-                    localStorage.removeItem('customStartDate');
-                    localStorage.removeItem('customEndDate');
                 }
             });
 
@@ -1020,6 +1010,11 @@
                 const endDate = new Date(today);
                 let startDate = new Date(today);
                 switch(option) {
+                    case 'today':
+                        // "Today" = yesterday through today (24-hour window),
+                        // since a same-day single-point range usually shows nothing.
+                        startDate.setDate(today.getDate() - 1);
+                        break;
                     case 'last7days':
                         startDate.setDate(today.getDate() - 7);
                         break;
@@ -1135,41 +1130,41 @@
             const defaultDateRange = getDateRange('last30days');
             if (defaultDateRange) {
                 updateSpendingChart(defaultDateRange.start, defaultDateRange.end);
-      updateWishlistChart(defaultDateRange.start, defaultDateRange.end);
-      updatePieCharts(defaultDateRange.start, defaultDateRange.end);
+                updateWishlistChart(defaultDateRange.start, defaultDateRange.end);
+                updatePieCharts(defaultDateRange.start, defaultDateRange.end);
             }
 
+            // Cap pickable dates at today (prevents picking the future).
+            const _todayIso = new Date().toISOString().split('T')[0];
+            $('#start_date, #end_date').attr('max', _todayIso);
+
+            // Resolve which option to start on (saved preference > last30days),
+            // populate the always-visible start/end inputs accordingly, and run the report.
             const savedTimeRange = localStorage.getItem('selectedTimeRange');
-    let selectedOption = 'last30days';
-            if (savedTimeRange) {
-                selectedOption = savedTimeRange;
-                $('#dateRangeDropdown').val(selectedOption);
-                if (selectedOption === 'specifyDate') {
-                    const savedStartDate = localStorage.getItem('customStartDate');
-                    const savedEndDate = localStorage.getItem('customEndDate');
-                    if (savedStartDate && savedEndDate) {
-                        $('#customDateContainer').show();
-                        $('#start_date').val(savedStartDate);
-                        $('#end_date').val(savedEndDate);
-                        generateReport(savedStartDate, savedEndDate);
-                    } else {
-                        selectedOption = 'last30days';
-                        $('#dateRangeDropdown').val(selectedOption);
-                        const dateRange = getDateRange(selectedOption);
-                        if (dateRange) {
-                            generateReport(dateRange.start, dateRange.end);
-                        }
-                    }
+            let selectedOption = savedTimeRange || 'last30days';
+            $('#dateRangeDropdown').val(selectedOption);
+            if (selectedOption === 'specifyDate') {
+                const savedStartDate = localStorage.getItem('customStartDate');
+                const savedEndDate = localStorage.getItem('customEndDate');
+                if (savedStartDate && savedEndDate) {
+                    $('#start_date').val(savedStartDate);
+                    $('#end_date').val(savedEndDate);
+                    generateReport(savedStartDate, savedEndDate);
                 } else {
+                    selectedOption = 'last30days';
+                    $('#dateRangeDropdown').val(selectedOption);
                     const dateRange = getDateRange(selectedOption);
                     if (dateRange) {
+                        $('#start_date').val(dateRange.start);
+                        $('#end_date').val(dateRange.end);
                         generateReport(dateRange.start, dateRange.end);
                     }
                 }
             } else {
-                $('#dateRangeDropdown').val('last30days');
                 const dateRange = getDateRange(selectedOption);
                 if (dateRange) {
+                    $('#start_date').val(dateRange.start);
+                    $('#end_date').val(dateRange.end);
                     generateReport(dateRange.start, dateRange.end);
                 }
             }

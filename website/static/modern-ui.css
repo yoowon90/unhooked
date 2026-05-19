@@ -240,7 +240,8 @@
 }
 .custom-date-fields {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
 }
 .date-range-input {
