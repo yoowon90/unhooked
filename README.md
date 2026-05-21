@@ -61,7 +61,7 @@ It started with introspection — what emotions push me toward *Buy Now*, how lo
 flowchart LR
   Web["Web app<br/>Flask + Jinja + Chart.js"] --> HTML["HTML routes<br/>session auth"]
   Mobile["Mobile app<br/>React Native + Expo"] --> API["REST API<br/>/api/v1 (JWT)"]
-  HTML --> DB[("SQLite<br/>SQLAlchemy + Alembic")]
+  HTML --> DB[("Postgres (Supabase) — prod<br/>SQLite — dev<br/>SQLAlchemy + Alembic")]
   API --> DB
   HTML --> Scraper["Per-brand scrapers<br/>BeautifulSoup"]
   API --> Scraper
@@ -162,16 +162,18 @@ instance/
 ## Migrations
 
 ```bash
-# dev
+# dev (SQLite — instance/database_dev.db)
 FLASK_ENV=development flask --app main db migrate -d migrations_dev -m "description"
 FLASK_ENV=development flask --app main db upgrade -d migrations_dev
 
-# prod
+# prod (Supabase Postgres — requires DATABASE_URL in .env)
 FLASK_ENV=production flask --app main db migrate -d migrations_prod -m "description"
 FLASK_ENV=production flask --app main db upgrade -d migrations_prod
 ```
 
-Live databases are never committed. `instance/database_template.db` is the only DB tracked in git — schema-only, regenerated from the model. Don't edit it directly.
+Prod was stamped at the head revision (`g0a1b2c3d4e5`) during the Supabase cutover, so new migrations layer cleanly on top of the existing schema.
+
+Live databases are never committed. `instance/database_template.db` is the only DB tracked in git — schema-only, regenerated from the model. Don't edit it directly. The local `instance/database_prod.db` is kept as a pre-cutover snapshot but is no longer the canonical prod store; Supabase is.
 
 ## Gmail Backfill setup
 

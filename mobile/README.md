@@ -103,7 +103,7 @@ The app will hot-reload on save just like the simulator.
 
 | Environment | Flask port | Database |
 |---|---|---|
-| `FLASK_ENV=development` | 5001 | `database_dev.db` |
-| `FLASK_ENV=production` | 5000 | `database_prod.db` |
+| `FLASK_ENV=development` | 5001 | local SQLite (`database_dev.db`) |
+| `FLASK_ENV=production` | 5000 | Supabase Postgres (`DATABASE_URL`) |
 
 The mobile app defaults to **port 5001 (dev)** in `services/api.ts`. If the web shows different data than the simulator, you're probably running the prod Flask (port 5000) while mobile is pointed at 5001 — start the dev Flask instead, or update the URL.
