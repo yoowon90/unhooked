@@ -38,10 +38,10 @@ SCORE_WEIGHTS = {
     'window_days': 90,
     'base_score': 50,
     'purchase_buckets': [
-        (7, -3),
+        (7, -8),
         (30, 0),
-        (60, 1),
-        (float('inf'), 2),
+        (60, 2),
+        (float('inf'), 4),
     ],
     'unhook_buckets': [
         (15, 0),

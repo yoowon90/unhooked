@@ -30,10 +30,10 @@ Constants live in `SCORE_WEIGHTS` at the top of `website/reports.py` so changes 
 
 | Days waited | Points per item |
 | --- | --- |
-| < 7    | -3 (impulsive) |
+| < 7    | -8 (impulsive) |
 | 7-29   | 0 |
-| 30-59  | +1 |
-| 60+    | +2 |
+| 30-59  | +2 |
+| 60+    | +4 |
 
 ### Unhook waiting-time buckets (rewards patience before deciding not to buy)
 
@@ -84,3 +84,4 @@ If there are zero purchases AND zero unhooks in the last 90 days, the card shows
 | Date       | Change |
 | ---        | --- |
 | 2026-05-06 | v1: signals = purchase waiting time, unhook waiting time, unhook-to-purchase ratio. Rolling 90-day window. |
+| 2026-05-28 | v2: steepened impulse penalty (`< 7` days: -3 → -8) and raised long-wait rewards (30-59: +1 → +2, 60+: +2 → +4) so a single fast purchase reads as low rather than mid-pack. Base score, unhook buckets, and ratio bonus unchanged. |
