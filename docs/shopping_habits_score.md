@@ -13,6 +13,8 @@ We tally:
 - **Purchased items** bucketed by waiting-time band.
 - **Unhooked items** bucketed by waiting-time band.
 - **Unhook-to-purchase ratio** for the window.
+- **Savings follow-through** per purchase (v3): the outcome of the
+  post-purchase "Move money to savings?" interstitial (`WishItem.savings_decision`).
 
 ## Formula
 
@@ -20,6 +22,7 @@ We tally:
 score = base_score
       + sum(purchase_bucket_points)
       + sum(unhook_bucket_points)
+      + sum(savings_decision_points)
       + ratio_bonus
 score = clamp(score, 0, 100)
 ```
@@ -44,6 +47,19 @@ Constants live in `SCORE_WEIGHTS` at the top of `website/reports.py` so changes 
 | 30-59  | +3 |
 | 60-89  | +4 |
 | 90+    | +5 |
+
+### Savings-decision points (rewards following through on the savings match)
+
+Applied once per purchase in the window, from the interstitial outcome:
+
+| `savings_decision` | Points per item |
+| --- | --- |
+| `'moved'`    | +3 |
+| `'declined'` | -3 |
+| `None` (never prompted) | 0 |
+
+`None` is deliberately neutral so purchases predating the feature (and
+Gmail-backfilled orders, which are never prompted) don't move the score.
 
 ### Unhook-to-purchase ratio bonus
 
@@ -85,3 +101,4 @@ If there are zero purchases AND zero unhooks in the last 90 days, the card shows
 | ---        | --- |
 | 2026-05-06 | v1: signals = purchase waiting time, unhook waiting time, unhook-to-purchase ratio. Rolling 90-day window. |
 | 2026-05-28 | v2: steepened impulse penalty (`< 7` days: -3 → -8) and raised long-wait rewards (30-59: +1 → +2, 60+: +2 → +4) so a single fast purchase reads as low rather than mid-pack. Base score, unhook buckets, and ratio bonus unchanged. |
+| 2026-07-05 | v3: added savings follow-through signal — the post-purchase "Move money to savings?" decision now scores `moved` +3 / `declined` -3 / never-prompted 0 per purchase (`savings_bucket` in `SCORE_WEIGHTS`). All v2 buckets unchanged. |

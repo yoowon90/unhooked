@@ -57,6 +57,14 @@ SCORE_WEIGHTS = {
         (0.25, 0),
         (0.0, -5),
     ],
+    # Points per purchase for the post-purchase savings decision (v3).
+    # None (never prompted — purchases predating the feature) is deliberately
+    # 0 so old purchases don't move the score.
+    'savings_bucket': {
+        'moved': 3,
+        'declined': -3,
+        None: 0,
+    },
 }
 
 # (min_score_inclusive, label). Iterated highest-min first.
@@ -109,6 +117,9 @@ def compute_shopping_habits_score(user):
             if decision_date is not None and decision_date >= cutoff:
                 days = _wait_days(item, decision_date)
                 total_points += _bucket_points(days, SCORE_WEIGHTS['purchase_buckets'])
+                # v3: savings follow-through. Rewards matching a purchase with
+                # a transfer to savings, penalizes declining the prompt.
+                total_points += SCORE_WEIGHTS['savings_bucket'].get(item.savings_decision, 0)
                 purchase_count += 1
         elif item.unhooked:
             decision_date = _strip_tz(item.unhooked_date)

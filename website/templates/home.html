@@ -128,7 +128,7 @@
         </svg>
       </div>
       <div class="score-hero-text">
-        <div class="score-hero-label">Shopping habits score<span class="info-icon" data-tooltip="Based on your last 90 days of decisions: how long you wait before each purchase, how patient you are before unhooking an item, and your balance of unhooks vs purchases. Higher = more mindful."><i class="fa fa-info-circle"></i></span></div>
+        <div class="score-hero-label">Shopping habits score<span class="info-icon" data-tooltip="Based on your last 90 days of decisions: how long you wait before each purchase, how patient you are before unhooking an item, your balance of unhooks vs purchases, and whether you match purchases with a transfer to savings. Higher = more mindful."><i class="fa fa-info-circle"></i></span></div>
         {% if shopping_score and shopping_score.has_data %}
           <div class="score-hero-number {{ tier_class }}">{{ shopping_score.score }}<span class="score-hero-denom">/ 100</span></div>
           <div class="score-hero-tier {{ tier_class }}">{{ shopping_score.tier }}</div>
