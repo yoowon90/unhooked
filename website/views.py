@@ -9,6 +9,7 @@ from flask_login import current_user, login_required
 from .models import Note, WishItem, normalize_category, clean_text
 from . import db
 from . import ledger
+from . import transfers
 from .ledger import LedgerError
 from .purchases import mark_purchased, needs_savings_prompt, record_savings_decision
 from .url_extraction import scrape_item
@@ -270,7 +271,18 @@ def savings_decision(item_id):
                                error='Please enter an amount greater than $0.'), 400
 
     record_savings_decision(wishitem, current_user, 'moved', amount_cents=amount_cents)
-    flash(f'{ledger.format_cents(amount_cents)} on its way to savings! 💰', category='success')
+
+    # Originate the real (sandbox) ACH debit. Rail failure never undoes the
+    # ledger posting — the intent stands and origination can be retried.
+    result = transfers.originate_savings_transfer(current_user, wishitem.savings_txn)
+    if result['originated']:
+        flash(f'{ledger.format_cents(amount_cents)} on its way to savings! 💰 (ACH transfer originated)', category='success')
+    elif result['reason'] == 'not_connected':
+        flash(f'{ledger.format_cents(amount_cents)} recorded in your ledger. '
+              'Connect a bank in Settings to originate real transfers.', category='success')
+    else:
+        flash(f'{ledger.format_cents(amount_cents)} recorded in your ledger, but the '
+              f'bank transfer could not be originated: {result["detail"]}', category='error')
     return redirect(url_for('views.purchased_list'))
 
 @views.route('/add-wishitem-period', methods=['POST'])

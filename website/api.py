@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem, normalize_category, clean_text
 from . import db
 from . import ledger
+from . import transfers
 from .ledger import LedgerError
 from .purchases import mark_purchased, needs_savings_prompt, record_savings_decision
 from .url_extraction import ItemDetails, scrape_item
@@ -306,13 +307,17 @@ def savings_decision(item_id):
         if amount_cents <= 0:
             return jsonify({'error': 'amount must be greater than 0'}), 400
 
+    user = _current_user()
     try:
-        record_savings_decision(item, _current_user(), decision, amount_cents=amount_cents)
+        record_savings_decision(item, user, decision, amount_cents=amount_cents)
     except LedgerError as e:
         return jsonify({'error': str(e)}), 409
 
     body = item.to_dict()
     if item.savings_txn is not None:
+        # Originate the real (sandbox) ACH debit; rail failure never undoes
+        # the ledger posting.
+        body['transfer'] = transfers.originate_savings_transfer(user, item.savings_txn)
         body['savings_txn'] = item.savings_txn.to_dict()
     return jsonify(body)
 

@@ -151,7 +151,78 @@
     </div>
     {% endif %}
 
+    <!-- Bank (Plaid sandbox) row -->
+    <div class="connector-row">
+      <div class="connector-info">
+        <div class="connector-icon">&#127974;</div>
+        <div>
+          <div class="connector-title">Bank <span style="font-size:0.72rem; background:#e7f3ff; color:#0967d2; padding:2px 8px; border-radius:10px; vertical-align:middle;">Plaid sandbox</span></div>
+          <div class="connector-sub">
+            {% if user.plaid_item_id %}
+              Connected to <strong>{{ user.plaid_institution_name or 'your bank' }}</strong>
+              {% if linked_accounts %}
+                — {% for a in linked_accounts %}{{ a.display_name }} ({{ a.kind }}){% if not loop.last %}, {% endif %}{% endfor %}
+              {% endif %}
+            {% else %}
+              Connect a sandbox bank so "move to savings" originates a real (test) ACH transfer
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        {% if user.plaid_item_id %}
+          <span class="status-pill status-connected">Connected</span>
+          <form method="POST" action="{{ url_for('connectors.plaid_disconnect') }}" style="margin: 0;">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Disconnect</button>
+          </form>
+        {% elif plaid_configured %}
+          <span class="status-pill status-disconnected">Not connected</span>
+          <button id="plaid-connect-btn" type="button" class="btn btn-primary btn-sm" onclick="startPlaidLink(this)">Connect Bank</button>
+        {% else %}
+          <span class="status-pill status-disconnected">Keys missing</span>
+          <span style="font-size:0.78rem; color:#6c757d;">Set PLAID_CLIENT_ID / PLAID_SANDBOX_SECRET in .env</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if not user.plaid_item_id and plaid_configured %}
+    <div style="background:#e7f3ff; border-left:3px solid #0967d2; padding:10px 14px; margin-top:14px; border-radius:4px; font-size:0.82rem; color:#08477e;">
+      <strong>Sandbox only — no real money.</strong> In the Plaid window pick any bank and log in with
+      <code>user_good</code> / <code>pass_good</code>. Your access token is stored encrypted at rest.
+    </div>
+    {% endif %}
+
   </div><!-- /settings-card -->
+
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <script>
+    function startPlaidLink(btn) {
+      btn.disabled = true;
+      btn.textContent = 'Opening…';
+      fetch('{{ url_for('connectors.plaid_link_token') }}', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.link_token) { throw new Error(data.error || 'No link token'); }
+          const handler = Plaid.create({
+            token: data.link_token,
+            onSuccess: function(public_token, metadata) {
+              fetch('{{ url_for('connectors.plaid_exchange') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ public_token: public_token })
+              }).then(r => r.json()).then(res => {
+                if (res.success) { window.location.reload(); }
+                else { alert('Bank link failed: ' + (res.error || 'unknown error')); resetBtn(); }
+              });
+            },
+            onExit: function(err, metadata) { resetBtn(); }
+          });
+          handler.open();
+        })
+        .catch(err => { alert('Could not start Plaid Link: ' + err.message); resetBtn(); });
+      function resetBtn() { btn.disabled = false; btn.textContent = 'Connect Bank'; }
+    }
+  </script>
 
 </div>
 {% endblock %}

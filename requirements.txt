@@ -7,6 +7,7 @@ flask-jwt-extended
 flask-limiter
 python-dotenv
 pytest
+cryptography
 matplotlib
 beautifulsoup4
 requests

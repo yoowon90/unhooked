@@ -282,3 +282,9 @@ class User(db.Model, UserMixin):
     gmail_refresh_token = db.Column(db.Text, nullable=True)
     gmail_token_expiry = db.Column(db.DateTime, nullable=True)
     gmail_connected_email = db.Column(db.String(150), nullable=True)
+    # Plaid (bank) connection. The access token is Fernet-encrypted at rest
+    # (website/crypto.py) — unlike the Gmail tokens above, a Plaid token can
+    # move money, so plaintext storage is not acceptable.
+    plaid_access_token_enc = db.Column(db.Text, nullable=True)
+    plaid_item_id = db.Column(db.String(200), nullable=True)
+    plaid_institution_name = db.Column(db.String(200), nullable=True)

@@ -2,12 +2,15 @@ import os
 import re
 from urllib.parse import urlparse
 
-from flask import Blueprint, render_template, redirect, url_for, session, request, flash
+from flask import Blueprint, render_template, redirect, url_for, session, request, flash, jsonify
 from flask_login import login_required, current_user
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from . import db
-from .models import WishItem
+from . import plaid_client
+from . import transfers
+from .models import WishItem, LedgerAccount
+from .plaid_client import PlaidError
 from .security import same_origin_required
 from .tax import state_for_zip, taxed_price
 
@@ -57,7 +60,54 @@ def _build_flow():
 @connectors.route('/settings')
 @login_required
 def settings():
-    return render_template('settings.html', user=current_user)
+    linked_accounts = []
+    if transfers.bank_connected(current_user):
+        linked_accounts = (LedgerAccount.query
+                           .filter_by(user_id=current_user.id)
+                           .filter(LedgerAccount.provider_account_id.isnot(None))
+                           .all())
+    return render_template('settings.html', user=current_user,
+                           plaid_configured=plaid_client.is_configured(),
+                           linked_accounts=linked_accounts)
+
+
+# ── Plaid (bank) connector ────────────────────────────────────────────────────
+
+@connectors.route('/connectors/plaid/link-token', methods=['POST'])
+@login_required
+@same_origin_required
+def plaid_link_token():
+    """Mint a short-lived link_token to initialize Plaid Link in the browser."""
+    try:
+        return jsonify({'link_token': plaid_client.create_link_token(current_user.id)})
+    except PlaidError as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@connectors.route('/connectors/plaid/exchange', methods=['POST'])
+@login_required
+@same_origin_required
+def plaid_exchange():
+    """Link onSuccess handler: exchange the public_token, store the encrypted
+    access token, and map bank accounts onto the ledger buckets."""
+    public_token = (request.get_json() or {}).get('public_token')
+    if not public_token:
+        return jsonify({'error': 'public_token is required'}), 400
+    try:
+        transfers.connect_bank(current_user, public_token)
+    except PlaidError as e:
+        return jsonify({'error': str(e)}), 502
+    flash(f'Bank connected: {current_user.plaid_institution_name or "linked"} (sandbox).', 'success')
+    return jsonify({'success': True})
+
+
+@connectors.route('/connectors/plaid/disconnect', methods=['POST'])
+@login_required
+@same_origin_required
+def plaid_disconnect():
+    transfers.disconnect_bank(current_user)
+    flash('Bank disconnected. Ledger history is preserved.', 'success')
+    return redirect(url_for('connectors.settings'))
 
 
 @connectors.route('/connectors/gmail/connect')
