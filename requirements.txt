@@ -6,6 +6,7 @@ flask-migrate
 flask-jwt-extended
 flask-limiter
 python-dotenv
+pytest
 matplotlib
 beautifulsoup4
 requests

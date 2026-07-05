@@ -23,4 +23,4 @@ backups/
 
 # React Native / Expo
 mobile/node_modules
-mobile/.expo
+mobile/.expo.pytest_cache/

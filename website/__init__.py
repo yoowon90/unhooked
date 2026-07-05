@@ -54,8 +54,12 @@ def create_app():
 
     from .models import User, Note, WishItem
 
-    with app.app_context():
-        db.create_all()
+    # SKIP_DB_CREATE_ALL=1 disables the auto-create so `flask db migrate` can
+    # autogenerate against the real DB state — otherwise create_all() creates
+    # any new tables at import time and autogenerate sees an empty diff.
+    if os.getenv('SKIP_DB_CREATE_ALL') != '1':
+        with app.app_context():
+            db.create_all()
 
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'

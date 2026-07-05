@@ -163,6 +163,95 @@ class BackfillReview(db.Model):
     )
 
 
+# ── Ledger core (double-entry) ────────────────────────────────────────────────
+# All ledger amounts are INTEGER CENTS, never floats — floats round differently
+# across SQLite (dev) and Postgres (prod) and silently lose pennies; a ledger
+# that doesn't balance to the cent is worthless. Convert at the boundary with
+# ledger.dollars_to_cents(). The sum-to-zero invariant is enforced in Python
+# (ledger.post_transaction), not as a DB constraint — SQLite's constraint
+# enforcement is laxer than Postgres, so a DB-only guard would pass on dev
+# and only fail in prod.
+
+LEDGER_ACCOUNT_KINDS = ('checking', 'savings')
+LEDGER_TXN_STATUSES = ('pending', 'settled', 'failed')
+
+
+class LedgerAccount(db.Model):
+    """A bucket in the internal ledger (NOT a real bank account).
+
+    Each user gets one 'checking' and one 'savings' bucket. Balances are
+    always derived by summing this account's entries — there is deliberately
+    no balance column (a mutable balance field is the classic lost-update bug).
+    `provider_account_id` links the bucket to a real Plaid account in step 4.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    kind = db.Column(db.String(20), nullable=False)  # one of LEDGER_ACCOUNT_KINDS
+    display_name = db.Column(db.String(150), nullable=False)
+    currency = db.Column(db.String(3), nullable=False, default='USD')
+    provider_account_id = db.Column(db.String(200), nullable=True)  # Plaid account id (step 4)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    entries = db.relationship('LedgerEntry', back_populates='account')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'kind', name='uq_ledger_account_user_kind'),
+    )
+
+
+class LedgerTransaction(db.Model):
+    """One money movement, made of >= 2 LedgerEntry rows that sum to zero.
+
+    Lifecycle: pending -> settled | failed. `pending` means our ledger has
+    recorded the intent; `settled` means the outside world (Plaid Transfer,
+    step 5 reconciliation) confirmed it. `provider_transfer_id` holds the
+    Plaid transfer id once a real (sandbox) ACH transfer is originated.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    wishitem_id = db.Column(db.Integer, db.ForeignKey('wish_item.id'), nullable=True)
+    amount_cents = db.Column(db.Integer, nullable=False)  # sum of the positive legs
+    status = db.Column(db.String(20), nullable=False, default='pending')  # one of LEDGER_TXN_STATUSES
+    memo = db.Column(db.String(500), default='')
+    provider_transfer_id = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    settled_at = db.Column(db.DateTime, nullable=True)
+    entries = db.relationship('LedgerEntry', back_populates='transaction')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'wishitem_id': self.wishitem_id,
+            'amount_cents': self.amount_cents,
+            'status': self.status,
+            'memo': self.memo,
+            'provider_transfer_id': self.provider_transfer_id,
+            'created_at': self.created_at.isoformat() if self.created_at is not None else None,
+            'settled_at': self.settled_at.isoformat() if self.settled_at is not None else None,
+            'entries': [e.to_dict() for e in self.entries],
+        }
+
+
+class LedgerEntry(db.Model):
+    """One signed leg of a transaction. IMMUTABLE once posted — a mistake is
+    fixed by posting a reversing transaction, never by editing an entry.
+    Negative = money leaves the account, positive = money arrives.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('ledger_transaction.id'), nullable=False)
+    account_id = db.Column(db.Integer, db.ForeignKey('ledger_account.id'), nullable=False)
+    amount_cents = db.Column(db.Integer, nullable=False)  # signed
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    transaction = db.relationship('LedgerTransaction', back_populates='entries')
+    account = db.relationship('LedgerAccount', back_populates='entries')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'account_id': self.account_id,
+            'amount_cents': self.amount_cents,
+        }
+
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True)
