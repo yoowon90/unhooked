@@ -1,0 +1,136 @@
+{% extends "base.html" %} {% block title %}Move to Savings?{% endblock %} {%
+block content %}
+<style>
+    .savings-prompt-card {
+        background-color: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 12px;
+        padding: 36px 32px;
+        margin: 48px auto;
+        max-width: 480px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        text-align: center;
+    }
+    .savings-prompt-card img.mascot {
+        width: 110px;
+        margin-bottom: 12px;
+    }
+    .savings-item-line {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+    .savings-amount-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin: 18px 0 6px;
+    }
+    .savings-amount-wrap .dollar-sign {
+        font-size: 26px;
+        font-weight: 600;
+    }
+    #savings-amount {
+        font-size: 26px;
+        font-weight: 600;
+        width: 160px;
+        text-align: center;
+        border: 2px solid #ced4da;
+        border-radius: 8px;
+        padding: 4px 8px;
+    }
+    #savings-amount:focus {
+        outline: none;
+        border-color: #0967d2;
+    }
+    #savings-amount.is-invalid {
+        border-color: #dc3545;
+    }
+    #amount-error {
+        color: #dc3545;
+        font-size: 13px;
+        min-height: 20px;
+        margin-bottom: 10px;
+    }
+    .savings-btn-row {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 14px;
+    }
+</style>
+
+<div class="savings-prompt-card">
+    <img
+        class="mascot"
+        src="{{ url_for('static', filename='img/logo-saving-money.png') }}"
+        alt=""
+    />
+    <h3>Move money to your savings?</h3>
+    <p class="savings-item-line">
+        You just purchased <b>{{ wishitem.name }}</b>{% if wishitem.brand %} ({{
+        wishitem.brand }}){% endif %}.<br />
+        Match it with a transfer to savings.
+    </p>
+
+    <form
+        id="savings-form"
+        method="POST"
+        action="{{ url_for('views.savings_decision', item_id=wishitem.id) }}"
+    >
+        <div class="savings-amount-wrap">
+            <span class="dollar-sign">$</span>
+            <input
+                type="text"
+                inputmode="decimal"
+                id="savings-amount"
+                name="amount"
+                value="{{ prefill_amount }}"
+                autocomplete="off"
+            />
+        </div>
+        <div id="amount-error">{% if error %}{{ error }}{% endif %}</div>
+
+        <div class="savings-btn-row">
+            <button
+                type="submit"
+                name="decision"
+                value="moved"
+                class="btn btn-success"
+                onclick="return validateSavingsAmount();"
+            >
+                Yes, move it to savings 💰
+            </button>
+            <button
+                type="submit"
+                name="decision"
+                value="declined"
+                class="btn btn-outline-secondary"
+                formnovalidate
+            >
+                Not at this time
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function validateSavingsAmount() {
+      var input = document.getElementById('savings-amount');
+      var errorEl = document.getElementById('amount-error');
+      var value = parseFloat((input.value || '').replace(/[$,]/g, ''));
+      if (isNaN(value) || value <= 0) {
+        input.classList.add('is-invalid');
+        errorEl.textContent = 'Please enter an amount greater than $0.';
+        return false;  // block submit; server re-validates regardless
+      }
+      input.classList.remove('is-invalid');
+      errorEl.textContent = '';
+      return true;
+    }
+    {% if error %}
+    document.getElementById('savings-amount').classList.add('is-invalid');
+    {% endif %}
+</script>
+{% endblock %}

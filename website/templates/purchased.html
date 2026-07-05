@@ -119,6 +119,7 @@
           </th>
           <th scope="col">Name</th>
           <th scope="col">Price (+tax)</th>
+          <th scope="col">Savings</th>
           <th scope="col">Wish Period</th>
         </tr>
       </thead>
@@ -171,6 +172,23 @@
               onkeydown="handlePriceKeyDown(event, this)"
               title="Click to edit (enter pre-tax price)">
             {{ (purchased_item.taxed_price|round(2) if purchased_item.taxed_price != None else 0) | format_money }}
+          </td>
+          <td style="font-size: 10pt;">
+            {% if purchased_item.savings_decision == 'moved' and purchased_item.savings_txn %}
+            <span title="Ledger transaction #{{ purchased_item.savings_txn.id }} ({{ purchased_item.savings_txn.status }})"
+                  style="display:inline-block; padding: 2px 8px; background: #d4edda; color: #155724; border-radius: 8px;">
+              💰 {{ purchased_item.savings_txn.amount_cents | format_cents }} moved to savings
+              <span style="opacity: 0.7;">({{ purchased_item.savings_txn.status }})</span>
+            </span>
+            {% elif purchased_item.savings_decision == 'declined' %}
+            <span style="display:inline-block; padding: 2px 8px; background: #f1f3f5; color: #6c757d; border-radius: 8px;">
+              Declined — not moved to savings
+            </span>
+            {% else %}
+            <span style="color: #adb5bd; font-style: italic;">
+              Price not moved to savings account
+            </span>
+            {% endif %}
           </td>
           <td>
             {{(purchased_item.wish_period | format_time).replace("ago", "") }}

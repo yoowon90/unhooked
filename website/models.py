@@ -119,6 +119,21 @@ class WishItem(db.Model):
     image_url = db.Column(db.String(10000), nullable=True)
     backfilled = db.Column(db.Boolean, default=False)
     source_email_id = db.Column(db.String(200), nullable=True)
+    # Savings-match decision, recorded at the post-purchase interstitial:
+    #   None       -> never prompted (all purchases predating the feature)
+    #   'moved'    -> user moved money to savings (savings_txn_id set)
+    #   'declined' -> user chose "Not at this time"
+    savings_decision = db.Column(db.String(20), nullable=True)
+    # Soft reference (no DB FK): ledger_transaction.wishitem_id already points
+    # back at wish_item, and a second real FK would make the two tables
+    # circularly dependent (breaks create_all ordering / SQLite alters).
+    savings_txn_id = db.Column(db.Integer, nullable=True)
+    savings_txn = db.relationship(
+        'LedgerTransaction',
+        primaryjoin='foreign(WishItem.savings_txn_id) == LedgerTransaction.id',
+        viewonly=True,
+        uselist=False,
+    )
 
     def to_dict(self):
         return {
@@ -142,6 +157,8 @@ class WishItem(db.Model):
             'purchase_date': self.purchase_date.isoformat() if self.purchase_date is not None else None,
             'unhooked_date': self.unhooked_date.isoformat() if self.unhooked_date is not None else None,
             'wish_period_seconds': int(self.wish_period.total_seconds()) if self.wish_period is not None else None,
+            'savings_decision': self.savings_decision,
+            'savings_txn_id': self.savings_txn_id,
         }
 
 class BackfillReview(db.Model):

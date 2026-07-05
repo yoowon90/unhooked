@@ -1,6 +1,10 @@
 from website import create_app, debug, Format # format_time, format_tag
+from website.ledger import format_cents
 
 app = create_app()
+
+# integer cents -> "$1,234.56" (used by the purchased-list savings badges)
+app.template_filter('format_cents')(format_cents)
 
 # Register the function as a template filter
 app.template_filter('format_time')(Format().format_time)

@@ -513,12 +513,13 @@
               {% endif %}
           </td>
           <td>
-            <button type="button" class="close" onclick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist'); addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
+            <!-- wish_period is computed server-side in /toggle-wishitem now -->
+            <button type="button" class="close" onclick="toggleWishItem({{ wishitem.id }}, true, false, '/my-wishlist')">
               <span id='unhook-button' style="color: blue; font-size: 11pt;" aria-hidden="true"> unhook&#129693;</span>
             </button>
           </td>
           <td>
-          <button type="button" class="close" onclick="toggleWishItem({{ wishitem.id }}, false, true, '/my-wishlist'); addWishItemPeriod({{wishitem.id}}, '/my-wishlist')">
+          <button type="button" class="close" onclick="toggleWishItem({{ wishitem.id }}, false, true, '/my-wishlist')">
           <span id='purchase-button' style="color: red; font-size: 11pt;" aria-hidden="true"> purchase&#129297;</span>
           </button>
           </td>

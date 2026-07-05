@@ -6,9 +6,13 @@ function toggleWishItem(wishItemId, unhooked, purchased, nextUrl){
   fetch("/toggle-wishitem", {
     method: "POST",
     body: JSON.stringify({ wishItemId: wishItemId, unhooked: unhooked, purchased: purchased }),
-    }).then((_res) => {
-      window.location.href = nextUrl;
-    });
+    }).then((res) => res.json())
+    .then((data) => {
+      // Purchases redirect to the savings interstitial; everything else
+      // goes back to nextUrl.
+      window.location.href = (data && data.redirect) ? data.redirect : nextUrl;
+    })
+    .catch(() => { window.location.href = nextUrl; });
 }
 
 function toggleFavoriteWishItem(wishItemId){

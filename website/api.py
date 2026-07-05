@@ -3,6 +3,9 @@ from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_requir
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem, normalize_category, clean_text
 from . import db
+from . import ledger
+from .ledger import LedgerError
+from .purchases import mark_purchased, needs_savings_prompt, record_savings_decision
 from .url_extraction import ItemDetails, scrape_item
 from .tax import taxed_price
 import datetime
@@ -258,11 +261,13 @@ def set_status(item_id):
         item.unhooked = False
         item.purchased = False
     elif status == 'purchased':
-        item.purchased = True
-        item.unhooked = False
-        item.purchase_date = datetime.datetime.now()
-        user = _current_user()
-        user.last_purchase_date = item.purchase_date
+        # Shared service (same path as the web toggle) stamps purchase_date,
+        # wish_period, and last_purchase_date.
+        mark_purchased(item, _current_user())
+        body = item.to_dict()
+        # Hint for the mobile client to show its savings interstitial.
+        body['savings_prompt'] = needs_savings_prompt(item)
+        return jsonify(body)
     elif status == 'unhooked':
         item.unhooked = True
         item.purchased = False
@@ -272,6 +277,44 @@ def set_status(item_id):
 
     db.session.commit()
     return jsonify(item.to_dict())
+
+
+@api.route('/wishitems/<int:item_id>/savings-decision', methods=['POST'])
+@jwt_required()
+def savings_decision(item_id):
+    """Record the post-purchase savings choice.
+
+    Body: {"decision": "moved"|"declined", "amount": 79.99}
+    `amount` (dollars, > 0) is required when decision is "moved"; it is the
+    user-edited value from the interstitial, not necessarily the item price.
+    """
+    item, err = _get_item(item_id)
+    if err:
+        return err
+
+    data = request.get_json() or {}
+    decision = data.get('decision')
+    if decision not in ('moved', 'declined'):
+        return jsonify({'error': 'decision must be moved or declined'}), 400
+
+    amount_cents = None
+    if decision == 'moved':
+        try:
+            amount_cents = ledger.dollars_to_cents(data.get('amount'))
+        except LedgerError:
+            return jsonify({'error': 'amount must be a number'}), 400
+        if amount_cents <= 0:
+            return jsonify({'error': 'amount must be greater than 0'}), 400
+
+    try:
+        record_savings_decision(item, _current_user(), decision, amount_cents=amount_cents)
+    except LedgerError as e:
+        return jsonify({'error': str(e)}), 409
+
+    body = item.to_dict()
+    if item.savings_txn is not None:
+        body['savings_txn'] = item.savings_txn.to_dict()
+    return jsonify(body)
 
 
 @api.route('/wishitems/<int:item_id>/favorite', methods=['POST'])

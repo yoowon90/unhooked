@@ -4,10 +4,13 @@ import re
 import os
 import datetime
 import json
-from flask import Blueprint, render_template, request, flash, jsonify
+from flask import Blueprint, render_template, request, flash, jsonify, redirect, url_for
 from flask_login import current_user, login_required
 from .models import Note, WishItem, normalize_category, clean_text
 from . import db
+from . import ledger
+from .ledger import LedgerError
+from .purchases import mark_purchased, needs_savings_prompt, record_savings_decision
 from .url_extraction import scrape_item
 from .tax import taxed_price
 
@@ -200,21 +203,75 @@ def toggle_wishitem():
     wishitem = WishItem.query.get(wishItemId)
     if wishitem:
         if wishitem.user_id == current_user.id:
+            if not unhooked and purchased:
+                # Shared service (same path as the mobile API) stamps
+                # purchase_date, wish_period, and last_purchase_date.
+                mark_purchased(wishitem, current_user)
+                flash("Item purchased.", category='success')
+                # Send the browser to the savings interstitial instead of nextUrl.
+                if needs_savings_prompt(wishitem):
+                    return jsonify({'redirect': url_for('views.savings_prompt', item_id=wishitem.id)})
+                return jsonify({})
             wishitem.unhooked = unhooked
             wishitem.purchased = purchased
             if unhooked and not purchased:
                 print("Unhooking.. new wishitem unhooked date is {}".format(datetime.datetime.now()))
                 wishitem.unhooked_date = datetime.datetime.now()
+                if wishitem.date:
+                    wishitem.wish_period = wishitem.unhooked_date - wishitem.date
                 flash("Item unhooked!", category='success')
-            elif not unhooked and purchased:
-                wishitem.purchase_date = datetime.datetime.now()
-                current_user.last_purchase_date = wishitem.purchase_date  # update last purchase date
-                flash("Item purchased.", category='success')
             elif not unhooked and not purchased:  # e.g. re-adding to wishlist
                 # wishitem.date = datetime.datetime.now() # update date
                 flash("Item added to wish list", category='success')
             db.session.commit()
     return jsonify({})
+
+
+# ── Savings interstitial (post-purchase) ──────────────────────────────────────
+
+@views.route('/purchase-savings-prompt/<int:item_id>', methods=['GET'])
+@login_required
+def savings_prompt(item_id):
+    """Middle page after marking an item purchased: "Move $X to savings?"."""
+    wishitem = WishItem.query.get(item_id)
+    if not wishitem or wishitem.user_id != current_user.id:
+        return redirect(url_for('views.purchased_list'))
+    if not needs_savings_prompt(wishitem):  # not purchased, or already decided
+        return redirect(url_for('views.purchased_list'))
+    prefill = '%.2f' % wishitem.price if wishitem.price and wishitem.price > 0 else ''
+    return render_template('savings_prompt.html', user=current_user,
+                           wishitem=wishitem, prefill_amount=prefill, error=None)
+
+
+@views.route('/purchase-savings-decision/<int:item_id>', methods=['POST'])
+@login_required
+def savings_decision(item_id):
+    wishitem = WishItem.query.get(item_id)
+    if not wishitem or wishitem.user_id != current_user.id:
+        return redirect(url_for('views.purchased_list'))
+    if not needs_savings_prompt(wishitem):
+        return redirect(url_for('views.purchased_list'))
+
+    decision = request.form.get('decision')
+    if decision == 'declined':
+        record_savings_decision(wishitem, current_user, 'declined')
+        flash('Okay — not this time.', category='success')
+        return redirect(url_for('views.purchased_list'))
+
+    # decision == 'moved': validate the (editable) amount server-side too.
+    raw_amount = (request.form.get('amount') or '').replace('$', '').replace(',', '').strip()
+    try:
+        amount_cents = ledger.dollars_to_cents(raw_amount)
+    except LedgerError:
+        amount_cents = None
+    if amount_cents is None or amount_cents <= 0:
+        return render_template('savings_prompt.html', user=current_user,
+                               wishitem=wishitem, prefill_amount=raw_amount,
+                               error='Please enter an amount greater than $0.'), 400
+
+    record_savings_decision(wishitem, current_user, 'moved', amount_cents=amount_cents)
+    flash(f'{ledger.format_cents(amount_cents)} on its way to savings! 💰', category='success')
+    return redirect(url_for('views.purchased_list'))
 
 @views.route('/add-wishitem-period', methods=['POST'])
 @login_required
