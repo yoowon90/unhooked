@@ -335,7 +335,7 @@ def create_figure(figure_type, figure_content, start_date=None, end_date=None):
                 # For wishlist items, use the date when item was added to wishlist
                 item_date = item.date
 
-            if item_date and start_date <= item_date <= end_date:
+            if item_date and start_date <= item_date < end_date:
                 filtered_wishitems.append(item)
     else:
         # If no date range provided, include all items
@@ -428,7 +428,9 @@ def generate_report():
 
     try:
         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
-        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d')
+        # End bound is exclusive of the next day so items dated any time on the
+        # end date (e.g. unhooked at 14:32) are included.
+        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d') + datetime.timedelta(days=1)
     except ValueError:
         return jsonify({'error': 'Invalid date format'}), 400
 
@@ -442,7 +444,7 @@ def generate_report():
     ).all()
 
     for item in purchased_items:
-        if item.purchase_date and start_date <= item.purchase_date <= end_date:
+        if item.purchase_date and start_date <= item.purchase_date < end_date:
             total_purchase_amount += item.taxed_price
             purchased_count += 1
 
@@ -454,7 +456,7 @@ def generate_report():
         unhooked=True
     ).all()
     for item in unhooked_items:
-        if item.unhooked_date and start_date <= item.unhooked_date <= end_date:
+        if item.unhooked_date and start_date <= item.unhooked_date < end_date:
             total_saved_amount += item.price or 0
             unhooked_count += 1
 
@@ -462,7 +464,7 @@ def generate_report():
     wishlist_added_count = 0
     all_user_items = WishItem.query.filter_by(user_id=current_user.id).all()
     for item in all_user_items:
-        if item.date and start_date <= item.date <= end_date:
+        if item.date and start_date <= item.date < end_date:
             wishlist_added_count += 1
 
     # Generate new pie charts with date filtering

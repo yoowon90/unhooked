@@ -415,16 +415,18 @@ def reports_generate():
 
     try:
         start = datetime.datetime.strptime(data['start_date'], '%Y-%m-%d')
-        end = datetime.datetime.strptime(data['end_date'], '%Y-%m-%d')
+        # End bound is exclusive of the next day so items dated any time on the
+        # end date are included.
+        end = datetime.datetime.strptime(data['end_date'], '%Y-%m-%d') + datetime.timedelta(days=1)
     except (KeyError, ValueError):
         return jsonify({'error': 'start_date and end_date required in YYYY-MM-DD format'}), 400
 
     purchased = [i for i in user.wishitems
-                 if i.purchased and i.purchase_date and start <= i.purchase_date <= end]
+                 if i.purchased and i.purchase_date and start <= i.purchase_date < end]
     unhooked = [i for i in user.wishitems
-                if i.unhooked and i.unhooked_date and start <= i.unhooked_date <= end]
+                if i.unhooked and i.unhooked_date and start <= i.unhooked_date < end]
     wishlist = [i for i in user.wishitems
-                if not i.purchased and not i.unhooked and i.date and start <= i.date <= end]
+                if not i.purchased and not i.unhooked and i.date and start <= i.date < end]
 
     def count_by(items, field):
         counts = {}
