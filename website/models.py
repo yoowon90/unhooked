@@ -190,7 +190,10 @@ class BackfillReview(db.Model):
 # and only fail in prod.
 
 LEDGER_ACCOUNT_KINDS = ('checking', 'savings')
-LEDGER_TXN_STATUSES = ('pending', 'settled', 'failed')
+# 'returned' = an ACH return that arrived AFTER settlement (possible for up
+# to 60 days on some return codes) — the settled money turned out not to have
+# moved. Reconciliation posts a reversal and flips settled -> returned.
+LEDGER_TXN_STATUSES = ('pending', 'settled', 'failed', 'returned')
 
 
 class LedgerAccount(db.Model):
@@ -267,6 +270,21 @@ class LedgerEntry(db.Model):
             'account_id': self.account_id,
             'amount_cents': self.amount_cents,
         }
+
+
+class SyncCursor(db.Model):
+    """Named cursor into an external event feed.
+
+    Plaid's /transfer/event/sync is a monotonically increasing event stream
+    for the whole Plaid app; persisting the last event_id processed lets each
+    reconciliation run resume exactly where the previous one stopped (and
+    makes re-runs idempotent).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    last_event_id = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.now,
+                           onupdate=datetime.datetime.now)
 
 
 class User(db.Model, UserMixin):

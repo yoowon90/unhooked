@@ -344,6 +344,18 @@ def remove_image(item_id):
     return jsonify({})
 
 
+@api.route('/transfers/reconcile', methods=['POST'])
+@jwt_required()
+def reconcile_transfers():
+    """Drain Plaid's transfer-event feed and converge ledger statuses.
+    Returns the reconciliation summary."""
+    from . import reconciliation
+    try:
+        return jsonify(reconciliation.reconcile_transfers())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
 # ── URL Extraction ────────────────────────────────────────────────────────────
 
 @api.route('/extract', methods=['POST'])

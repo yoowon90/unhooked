@@ -175,8 +175,13 @@
           </td>
           <td style="font-size: 10pt;">
             {% if purchased_item.savings_decision == 'moved' and purchased_item.savings_txn %}
+            {% if purchased_item.savings_txn.status in ('failed', 'returned') %}
+            {% set badge_bg, badge_fg = '#fff3cd', '#856404' %}
+            {% else %}
+            {% set badge_bg, badge_fg = '#d4edda', '#155724' %}
+            {% endif %}
             <span title="Ledger transaction #{{ purchased_item.savings_txn.id }} ({{ purchased_item.savings_txn.status }})"
-                  style="display:inline-block; padding: 2px 8px; background: #d4edda; color: #155724; border-radius: 8px;">
+                  style="display:inline-block; padding: 2px 8px; background: {{ badge_bg }}; color: {{ badge_fg }}; border-radius: 8px;">
               💰 {{ purchased_item.savings_txn.amount_cents | format_cents }} moved to savings
               <span style="opacity: 0.7;">({{ purchased_item.savings_txn.status }})</span>
             </span>

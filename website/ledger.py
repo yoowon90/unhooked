@@ -196,6 +196,20 @@ def fail_transaction(txn):
     return txn
 
 
+def return_settled_transaction(txn, memo=None):
+    """Handle an ACH return that arrives AFTER settlement — the classic
+    reconciliation edge (returns like R10 'unauthorized' can arrive up to
+    60 days later). The money never actually moved, so: post a reversing
+    transaction (history stays append-only) and mark the original 'returned'.
+    Returns the reversal transaction."""
+    if txn.status != 'settled':
+        raise LedgerError(f'Only settled transactions can be returned (txn {txn.id} is {txn.status})')
+    reversal = reverse_transaction(txn, memo=memo or f'ACH return of txn #{txn.id}')
+    txn.status = 'returned'
+    db.session.commit()
+    return reversal
+
+
 def reverse_transaction(txn, memo=None):
     """Post a NEW transaction with negated entries. This is how mistakes are
     corrected — entries are never edited or deleted, so history stays intact."""

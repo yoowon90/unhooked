@@ -172,6 +172,9 @@
       <div style="display: flex; align-items: center; gap: 10px;">
         {% if user.plaid_item_id %}
           <span class="status-pill status-connected">Connected</span>
+          <form method="POST" action="{{ url_for('connectors.plaid_reconcile') }}" style="margin: 0;" title="Pull transfer statuses from Plaid and update the ledger">
+            <button type="submit" class="btn btn-outline-primary btn-sm">&#8635; Sync transfers</button>
+          </form>
           <form method="POST" action="{{ url_for('connectors.plaid_disconnect') }}" style="margin: 0;">
             <button type="submit" class="btn btn-outline-danger btn-sm">Disconnect</button>
           </form>

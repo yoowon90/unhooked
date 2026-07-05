@@ -9,6 +9,7 @@ from flask_login import current_user, login_required
 from .models import Note, WishItem, normalize_category, clean_text
 from . import db
 from . import ledger
+from . import reconciliation
 from . import transfers
 from .ledger import LedgerError
 from .purchases import mark_purchased, needs_savings_prompt, record_savings_decision
@@ -395,6 +396,16 @@ def unhooked_list():
 @views.route('/purchased-list', methods=['GET', 'POST'])
 @login_required
 def purchased_list():
+    # Opportunistic reconciliation: if any transfer we originated is still
+    # pending, drain Plaid's event feed so the savings badges show current
+    # rail status. Guarded (no Plaid call when nothing is in flight) and
+    # non-fatal — a Plaid outage must never break this page.
+    try:
+        if reconciliation.should_sync():
+            reconciliation.reconcile_transfers()
+    except Exception as e:
+        print(f'Transfer reconciliation skipped: {e}')
+
     # get all unique categories in purchased list
     purchased_cats = set()
     # get all unique brands in purchased list
