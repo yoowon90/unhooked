@@ -153,3 +153,60 @@ def test_originate_without_bank_is_a_clean_noop(user):
     result = transfers.originate_savings_transfer(user, txn)
     assert result['originated'] is False and result['reason'] == 'not_connected'
     assert txn.status == 'pending'
+
+
+# ── auto-origination of stuck transactions ────────────────────────────────────
+
+def test_connect_bank_originates_prior_decisions(user, monkeypatch):
+    """A 'Yes' recorded before any bank existed is a standing instruction —
+    linking a bank fulfills it without asking again."""
+    stuck = ledger.transfer_to_savings(user.id, 3000)
+    assert stuck.provider_transfer_id is None
+
+    monkeypatch.setattr(transfers.plaid_client, 'exchange_public_token',
+                        lambda pt: {'access_token': 'access-sandbox-123', 'item_id': 'item-1'})
+    monkeypatch.setattr(transfers.plaid_client, 'get_institution_name', lambda at: 'Bank')
+    monkeypatch.setattr(transfers.plaid_client, 'get_accounts', lambda at: [
+        {'account_id': 'acct-chk', 'name': 'Checking', 'subtype': 'checking', 'mask': '0000'},
+        {'account_id': 'acct-sav', 'name': 'Saving', 'subtype': 'savings', 'mask': '1111'},
+    ])
+    monkeypatch.setattr(transfers.plaid_client, 'create_transfer_authorization',
+                        lambda *a, **k: {'id': 'auth-1', 'decision': 'approved'})
+    monkeypatch.setattr(transfers.plaid_client, 'create_transfer',
+                        lambda *a, **k: {'id': 'transfer-auto'})
+
+    transfers.connect_bank(user, 'public-token')
+    assert stuck.provider_transfer_id == 'transfer-auto'
+
+
+def test_originate_pending_transfers_skips_done_and_collects_failures(linked_user, monkeypatch):
+    done = ledger.transfer_to_savings(linked_user.id, 1000)
+    done.provider_transfer_id = 'already-originated'
+    settled = ledger.transfer_to_savings(linked_user.id, 1000)
+    ledger.settle_transaction(settled)
+    nsf = ledger.transfer_to_savings(linked_user.id, 17800)
+    ok = ledger.transfer_to_savings(linked_user.id, 2500)
+    db.session.commit()
+
+    def auth_by_amount(access_token, account_id, amount, legal_name, idempotency_key=None):
+        if amount == '178.00':
+            return {'id': 'auth-nsf', 'decision': 'declined',
+                    'decision_rationale': {'description': 'insufficient funds'}}
+        return {'id': 'auth-ok', 'decision': 'approved'}
+
+    monkeypatch.setattr(transfers.plaid_client, 'create_transfer_authorization', auth_by_amount)
+    monkeypatch.setattr(transfers.plaid_client, 'create_transfer',
+                        lambda *a, **k: {'id': 'transfer-new'})
+
+    summary = transfers.originate_pending_transfers(linked_user)
+    assert summary['originated'] == 1
+    assert len(summary['failures']) == 1 and 'insufficient funds' in summary['failures'][0]
+    assert ok.provider_transfer_id == 'transfer-new'
+    assert nsf.provider_transfer_id is None          # decline: intent survives, retryable
+    assert done.provider_transfer_id == 'already-originated'  # untouched
+
+
+def test_originate_pending_transfers_without_bank_is_noop(user):
+    ledger.transfer_to_savings(user.id, 1000)
+    summary = transfers.originate_pending_transfers(user)
+    assert summary == {'originated': 0, 'skipped': 0, 'failures': []}

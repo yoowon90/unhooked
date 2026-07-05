@@ -73,11 +73,18 @@ def settings():
 
 # ── Plaid (bank) connector ────────────────────────────────────────────────────
 
+def _plaid_routes_enabled():
+    from .purchases import savings_feature_enabled
+    return savings_feature_enabled()
+
+
 @connectors.route('/connectors/plaid/link-token', methods=['POST'])
 @login_required
 @same_origin_required
 def plaid_link_token():
     """Mint a short-lived link_token to initialize Plaid Link in the browser."""
+    if not _plaid_routes_enabled():
+        return jsonify({'error': 'Not available in this environment'}), 404
     try:
         return jsonify({'link_token': plaid_client.create_link_token(current_user.id)})
     except PlaidError as e:
@@ -90,6 +97,8 @@ def plaid_link_token():
 def plaid_exchange():
     """Link onSuccess handler: exchange the public_token, store the encrypted
     access token, and map bank accounts onto the ledger buckets."""
+    if not _plaid_routes_enabled():
+        return jsonify({'error': 'Not available in this environment'}), 404
     public_token = (request.get_json() or {}).get('public_token')
     if not public_token:
         return jsonify({'error': 'public_token is required'}), 400
@@ -105,6 +114,8 @@ def plaid_exchange():
 @login_required
 @same_origin_required
 def plaid_disconnect():
+    if not _plaid_routes_enabled():
+        return redirect(url_for('connectors.settings'))
     transfers.disconnect_bank(current_user)
     flash('Bank disconnected. Ledger history is preserved.', 'success')
     return redirect(url_for('connectors.settings'))
@@ -114,20 +125,29 @@ def plaid_disconnect():
 @login_required
 @same_origin_required
 def plaid_reconcile():
-    """On-demand reconciliation from the Settings page."""
+    """On-demand reconciliation from the Settings page: push (originate any
+    ledger transactions still awaiting a rail transfer), then pull (drain
+    Plaid's event feed onto ledger statuses)."""
+    if not _plaid_routes_enabled():
+        return redirect(url_for('connectors.settings'))
     from . import reconciliation
+    push = transfers.originate_pending_transfers(current_user)
     try:
         summary = reconciliation.reconcile_transfers()
     except PlaidError as e:
         flash(f'Reconciliation failed: {e}', 'error')
         return redirect(url_for('connectors.settings'))
     parts = [f"{summary['events']} event(s) processed"]
+    if push['originated']:
+        parts.append(f"{push['originated']} transfer(s) originated")
     for key in ('settled', 'failed', 'returned'):
         if summary[key]:
             parts.append(f"{summary[key]} {key}")
     if summary['unmatched']:
         parts.append(f"⚠️ {len(summary['unmatched'])} unmatched transfer(s)")
     flash('Reconciliation: ' + ', '.join(parts) + '.', 'success')
+    for detail in push['failures']:
+        flash(f'Transfer not originated: {detail}', 'error')
     return redirect(url_for('connectors.settings'))
 
 

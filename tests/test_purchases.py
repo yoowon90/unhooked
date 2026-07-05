@@ -113,3 +113,15 @@ def test_invalid_decision_rejected(user, item):
     mark_purchased(item, user)
     with pytest.raises(LedgerError, match='decision must be'):
         record_savings_decision(item, user, 'maybe')
+
+
+def test_feature_flag_off_hides_prompt_and_blocks_recording(app, user, item):
+    """SAVINGS_FEATURE_ENABLED=False (prod config): purchases work normally,
+    but the interstitial never shows and decisions can't be recorded."""
+    app.config['SAVINGS_FEATURE_ENABLED'] = False
+    mark_purchased(item, user)
+    assert item.purchased is True            # purchasing itself is unaffected
+    assert needs_savings_prompt(item) is False
+    with pytest.raises(LedgerError, match='not enabled'):
+        record_savings_decision(item, user, 'declined')
+    assert item.savings_decision is None

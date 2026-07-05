@@ -47,6 +47,10 @@ def connect_bank(user, public_token):
                 f"{plaid_account.get('name', subtype.capitalize())} ••{plaid_account.get('mask', '')}"
             )
     db.session.commit()
+
+    # Any savings decision made before the bank existed is a standing
+    # instruction — fulfill it now that we can.
+    originate_pending_transfers(user)
     return user
 
 
@@ -66,6 +70,35 @@ def disconnect_bank(user):
         account.provider_account_id = None
     db.session.commit()
     return user
+
+
+def originate_pending_transfers(user):
+    """Originate every ledger transaction still awaiting a rail transfer
+    (pending, no provider id). The user's 'Yes' at the interstitial IS the
+    instruction to move money — if origination couldn't happen then (no bank
+    linked, transient decline), the system retries here rather than asking
+    the user again. Called when a bank is connected and on every
+    reconciliation run ('push' before the event-feed 'pull').
+
+    Returns {'originated': n, 'skipped': n, 'failures': [detail, ...]}.
+    """
+    from .models import LedgerTransaction
+
+    summary = {'originated': 0, 'skipped': 0, 'failures': []}
+    if not bank_connected(user):
+        return summary
+    stuck = (LedgerTransaction.query
+             .filter_by(user_id=user.id, status='pending', provider_transfer_id=None)
+             .all())
+    for txn in stuck:
+        result = originate_savings_transfer(user, txn)
+        if result['originated']:
+            summary['originated'] += 1
+        elif result['reason'] == 'not_connected':
+            summary['skipped'] += 1
+        else:
+            summary['failures'].append(result['detail'])
+    return summary
 
 
 def originate_savings_transfer(user, txn):

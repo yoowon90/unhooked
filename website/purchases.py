@@ -7,11 +7,19 @@ record_savings_decision().
 """
 import datetime
 
+from flask import current_app
+
 from . import db
 from . import ledger
 from .ledger import LedgerError
 
 SAVINGS_DECISIONS = ('moved', 'declined')
+
+
+def savings_feature_enabled():
+    """Config-gated: True in dev, False in prod (dev-only feature for now).
+    Defaults True so bare test apps that never load a config get the feature."""
+    return bool(current_app.config.get('SAVINGS_FEATURE_ENABLED', True))
 
 
 def mark_purchased(item, user):
@@ -28,7 +36,10 @@ def mark_purchased(item, user):
 
 
 def needs_savings_prompt(item):
-    """The interstitial shows only for purchased items with no decision yet."""
+    """The interstitial shows only for purchased items with no decision yet —
+    and only where the savings feature is enabled at all."""
+    if not savings_feature_enabled():
+        return False
     return bool(item.purchased and not item.unhooked and item.savings_decision is None)
 
 
@@ -42,6 +53,8 @@ def record_savings_decision(item, user, decision, amount_cents=None):
     A decision is recorded once — re-deciding would double-post the transfer.
     Raises LedgerError on any violation; commits on success.
     """
+    if not savings_feature_enabled():
+        raise LedgerError('The savings feature is not enabled in this environment')
     if decision not in SAVINGS_DECISIONS:
         raise LedgerError(f"decision must be one of {SAVINGS_DECISIONS}, got {decision!r}")
     if not item.purchased or item.unhooked:

@@ -6,7 +6,8 @@ from . import db
 from . import ledger
 from . import transfers
 from .ledger import LedgerError
-from .purchases import mark_purchased, needs_savings_prompt, record_savings_decision
+from .purchases import (mark_purchased, needs_savings_prompt,
+                        record_savings_decision, savings_feature_enabled)
 from .url_extraction import ItemDetails, scrape_item
 from .tax import taxed_price
 import datetime
@@ -289,6 +290,8 @@ def savings_decision(item_id):
     `amount` (dollars, > 0) is required when decision is "moved"; it is the
     user-edited value from the interstitial, not necessarily the item price.
     """
+    if not savings_feature_enabled():
+        return jsonify({'error': 'Not available in this environment'}), 404
     item, err = _get_item(item_id)
     if err:
         return err
@@ -347,11 +350,16 @@ def remove_image(item_id):
 @api.route('/transfers/reconcile', methods=['POST'])
 @jwt_required()
 def reconcile_transfers():
-    """Drain Plaid's transfer-event feed and converge ledger statuses.
-    Returns the reconciliation summary."""
+    """Push (originate ledger transactions still awaiting a rail transfer),
+    then pull (drain Plaid's event feed onto ledger statuses)."""
+    if not savings_feature_enabled():
+        return jsonify({'error': 'Not available in this environment'}), 404
     from . import reconciliation
     try:
-        return jsonify(reconciliation.reconcile_transfers())
+        push = transfers.originate_pending_transfers(_current_user())
+        summary = reconciliation.reconcile_transfers()
+        summary['origination'] = push
+        return jsonify(summary)
     except Exception as e:
         return jsonify({'error': str(e)}), 502
 

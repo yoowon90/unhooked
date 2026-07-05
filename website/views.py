@@ -12,7 +12,8 @@ from . import ledger
 from . import reconciliation
 from . import transfers
 from .ledger import LedgerError
-from .purchases import mark_purchased, needs_savings_prompt, record_savings_decision
+from .purchases import (mark_purchased, needs_savings_prompt,
+                        record_savings_decision, savings_feature_enabled)
 from .url_extraction import scrape_item
 from .tax import taxed_price
 
@@ -401,7 +402,7 @@ def purchased_list():
     # rail status. Guarded (no Plaid call when nothing is in flight) and
     # non-fatal — a Plaid outage must never break this page.
     try:
-        if reconciliation.should_sync():
+        if savings_feature_enabled() and reconciliation.should_sync():
             reconciliation.reconcile_transfers()
     except Exception as e:
         print(f'Transfer reconciliation skipped: {e}')

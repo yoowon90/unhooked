@@ -151,6 +151,7 @@
     </div>
     {% endif %}
 
+    {% if config.SAVINGS_FEATURE_ENABLED %}
     <!-- Bank (Plaid sandbox) row -->
     <div class="connector-row">
       <div class="connector-info">
@@ -194,9 +195,11 @@
       <code>user_good</code> / <code>pass_good</code>. Your access token is stored encrypted at rest.
     </div>
     {% endif %}
+    {% endif %}{# /SAVINGS_FEATURE_ENABLED #}
 
   </div><!-- /settings-card -->
 
+  {% if config.SAVINGS_FEATURE_ENABLED %}
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <script>
     function startPlaidLink(btn) {
@@ -226,6 +229,7 @@
       function resetBtn() { btn.disabled = false; btn.textContent = 'Connect Bank'; }
     }
   </script>
+  {% endif %}{# /SAVINGS_FEATURE_ENABLED #}
 
 </div>
 {% endblock %}

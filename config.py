@@ -9,6 +9,10 @@ class Config:
     TESTING = False
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-fallback-change-in-production')
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-fallback-change-in-production')
+    # Savings-ledger feature (post-purchase interstitial, Plaid bank link,
+    # ACH transfers, reconciliation). Dev-only for now: the schema exists in
+    # both DBs, but the feature is invisible unless a config enables it.
+    SAVINGS_FEATURE_ENABLED = False
 
 def _resolve_prod_db_uri():
     url = os.environ.get('DATABASE_URL')
@@ -26,6 +30,7 @@ class ProductionConfig(Config):
     DB_NAME = 'database_prod.db'
     SQLALCHEMY_DATABASE_URI = _resolve_prod_db_uri()
     DEBUG = False
+    SAVINGS_FEATURE_ENABLED = False  # explicit: dev-only feature
 
 class DevelopmentConfig(Config):
     GIT_BRANCH = 'develop'
@@ -34,3 +39,4 @@ class DevelopmentConfig(Config):
     SQLALCHEMY_BINDS = {'prod': 'sqlite:///database_prod.db'}
     DB_NAME = 'database_dev.db'
     DEBUG = True
+    SAVINGS_FEATURE_ENABLED = True
