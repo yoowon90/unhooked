@@ -170,7 +170,7 @@ async def _playwright_fetch(url: str) -> str:
                 resp_url = response.url
                 if not any(kw in resp_url.lower() for kw in product_kw):
                     return
-                body = await response.text()
+                body = response.text()
                 if body and len(body) > 200:
                     parsed = _json.loads(body)
                     # Only keep responses that contain actual product data (name + price)
@@ -191,7 +191,7 @@ async def _playwright_fetch(url: str) -> str:
 
         # 1. Try __NEXT_DATA__
         try:
-            raw = await page.evaluate("document.getElementById('__NEXT_DATA__')?.textContent || ''")
+            raw = page.evaluate("document.getElementById('__NEXT_DATA__')?.textContent || ''")
             if raw and len(raw) > 100:
                 print(f"[playwright] Found __NEXT_DATA__ ({len(raw)} chars)")
                 await browser.close()
@@ -235,6 +235,7 @@ def scrape_item(url: str) -> dict:
     2. requests.get() + brand/generic extractor
     3. Playwright (real Chrome) if step 2 returns all-None fields
     """
+    print(f"[scrape] fetching {url}")
     # 1. Shopify fast path
     shopify = _try_shopify_json(url)
     if shopify and any(v is not None for v in shopify.values()):
@@ -323,7 +324,7 @@ class ItemDetails:
             data_copy['description'] = (f"{soup.find('meta', {'property': 'og:description'}).get('content')}."
                                         f" {soup.find('meta', {'property': 'product:color'}).get('content')}"
                                         f" ({soup.find('meta', {'property': 'product:color:map'}).get('content')})")
-        except Exception as e:
+        except KeyError as e:
             print(f"extract_aritzia failed: {e}")
         return data_copy
 
