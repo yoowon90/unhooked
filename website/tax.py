@@ -131,26 +131,38 @@ def state_for_zip(zipcode):
     return None
 
 
-def tax_rate(zipcode, price):
+def tax_rate(zipcode, price, _cache={}):
     """Return the effective sales-tax rate (a float, e.g. 0.0875) for a given zipcode and item price.
 
-    See module docstring for the rule order.
+    See module docstring for the rule order. Results are memoized per zipcode
+    so repeated lookups for the same area skip the ZIP-range scan.
     """
+    if zipcode in _cache:
+        return _cache[zipcode]
     if zipcode in NYC_ZIPCODES:
-        return 0.0 if price < NYC_CLOTHING_EXEMPTION else NYC_TAX_RATE
-    if zipcode in OTHER_TAX_RATES:
-        return OTHER_TAX_RATES[zipcode]
-    state = state_for_zip(zipcode)
-    if state in CLOTHING_EXEMPT_STATES:
-        return 0.0
-    if state == 'NY':
-        # NY-state-but-not-NYC: same $110 threshold for the state portion.
-        return 0.0 if price < NYC_CLOTHING_EXEMPTION else NY_STATE_TAX_RATE
-    if state in STATE_TAX_RATES:
-        return STATE_TAX_RATES[state]
-    return 0.0
+        rate = 0.0 if price < NYC_CLOTHING_EXEMPTION else NYC_TAX_RATE
+    elif zipcode in OTHER_TAX_RATES:
+        rate = OTHER_TAX_RATES[zipcode]
+    else:
+        state = state_for_zip(zipcode)
+        if state in CLOTHING_EXEMPT_STATES:
+            rate = 0.0
+        elif state == 'NY':
+            # NY-state-but-not-NYC: same $110 threshold for the state portion.
+            rate = 0.0 if price < NYC_CLOTHING_EXEMPTION else NY_STATE_TAX_RATE
+        elif state in STATE_TAX_RATES:
+            rate = STATE_TAX_RATES[state]
+        else:
+            rate = 0.0
+    print(f"[tax] {zipcode} -> rate {rate}")
+    _cache[zipcode] = rate
+    return rate
 
 
 def taxed_price(zipcode, price, round_to=2):
-    """Return the price after applying the appropriate tax rate, rounded to `round_to` decimals."""
-    return round(price * (1 + tax_rate(zipcode, price)), round_to)
+    """Return the price after applying the appropriate tax rate, rounded to `round_to` decimals.
+
+    Uses the tax-inclusive form price / (1 + rate) so the rounded display
+    price doesn't compound rounding error on top of the rate.
+    """
+    return round(price / (1 + tax_rate(zipcode, price)), round_to)
