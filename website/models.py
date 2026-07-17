@@ -296,6 +296,9 @@ class User(db.Model, UserMixin):
     notes = db.relationship('Note')
     wishitems = db.relationship('WishItem')
     last_purchase_date = db.Column(db.DateTime, default=None)
+    # Monthly spending budget in dollars (set via the API / settings). None
+    # until the user picks one.
+    monthly_budget = db.Column(db.Float, default=None, nullable=True)
     gmail_access_token = db.Column(db.Text, nullable=True)
     gmail_refresh_token = db.Column(db.Text, nullable=True)
     gmail_token_expiry = db.Column(db.DateTime, nullable=True)
