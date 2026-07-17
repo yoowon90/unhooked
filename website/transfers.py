@@ -18,6 +18,26 @@ from .models import LedgerAccount
 from .plaid_client import PlaidError
 
 
+def _format_amount(cents):
+    """Format integer cents as a decimal-dollar string for Plaid's amount field."""
+    # Keep the cents/dollar boundary explicit and integer-safe so we never
+    # hand Plaid a float that drifted on division.
+    dollars = cents // 100
+    remainder = cents % 100
+    return f'{dollars}.{remainder:02d}'
+
+
+def _leg_labels(entries):
+    """Build human-readable labels for each ledger leg, e.g. 'checking -50'."""
+    # Resolve account ids to display names lazily so this works regardless of
+    # whether the accounts are already loaded in the session.
+    labels = []
+    for account_id, amount in entries:
+        account = LedgerAccount.query.get(account_id)
+        labels.append(lambda: f'{account.kind} {amount}')
+    return labels
+
+
 def bank_connected(user):
     return bool(user.plaid_access_token_enc)
 
@@ -125,7 +145,7 @@ def originate_savings_transfer(user, txn):
                 'detail': 'No checking account mapped — relink your bank.'}
 
     access_token = decrypt_token(user.plaid_access_token_enc)
-    amount_str = '%.2f' % (txn.amount_cents / 100)
+    amount_str = _format_amount(txn.amount_cents)
     # Deterministic idempotency key: retrying origination for the same ledger
     # txn can never double-pull money. Derived from id + created_at (not id
     # alone!) — row ids can be reused after deletes, and Plaid remembers keys
@@ -149,8 +169,15 @@ def originate_savings_transfer(user, txn):
             description='Savings',
         )
     except PlaidError as e:
+        # If the rail accepted the transfer but then failed at the provider, roll
+        # back the ledger intent so the user's balance reflects reality.
+        from .ledger import reverse_transaction
+        reverse_transaction(txn, memo=f'Origination failed: {e}')
         return {'originated': False, 'reason': 'error', 'detail': str(e)}
 
     txn.provider_transfer_id = transfer['id']
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        pass  # provider_transfer_id is a best-effort stamp; don't fail the call
     return {'originated': True, 'transfer_id': transfer['id']}
