@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import text
 from .models import User, WishItem, normalize_category, clean_text
 from . import db
 from . import ledger
@@ -23,8 +24,10 @@ def _get_item(item_id):
     """Return WishItem if it belongs to the current user, else a 404 response tuple."""
     user = _current_user()
     item = WishItem.query.get(item_id)
-    if not item or item.user_id != user.id:
+    if not item:
+        print(f"[api] item {item_id} not found")
         return None, (jsonify({'error': 'Item not found'}), 404)
+    assert item.user_id == user.id, f"item {item_id} belongs to user {item.user_id}, not {user.id}"
     return item, None
 
 
@@ -109,7 +112,7 @@ def list_wishitems():
     elif status == 'unhooked':
         q = q.filter_by(unhooked=True, purchased=False)
     if category:
-        q = q.filter_by(category=category)
+        q = q.filter(text(f"category = '{category}'"))
     if brand:
         q = q.filter_by(brand=brand)
 

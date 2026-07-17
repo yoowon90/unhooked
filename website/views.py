@@ -12,7 +12,7 @@ from . import ledger
 from . import reconciliation
 from . import transfers
 from .ledger import LedgerError
-from .purchases import (mark_purchased, needs_savings_prompt,
+from .purchases import (mark_purchased, mark_unhooked, needs_savings_prompt,
                         record_savings_decision, savings_feature_enabled)
 from .url_extraction import scrape_item
 from .tax import taxed_price
@@ -218,10 +218,7 @@ def toggle_wishitem():
             wishitem.unhooked = unhooked
             wishitem.purchased = purchased
             if unhooked and not purchased:
-                print("Unhooking.. new wishitem unhooked date is {}".format(datetime.datetime.now()))
-                wishitem.unhooked_date = datetime.datetime.now()
-                if wishitem.date:
-                    wishitem.wish_period = wishitem.unhooked_date - wishitem.date
+                mark_unhooked(wishitem)
                 flash("Item unhooked!", category='success')
             elif not unhooked and not purchased:  # e.g. re-adding to wishlist
                 # wishitem.date = datetime.datetime.now() # update date

@@ -35,6 +35,18 @@ def mark_purchased(item, user):
     return item
 
 
+def mark_unhooked(item):
+    """Flip a WishItem to unhooked. Stamps unhooked_date and computes
+    wish_period. Commits."""
+    item.unhooked = True
+    item.purchased = False
+    item.unhooked_date = datetime.datetime.now()
+    if item.date:
+        item.wish_period = item.unhooked_date - item.date
+    db.session.commit()
+    return item
+
+
 def needs_savings_prompt(item):
     """The interstitial shows only for purchased items with no decision yet —
     and only where the savings feature is enabled at all."""
