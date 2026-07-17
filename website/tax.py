@@ -120,10 +120,20 @@ STATE_ZIP_RANGES = [
 ]
 
 
+from .cache import TTLCache
+
+
+_zip_cache = TTLCache(default_ttl=3600)
+
+
 def state_for_zip(zipcode):
     """Return the 2-letter US state code for a 5-digit zipcode, or None if unknown."""
     if not zipcode or len(zipcode) != 5 or not zipcode.isdigit():
         return None
+    return _zip_cache.get(zipcode, lambda: _resolve_state(zipcode))
+
+
+def _resolve_state(zipcode):
     z = int(zipcode)
     for state, low, high in STATE_ZIP_RANGES:
         if low <= z <= high:
