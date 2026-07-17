@@ -38,7 +38,7 @@ SCORE_WEIGHTS = {
     'window_days': 90,
     'base_score': 50,
     'purchase_buckets': [
-        (7, -8),
+        (7, -4),
         (30, 0),
         (60, 2),
         (float('inf'), 4),
@@ -135,7 +135,9 @@ def compute_shopping_habits_score(user):
     if purchase_count == 0:
         ratio_bonus = SCORE_WEIGHTS['ratio_bonus'][0][1]
     else:
-        ratio = unhook_count / purchase_count
+        # Unhooks relative to total decisions — a high ratio means the user
+        # is deciding "no" more often than "yes", i.e. pausing before buying.
+        ratio = unhook_count / (purchase_count + unhook_count)
         ratio_bonus = next(b for r, b in SCORE_WEIGHTS['ratio_bonus'] if ratio >= r)
 
     raw = SCORE_WEIGHTS['base_score'] + total_points + ratio_bonus
@@ -162,6 +164,9 @@ def _summarize_decisions(items, window_start, window_end):
     """Aggregates purchases and unhooks decided within [window_start, window_end).
     Returns counts, totals, and avg wait days. Used by the hero card to compute
     both the current and prior window so we can show period-over-period deltas."""
+    # Anchor the window start to UTC so the boundary is absolute regardless of
+    # the server's local timezone.
+    window_start = window_start.replace(tzinfo=timezone('UTC'))
     saved = 0.0
     unhooks = 0
     purchased = 0.0
@@ -169,7 +174,7 @@ def _summarize_decisions(items, window_start, window_end):
     purchase_wait_days = 0
     for item in items:
         if item.purchased and not item.unhooked:
-            pdate = _strip_tz(item.purchase_date)
+            pdate = item.purchase_date
             if pdate is not None and window_start <= pdate < window_end:
                 purchased += item.taxed_price or 0
                 purchases += 1
@@ -411,6 +416,14 @@ def plot_purchased_category_png():
 @reports.route('/purchased_brand.png')
 def plot_purchased_brand_png():
     fig = create_figure('purchased_list', 'brand')
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    return Response(output.getvalue(), mimetype='image/png')
+
+
+@reports.route('/unhooked_category.png')
+def plot_unhooked_category_png():
+    fig = create_figure('unhooked_list', 'category')
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')
