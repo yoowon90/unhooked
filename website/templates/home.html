@@ -99,6 +99,25 @@
         </a>
       </div>
     </div>
+    {# ── Monthly budget ── #}
+    {% if budget and budget.budget %}
+    <div class="budget-card {{ 'budget-over' if budget.over_budget else '' }}">
+      <div class="budget-card-head">
+        <span class="budget-card-title">{{ budget.month_label }} budget</span>
+        <span class="budget-card-amounts">${{ budget.spent | format_money }} of ${{ budget.budget | format_money }}</span>
+      </div>
+      <div class="budget-bar">
+        <div class="budget-bar-fill" style="width: {{ [budget.percent_used, 100] | min }}%"></div>
+      </div>
+      <div class="budget-card-foot">
+        {% if budget.over_budget %}
+          <span class="budget-over-label">${{ (-budget.remaining) | format_money }} over budget</span>
+        {% else %}
+          <span>${{ budget.remaining | format_money }} left · {{ budget.percent_used }}% used</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
     {# ── Shopping Habits Score (sits right under the hero) ── #}
     {% if shopping_score and shopping_score.has_data %}
       {% set tier_class = 'tier-' + shopping_score.tier|lower|replace(' ', '-') %}

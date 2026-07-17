@@ -10,6 +10,7 @@ from .purchases import (mark_purchased, needs_savings_prompt,
                         record_savings_decision, savings_feature_enabled)
 from .url_extraction import ItemDetails, scrape_item
 from .tax import taxed_price
+from .budget import budget_status
 import datetime
 
 api = Blueprint('api', __name__)
@@ -362,6 +363,35 @@ def reconcile_transfers():
         return jsonify(summary)
     except Exception as e:
         return jsonify({'error': str(e)}), 502
+
+
+# ── Budget ────────────────────────────────────────────────────────────────────
+
+@api.route('/reports/budget', methods=['GET'])
+@jwt_required()
+def get_budget():
+    """Return the current-month budget summary. Defaults to the caller, but a
+    ?user_id= override is accepted so the (planned) shared-household view can
+    read another member's budget."""
+    user_id = request.args.get('user_id', type=int) or int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify(budget_status(user))
+
+
+@api.route('/user/budget', methods=['PUT'])
+@jwt_required()
+def set_budget():
+    """Set the caller's monthly budget. Body: {"monthly_budget": 500}."""
+    user = _current_user()
+    data = request.get_json() or {}
+    try:
+        user.monthly_budget = float(data.get('monthly_budget'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'monthly_budget must be a number'}), 400
+    db.session.commit()
+    return jsonify(budget_status(user))
 
 
 # ── URL Extraction ────────────────────────────────────────────────────────────

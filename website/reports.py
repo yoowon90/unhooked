@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, flash, jsonify, redirect,
 from flask_login import login_required, current_user
 from . import db
 from .models import WishItem
+from .budget import budget_status
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
@@ -255,6 +256,9 @@ def home():
 
     shopping_score = compute_shopping_habits_score(current_user)
 
+    # Monthly budget summary for the current calendar month.
+    budget = budget_status(current_user)
+
     # ── Stat-forward hero: time-of-day greeting + last-30-day totals ──
     # Hero stats are fixed to a rolling 30-day window (rather than the
     # current calendar month) so early-month views aren't dominated by
@@ -302,7 +306,8 @@ def home():
                 spenditure=spenditure,
                 saves=saves,
                 shopping_score=shopping_score,
-                hero_stats=hero_stats
+                hero_stats=hero_stats,
+                budget=budget
                 )  # return html when we got root
 
 def create_figure(figure_type, figure_content, start_date=None, end_date=None):
