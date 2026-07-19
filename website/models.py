@@ -287,6 +287,21 @@ class SyncCursor(db.Model):
                            onupdate=datetime.datetime.now)
 
 
+class ShareLink(db.Model):
+    """A public, read-only share of a user's wishlist.
+
+    `token` is the secret carried in the share URL. `expires_at = None` means
+    the link never expires. `revoked` lets the owner kill a link (so an old URL
+    stops resolving) without deleting the row, which keeps the audit trail.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    token = db.Column(db.String(64), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    revoked = db.Column(db.Boolean, default=False)
+
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True)

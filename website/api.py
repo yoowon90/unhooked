@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
-from .models import User, WishItem, normalize_category, clean_text
+from .models import User, WishItem, ShareLink, normalize_category, clean_text
+from .sharing import generate_token, link_is_valid, wishlist_tax_estimate
 from . import db
 from . import ledger
 from . import transfers
@@ -362,6 +363,62 @@ def reconcile_transfers():
         return jsonify(summary)
     except Exception as e:
         return jsonify({'error': str(e)}), 502
+
+
+# ── Shareable wishlist ──────────────────────────────────────────────────────────
+
+@api.route('/share', methods=['POST'])
+@jwt_required()
+def create_share():
+    """Mint a share link for the caller's wishlist.
+
+    Body (optional): {"expires_in_days": 30}. Pass null / 0 for a link that
+    never expires.
+    """
+    user = _current_user()
+    data = request.get_json() or {}
+    days = data.get('expires_in_days', 30)
+
+    expires_at = None
+    if days:
+        expires_at = datetime.datetime.now() + datetime.timedelta(days=int(days))
+
+    link = ShareLink(user_id=user.id, token=generate_token(), expires_at=expires_at)
+    db.session.add(link)
+    db.session.commit()
+    return jsonify({
+        'token': link.token,
+        'url': f'/api/v1/shared/{link.token}',
+        'expires_at': link.expires_at.isoformat() if link.expires_at else None,
+    }), 201
+
+
+@api.route('/shared/<token>', methods=['GET'])
+def view_shared(token):
+    """Public (no auth): resolve a share token to the owner's wishlist."""
+    link = ShareLink.query.filter_by(token=token).first()
+    if not link or not link_is_valid(link):
+        return jsonify({'error': 'Link not found or expired'}), 404
+
+    owner = User.query.get(link.user_id)
+    items = WishItem.query.filter_by(user_id=link.user_id).all()
+    return jsonify({
+        'owner_first_name': owner.first_name,
+        'items': [i.to_dict() for i in items],
+        'estimated_total': wishlist_tax_estimate(items, owner.zipcode),
+    })
+
+
+@api.route('/share/<token>', methods=['DELETE'])
+@jwt_required()
+def revoke_share(token):
+    """Revoke a share link so its URL stops resolving."""
+    link = ShareLink.query.filter_by(token=token).first()
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+    link.revoked = True
+    db.session.commit()
+    return jsonify({})
 
 
 # ── URL Extraction ────────────────────────────────────────────────────────────
