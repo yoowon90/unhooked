@@ -1,4 +1,8 @@
-from flask import Blueprint, jsonify, request
+import asyncio
+import datetime
+from urllib.parse import urlparse, urlunparse
+
+from flask import Blueprint, Response, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem, normalize_category, clean_text
@@ -10,7 +14,7 @@ from .purchases import (mark_purchased, needs_savings_prompt,
                         record_savings_decision, savings_feature_enabled)
 from .url_extraction import ItemDetails, scrape_item
 from .tax import taxed_price
-import datetime
+from .batch_extraction import BatchExtractionError, BatchExtractor, MAX_BATCH_URLS
 
 api = Blueprint('api', __name__)
 
@@ -381,6 +385,58 @@ def extract_url():
         print(f"URL extraction error: {e}")
         return jsonify({'success': False, 'name': None, 'price': None, 'brand': None,
                         'description': None, 'currency': None, 'image_url': None})
+
+
+@api.route('/extract/batch', methods=['POST'])
+@jwt_required()
+def extract_batch() -> Response | tuple[Response, int]:
+    """Extract product metadata for up to ten URLs in one request."""
+    body: dict[str, bool | list[str]] | None = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({'error': 'request body must be a JSON object'}), 400
+    raw_urls: bool | list[str] | None = body.get('urls')
+    if not isinstance(raw_urls, list) or not raw_urls:
+        return jsonify({'error': 'urls must be a non-empty list'}), 400
+    if len(raw_urls) > MAX_BATCH_URLS:
+        return jsonify({
+            'error': f'urls must contain no more than {MAX_BATCH_URLS} entries'
+        }), 400
+
+    normalized_urls: list[str] = []
+    for raw_url in raw_urls:
+        if not isinstance(raw_url, str):
+            return jsonify({'error': 'each URL must be a string'}), 400
+        candidate: str = raw_url.strip()
+        parsed = urlparse(candidate)
+        if parsed.scheme.lower() not in ('http', 'https') or not parsed.netloc:
+            return jsonify({'error': f'invalid URL: {raw_url!r}'}), 400
+        normalized_urls.append(urlunparse((
+            parsed.scheme.lower(),
+            parsed.netloc.lower(),
+            parsed.path or '/',
+            parsed.params,
+            parsed.query,
+            '',
+        )))
+
+    enrich_images: bool | list[str] = body.get('enrich_images', False)
+    if not isinstance(enrich_images, bool):
+        return jsonify({'error': 'enrich_images must be a boolean'}), 400
+
+    try:
+        results = asyncio.run(
+            BatchExtractor().extract(normalized_urls, enrich_images=enrich_images)
+        )
+    except BatchExtractionError as exc:
+        return jsonify({'error': str(exc)}), 400
+
+    succeeded: int = sum(result.success for result in results)
+    return jsonify({
+        'count': len(results),
+        'succeeded': succeeded,
+        'failed': len(results) - succeeded,
+        'results': [result.to_dict() for result in results],
+    })
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
