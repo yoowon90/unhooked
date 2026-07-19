@@ -11,13 +11,36 @@ fund movement is a compliance project, not a code one).
 """
 import os
 import uuid
+from collections.abc import Mapping
+from typing import TypeAlias
 
 import requests
+
+from .plaid_retry import PlaidRetry
+
+JsonValue: TypeAlias = (
+    str | int | float | bool | None | list['JsonValue'] | dict[str, 'JsonValue']
+)
+JsonObject: TypeAlias = dict[str, JsonValue]
 
 PLAID_HOSTS = {
     'sandbox': 'https://sandbox.plaid.com',
     'production': 'https://production.plaid.com',
 }
+
+_RETRYABLE_READ_ENDPOINTS: frozenset[str] = frozenset({
+    '/accounts/get',
+    '/item/get',
+    '/institutions/get_by_id',
+    '/transfer/get',
+    '/transfer/event/sync',
+})
+_RETRYABLE_ERROR_CODES: frozenset[str] = frozenset({
+    'RATE_LIMIT',
+    'INTERNAL',
+    'API_CONNECTION_ERROR',
+})
+_retry: PlaidRetry = PlaidRetry()
 
 
 class PlaidError(RuntimeError):
@@ -52,14 +75,45 @@ def is_configured():
                 and (os.getenv('PLAID_SANDBOX_SECRET') or os.getenv('PLAID_SECRET')))
 
 
-def _post(endpoint, payload):
+def _retry_safe(endpoint: str, payload: Mapping[str, JsonValue]) -> bool:
+    """Return whether repeating this endpoint with this payload is safe."""
+    if endpoint in _RETRYABLE_READ_ENDPOINTS:
+        return True
+    if endpoint == '/transfer/authorization/create':
+        return bool(payload.get('idempotency_key'))
+    return False
+
+
+def _retryable_plaid_error(error: Exception) -> bool:
+    """Return whether a Plaid response reports a transient failure."""
+    return (
+        isinstance(error, PlaidError)
+        and error.error_code in _RETRYABLE_ERROR_CODES
+    )
+
+
+def _post_once(endpoint: str, payload: JsonObject) -> JsonObject:
+    """Make one Plaid POST attempt and raise PlaidError on a non-2xx response."""
     client_id, secret = _credentials()
-    body = {'client_id': client_id, 'secret': secret, **payload}
-    resp = requests.post(f'{_base_url()}{endpoint}', json=body, timeout=30)
-    data = resp.json()
-    if resp.status_code != 200:
+    body: JsonObject = {'client_id': client_id, 'secret': secret, **payload}
+    response: requests.Response = requests.post(
+        f'{_base_url()}{endpoint}', json=body, timeout=30
+    )
+    data: JsonObject = response.json()
+    if response.status_code != 200:
         raise PlaidError(endpoint, data)
     return data
+
+
+def _post(endpoint: str, payload: JsonObject) -> JsonObject:
+    """POST to Plaid, retrying only transient failures on safe endpoints."""
+    if not _retry_safe(endpoint, payload):
+        return _post_once(endpoint, payload)
+    return _retry.run(
+        lambda: _post_once(endpoint, payload),
+        error_type=PlaidError,
+        is_retryable=_retryable_plaid_error,
+    )
 
 
 # ── Link + item lifecycle ─────────────────────────────────────────────────────
