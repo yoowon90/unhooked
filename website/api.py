@@ -1,4 +1,7 @@
-from flask import Blueprint, jsonify, request
+import datetime
+from typing import cast
+
+from flask import Blueprint, Response, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem, normalize_category, clean_text
@@ -9,8 +12,8 @@ from .ledger import LedgerError
 from .purchases import (mark_purchased, needs_savings_prompt,
                         record_savings_decision, savings_feature_enabled)
 from .url_extraction import ItemDetails, scrape_item
+from .statements import AccountKind, LedgerStatement, StatementError, build_statement
 from .tax import taxed_price
-import datetime
 
 api = Blueprint('api', __name__)
 
@@ -345,6 +348,34 @@ def remove_image(item_id):
     item.image_url = None
     db.session.commit()
     return jsonify({})
+
+
+@api.route('/ledger/statement', methods=['GET'])
+@jwt_required()
+def ledger_statement() -> Response | tuple[Response, int]:
+    """Return one user's derived ledger statement for a half-open date range."""
+    if not savings_feature_enabled():
+        return jsonify({'error': 'Not available in this environment'}), 404
+
+    account_name: str = request.args.get('account', '')
+    if account_name not in ('checking', 'savings'):
+        return jsonify({'error': 'account must be checking or savings'}), 400
+
+    start_raw: str = request.args.get('start_date', '')
+    end_raw: str = request.args.get('end_date', '')
+    try:
+        start: datetime.datetime = datetime.datetime.strptime(start_raw, '%Y-%m-%d')
+        end: datetime.datetime = datetime.datetime.strptime(end_raw, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'start_date and end_date required in YYYY-MM-DD format'}), 400
+
+    account_kind: AccountKind = cast(AccountKind, account_name)
+    user: User = _current_user()
+    try:
+        statement: LedgerStatement = build_statement(user.id, account_kind, start, end)
+    except StatementError as error:
+        return jsonify({'error': str(error)}), 400
+    return jsonify(statement.to_dict())
 
 
 @api.route('/transfers/reconcile', methods=['POST'])
