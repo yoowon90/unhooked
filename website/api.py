@@ -1,4 +1,6 @@
-from flask import Blueprint, jsonify, request
+import asyncio
+
+from flask import Blueprint, Response, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem, normalize_category, clean_text
@@ -9,6 +11,14 @@ from .ledger import LedgerError
 from .purchases import (mark_purchased, needs_savings_prompt,
                         record_savings_decision, savings_feature_enabled)
 from .url_extraction import ItemDetails, scrape_item
+from .content_parser import HtmlParsingError, ParsedWebsite, WebsiteParser
+from .llm_summary import (
+    JsonValue,
+    OpenAIConfigurationError,
+    OpenAISummarizer,
+    OpenAISummaryError,
+    WebsiteSummary,
+)
 from .tax import taxed_price
 import datetime
 
@@ -381,6 +391,32 @@ def extract_url():
         print(f"URL extraction error: {e}")
         return jsonify({'success': False, 'name': None, 'price': None, 'brand': None,
                         'description': None, 'currency': None, 'image_url': None})
+
+
+@api.route('/summarize', methods=['POST'])
+@jwt_required()
+def summarize_website() -> Response | tuple[Response, int]:
+    """Parse raw HTML and return OpenAI-generated content and review summaries."""
+    body: JsonValue = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({'error': 'request body must be a JSON object'}), 400
+
+    html: JsonValue = body.get('html')
+    if not isinstance(html, str) or not html.strip():
+        return jsonify({'error': 'html must be a non-empty string'}), 400
+
+    try:
+        page: ParsedWebsite = WebsiteParser().parse(html)
+        summarizer: OpenAISummarizer = OpenAISummarizer()
+        summary: WebsiteSummary = asyncio.run(summarizer.summarize(page))
+    except HtmlParsingError as error:
+        return jsonify({'error': str(error)}), 400
+    except OpenAIConfigurationError as error:
+        return jsonify({'error': str(error)}), 503
+    except OpenAISummaryError:
+        return jsonify({'error': 'OpenAI could not summarize this page'}), 502
+
+    return jsonify(summary.to_dict())
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
