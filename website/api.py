@@ -1,4 +1,7 @@
-from flask import Blueprint, jsonify, request
+import asyncio
+from urllib.parse import ParseResult, urlparse
+
+from flask import Blueprint, Response, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem, normalize_category, clean_text
@@ -9,6 +12,13 @@ from .ledger import LedgerError
 from .purchases import (mark_purchased, needs_savings_prompt,
                         record_savings_decision, savings_feature_enabled)
 from .url_extraction import ItemDetails, scrape_item
+from .review_categorizer import (
+    OpenAIConfigurationError,
+    OpenAIReviewCategorizer,
+    ReviewCategorization,
+    ReviewCategorizationError,
+)
+from .review_crawler import JsonValue, Review, ReviewCrawler, ReviewCrawlerError
 from .tax import taxed_price
 import datetime
 
@@ -381,6 +391,44 @@ def extract_url():
         print(f"URL extraction error: {e}")
         return jsonify({'success': False, 'name': None, 'price': None, 'brand': None,
                         'description': None, 'currency': None, 'image_url': None})
+
+
+async def _categorize_review_url(target_url: str) -> ReviewCategorization:
+    """Fetch one site's reviews and categorize them through OpenAI."""
+    crawler: ReviewCrawler = ReviewCrawler()
+    categorizer: OpenAIReviewCategorizer = OpenAIReviewCategorizer()
+    reviews: list[Review] = await crawler.fetch_reviews(target_url)
+    return await categorizer.categorize_reviews(reviews)
+
+
+@api.route('/reviews/categorize', methods=['POST'])
+@jwt_required()
+def categorize_website_reviews() -> Response | tuple[Response, int]:
+    """Return crawler reviews grouped into fixed product-feedback categories."""
+    body: JsonValue = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({'error': 'request body must be a JSON object'}), 400
+
+    target_url_value: JsonValue = body.get('url')
+    if not isinstance(target_url_value, str):
+        return jsonify({'error': 'url must be a string'}), 400
+    target_url: str = target_url_value.strip()
+    parsed_url: ParseResult = urlparse(target_url)
+    if parsed_url.scheme.lower() not in ('http', 'https') or not parsed_url.netloc:
+        return jsonify({'error': 'url must be an absolute HTTP or HTTPS URL'}), 400
+
+    try:
+        categorization: ReviewCategorization = asyncio.run(
+            _categorize_review_url(target_url)
+        )
+    except OpenAIConfigurationError as error:
+        return jsonify({'error': str(error)}), 503
+    except (ReviewCrawlerError, ReviewCategorizationError):
+        return jsonify({'error': 'Could not categorize reviews for this URL'}), 502
+
+    payload: dict[str, JsonValue] = categorization.to_dict()
+    payload['url'] = target_url
+    return jsonify(payload)
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
