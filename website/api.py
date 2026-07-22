@@ -1,4 +1,6 @@
-from flask import Blueprint, jsonify, request
+import asyncio
+
+from flask import Blueprint, Response, jsonify, request
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, WishItem, normalize_category, clean_text
@@ -9,6 +11,16 @@ from .ledger import LedgerError
 from .purchases import (mark_purchased, needs_savings_prompt,
                         record_savings_decision, savings_feature_enabled)
 from .url_extraction import ItemDetails, scrape_item
+from .voice_search import (
+    JsonObject,
+    JsonValue,
+    OpenAIConfigurationError,
+    VoiceSearchError,
+    VoiceSearchResult,
+    build_failure_events,
+    create_realtime_session,
+    execute_web_search,
+)
 from .tax import taxed_price
 import datetime
 
@@ -381,6 +393,53 @@ def extract_url():
         print(f"URL extraction error: {e}")
         return jsonify({'success': False, 'name': None, 'price': None, 'brand': None,
                         'description': None, 'currency': None, 'image_url': None})
+
+
+@api.route('/voice/session', methods=['POST'])
+@jwt_required()
+def create_voice_session() -> Response | tuple[Response, int]:
+    """Mint an ephemeral OpenAI Realtime credential for the current user."""
+    try:
+        session: JsonObject = asyncio.run(
+            create_realtime_session(str(get_jwt_identity()))
+        )
+    except OpenAIConfigurationError as error:
+        return jsonify({'error': str(error)}), 503
+    except VoiceSearchError:
+        return jsonify({'error': 'Could not create voice session'}), 502
+    return jsonify(session)
+
+
+@api.route('/voice/search', methods=['POST'])
+@jwt_required()
+def execute_voice_search() -> Response | tuple[Response, int]:
+    """Execute a completed Realtime search_web tool call."""
+    body: JsonValue = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({'error': 'request body must be a JSON object'}), 400
+
+    call_id_value: JsonValue = body.get('call_id')
+    query_value: JsonValue = body.get('query')
+    if not isinstance(call_id_value, str) or not call_id_value.strip():
+        return jsonify({'error': 'call_id must be a non-empty string'}), 400
+    if not isinstance(query_value, str) or not query_value.strip():
+        return jsonify({'error': 'query must be a non-empty string'}), 400
+    query: str = query_value.strip()
+    if len(query) > 300:
+        return jsonify({'error': 'query must be 300 characters or fewer'}), 400
+
+    call_id: str = call_id_value.strip()
+    try:
+        result: VoiceSearchResult = asyncio.run(execute_web_search(query))
+    except OpenAIConfigurationError as error:
+        return jsonify({'error': str(error)}), 503
+    except VoiceSearchError as error:
+        events: list[JsonObject] = build_failure_events(call_id, str(error))
+        return jsonify({'error': 'Voice search failed', 'events': events}), 502
+
+    payload: JsonObject = result.to_dict()
+    payload['events'] = result.realtime_events(call_id)
+    return jsonify(payload)
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
